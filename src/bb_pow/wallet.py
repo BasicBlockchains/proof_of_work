@@ -142,8 +142,34 @@ class Wallet():
 
     # --- SIGN TRANSACTION --- #
     def sign_transaction(self, tx_id: str):
-        (r, s) = self.curve.generate_signature(self.private_key, tx_id)
-        return (hex(r), hex(s))
+        return self.curve.generate_signature(self.private_key, tx_id)
+
+    def encode_signature(self, signature: tuple):
+        '''
+        We are given an integer signature (r,s) and we encode as
+
+            r_length + hex(r) + s_length + hex(s)
+
+        Lengths will be formatted to be 2 hex chars. Both hex(r) and hex(s) will NOT have the leading '0x'
+        '''
+        r, s = signature
+        h_r = hex(r)[2:]
+        h_s = hex(s)[2:]
+        r_length = format(len(h_r), '02x')
+        s_length = format(len(h_s), '02x')
+
+        return r_length + h_r + s_length + h_s
+
+    def decode_signature(self, signature: str):
+        '''
+        Given the signature string, we decode and return the signature tuple (r,s)
+        '''
+        r_length = int(signature[:2], 16)
+        r = int(signature[2:2 + r_length], 16)
+        s_length = int(signature[2 + r_length:4 + r_length], 16)
+        s = int(signature[4 + r_length:4 + r_length + s_length], 16)
+
+        return (r, s)
 
 
 # --- RECOVER WALLET --- #
@@ -229,6 +255,10 @@ def verify_address(address: str) -> bool:
     hex_addy = hex(base58_to_int(address))[2:]
     epk = hex_addy[:-8]
     checksum = hex_addy[-8:]
+
+    # Make sure epk is 40 characters
+    while len(epk) != 40:
+        epk = '0' + epk
 
     return sha256(
         sha256(epk.encode()).hexdigest().encode()

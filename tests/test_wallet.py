@@ -27,15 +27,21 @@ def test_wallet_recovery():
 
 
 def test_wallet_signature():
-    random_string = ''
-    for x in range(0, secrets.randbelow(100)):
-        random_string += random.choice(string.ascii_letters)
-    tx_id = sha256(random_string.encode()).hexdigest()
-
+    tx_id = random_tx_id()
     w = Wallet()
-    (hr, hs) = w.sign_transaction(tx_id)
+    signature = w.sign_transaction(tx_id)
     curve = secp256k1()
-    assert curve.verify_signature((int(hr, 16), int(hs, 16)), tx_id, w.public_key)
+    assert curve.verify_signature(signature, tx_id, w.public_key)
+
+
+def test_signature_encoding():
+    '''
+    We create a signature, then encode and decode the signature to make sure we have the same point
+    '''
+    tx_id = random_tx_id()
+    w = Wallet()
+    signature_tuple = w.sign_transaction(tx_id)
+    assert w.decode_signature(w.encode_signature(signature_tuple)) == signature_tuple
 
 
 def test_base58():
@@ -51,9 +57,22 @@ def test_base58():
     random_base58_string = ''
     for x in range(0, string_length):
         random_base58_string += random.choice(BASE58_ALPHABET)
+
+    # Remove prepended zeros from random_string
+    while random_base58_string[:1] == '1':
+        random_base58_string = random_base58_string[1:]
+
     assert int_to_base58(base58_to_int(random_base58_string)) == random_base58_string
 
 
 def test_verify_address():
     random_address = Wallet().address
     assert verify_address(random_address)
+
+
+# --- HELPER METHODS --- #
+def random_tx_id():
+    random_string = ''
+    for x in range(0, secrets.randbelow(100)):
+        random_string += random.choice(string.ascii_letters)
+    return sha256(random_string.encode()).hexdigest()
