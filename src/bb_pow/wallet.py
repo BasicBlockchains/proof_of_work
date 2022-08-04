@@ -23,6 +23,9 @@ class Wallet():
     DICTIONARY_EXPONENT = 11
 
     def __init__(self, seed=None, seed_bits=128):
+        # Use secp256k1 curve as standard
+        self.curve = EC.secp256k1()
+
         # Allow seed_bits to be variable
         self.seed_bits = seed_bits
 
@@ -34,7 +37,10 @@ class Wallet():
         self.seed_phrase = self.get_seed_phrase(seed)
 
         # Create keys - seed dropped after generating keys
-        # self.private_key, self.public_key = self.get_keys(seed)
+        self.private_key, self.public_key = self.get_keys(seed)
+        self.compressed_public_key = self.curve.compress_point(self.public_key)
+
+    # --- SEED METHODS --- #
 
     def get_seed(self):
         seed = 0
@@ -114,3 +120,30 @@ class Wallet():
         # Write seed to file as hex string
         with open(dir_path + "wallet.dat", "w") as f:
             f.write(hex(seed))
+
+    # --- GENERATE KEYS ---#
+    def get_keys(self, seed: int):
+        # Take the 512-bit hash of the seed hex string (with leading 0x
+        seed_hash512 = sha512(hex(seed).encode()).hexdigest()
+
+        # Private key is the first 256 bits (64 hex chars) of the 512-bit hash
+        private_key = int(seed_hash512[:64], 16)
+
+        # Chain code is second 256 bits of the 512-bit hash
+        self.chain_code = int(seed_hash512[64:], 16)
+
+        # Public key comes from secp256k1
+        public_key = self.curve.scalar_multiplication(private_key, self.curve.generator)
+
+        return private_key, public_key
+
+    # --- SIGN TRANSACTION --- #
+    def sign_transaction(self, tx_id: str):
+        (r, s) = self.curve.generate_signature(self.private_key, tx_id)
+        return (hex(r), hex(s))
+
+
+# --- RECOVER WALLET --- #
+def recover_wallet(seed_phrase: list):
+    seed = Wallet.recover_seed(seed_phrase)
+    return Wallet(seed)
