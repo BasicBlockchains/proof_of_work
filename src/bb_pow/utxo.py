@@ -17,16 +17,19 @@ class UTXO_INPUT():
         self.signature = signature
 
     def __repr__(self):
-        utxo_dict = {
-            "tx_id": self.tx_id,
-            "index": self.index,
-            "signature": self.signature
-        }
-        return json.dumps(utxo_dict)
+        return self.to_json
 
     @property
     def id(self):
-        return sha256(str(self).encode()).hexdigest()
+        return sha256(self.to_json.encode()).hexdigest()
+
+    @property
+    def to_json(self):
+        return json.dumps({
+            "tx_id": self.tx_id,
+            "index": self.index,
+            "signature": self.signature
+        })
 
 
 class UTXO_OUTPUT():
@@ -41,13 +44,16 @@ class UTXO_OUTPUT():
         self.block_height = block_height
 
     def __repr__(self):
-        utxo_dict = {
-            'amount': self.amount,
-            'address': self.address,
-            'block_height': self.block_height
-        }
-        return json.dumps(utxo_dict)
+        return self.to_json
 
     @property
     def id(self):
-        return sha256(str(self).encode()).hexdigest()
+        return sha256(self.to_json.encode()).hexdigest()
+
+    @property
+    def to_json(self):
+        return json.dumps({
+            'amount': self.amount,
+            'address': self.address,
+            'block_height': self.block_height
+        })
