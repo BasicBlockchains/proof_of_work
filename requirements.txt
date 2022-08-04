@@ -4,6 +4,7 @@
 #
 #    pip-compile pyproject.toml
 #
+pandas==1.4.3
 basicblockchains-ecc==2.1.0
     # via bb-pow (pyproject.toml)
 primefac==2.0.12
