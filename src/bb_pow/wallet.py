@@ -144,6 +144,33 @@ class Wallet():
     def sign_transaction(self, tx_id: str):
         return self.curve.generate_signature(self.private_key, tx_id)
 
+    def encode_signature(self, signature: tuple):
+        '''
+        We are given an integer signature (r,s) and we encode as
+
+            r_length + hex(r) + s_length + hex(s)
+
+        Lengths will be formatted to be 2 hex chars. Both hex(r) and hex(s) will NOT have the leading '0x'
+        '''
+        r, s = signature
+        h_r = hex(r)[2:]
+        h_s = hex(s)[2:]
+        r_length = format(len(h_r), '02x')
+        s_length = format(len(h_s), '02x')
+
+        return r_length + h_r + s_length + h_s
+
+    def decode_signature(self, signature: str):
+        '''
+        Given the signature string, we decode and return the signature tuple (r,s)
+        '''
+        r_length = int(signature[:2], 16)
+        r = int(signature[2:2 + r_length], 16)
+        s_length = int(signature[2 + r_length:4 + r_length], 16)
+        s = int(signature[4 + r_length:4 + r_length + s_length], 16)
+
+        return (r, s)
+
 
 # --- RECOVER WALLET --- #
 def recover_wallet(seed_phrase: list):
