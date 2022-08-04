@@ -220,3 +220,17 @@ def create_address(compressed_public_key: str) -> str:
     # Create cepk and return address
     cepk = epk + checksum
     return int_to_base58(int(cepk, 16))
+
+
+def verify_address(address: str) -> bool:
+    '''
+    We decode from base58 and verify that the epk generates the expected checksum
+    '''
+    hex_addy = hex(base58_to_int(address))[2:]
+    epk = hex_addy[:-8]
+    checksum = hex_addy[-8:]
+
+    return sha256(
+        sha256(epk.encode()).hexdigest().encode()
+    ).hexdigest()[:8] == checksum
+

@@ -3,7 +3,7 @@ Tests for the Wallet class
 '''
 import random
 
-from src.bb_pow.wallet import Wallet, recover_wallet, int_to_base58, base58_to_int, BASE58_ALPHABET
+from src.bb_pow.wallet import Wallet, recover_wallet, int_to_base58, base58_to_int, BASE58_ALPHABET, verify_address
 import secrets
 import string
 from hashlib import sha256
@@ -52,3 +52,8 @@ def test_base58():
     for x in range(0, string_length):
         random_base58_string += random.choice(BASE58_ALPHABET)
     assert int_to_base58(base58_to_int(random_base58_string)) == random_base58_string
+
+
+def test_verify_address():
+    random_address = Wallet().address
+    assert verify_address(random_address)
