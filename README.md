@@ -1,1 +1,3 @@
-# proof_of_work
+# An Object Oriented proof of work Blockchain
+
+## Wallet
