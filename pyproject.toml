@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=43.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bb_pow"
+version = "0.0.1"
+description = "An object oriented proof of work blockchain"
+readme = "README.md"
+authors = [{ name = "Basic Blockchains", email = "basicblockchains@gmail.com" }]
+license = { file = "LICENSE.txt" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Development Status :: 4 - Beta Copy",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Other Audience",
+    "Topic :: Security :: Cryptography",
+]
+keywords = ["cryptocurrency", "proof of work", "blockchain"]
+dependencies = [
+    "basicblockchains_ecc >=2.1.0"
+]
+requires-python = ">=3.10"
+
