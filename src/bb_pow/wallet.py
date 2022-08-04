@@ -233,4 +233,3 @@ def verify_address(address: str) -> bool:
     return sha256(
         sha256(epk.encode()).hexdigest().encode()
     ).hexdigest()[:8] == checksum
-
