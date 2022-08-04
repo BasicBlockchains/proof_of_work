@@ -3,7 +3,7 @@ The Wallet class
 '''
 import json
 import secrets
-from hashlib import sha256, sha512
+from hashlib import sha256, sha512, sha1
 from pathlib import Path
 from basicblockchains_ecc import elliptic_curve as EC
 import pandas as pd
@@ -39,6 +39,9 @@ class Wallet():
         # Create keys - seed dropped after generating keys
         self.private_key, self.public_key = self.get_keys(seed)
         self.compressed_public_key = self.curve.compress_point(self.public_key)
+
+        # Create address
+        self.address = create_address(self.compressed_public_key)
 
     # --- SEED METHODS --- #
 
@@ -147,3 +150,86 @@ class Wallet():
 def recover_wallet(seed_phrase: list):
     seed = Wallet.recover_seed(seed_phrase)
     return Wallet(seed)
+
+
+# --- BASE58 ENCODING/DECODING --- #
+BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+BASE58_LIST = [x for x in BASE58_ALPHABET]
+
+
+def int_to_base58(num: int) -> str:
+    '''
+    We create the string by successively dividing by 58 and appending the corresponding symbol to our string.
+    '''
+    # Start with empty string
+    base58_string = ''
+
+    # Return empty string if integer is negative
+    if num < 0:
+        return base58_string
+
+    # Catch zero case
+    if num == 0:
+        base58_string = '1'
+
+    # Create string from successive residues
+    else:
+        while num > 0:
+            remainder = num % 58
+            base58_string = BASE58_LIST[remainder] + base58_string
+            num = num // 58
+    return base58_string
+
+
+def base58_to_int(base58_string: str) -> int:
+    '''
+    To convert a base58 string back to an int:
+        -For each character, find the numeric index in the list of alphabet characters
+        -Multiply this numeric value by a corresponding power of 58
+        -Sum all values
+    '''
+    return sum([BASE58_LIST.index(base58_string[x:x + 1]) * pow(58, len(base58_string) - x - 1) for x in
+                range(0, len(base58_string))])
+
+
+# --- ADDRESS --- #
+
+def create_address(compressed_public_key: str) -> str:
+    '''
+    We use the following address algorithm
+    1) Take the SHA256 of the compressed_public_key string
+    2) Take the SHA1 of the above hash result - ensure it's 40 characters. Call this the encoded public key (EPK)
+    3) Take the first 8 characters of SHA256 of the SHA256 of the EPK. This is the checksum
+    4) Append the checksum to EPK - call this the checksum encoded public key (CEPK)
+    5) Return the base58 encoding of the CEPK.
+    '''
+    # Get EPK
+    epk = sha1(
+        sha256(compressed_public_key.encode()).hexdigest().encode()
+    ).hexdigest()
+
+    # Make sure it's 40 characters
+    while len(epk) != 40:
+        epk = '0' + epk
+
+    # Get checksum
+    checksum = sha256(
+        sha256(epk.encode()).hexdigest().encode()
+    ).hexdigest()[:8]
+
+    # Create cepk and return address
+    cepk = epk + checksum
+    return int_to_base58(int(cepk, 16))
+
+
+def verify_address(address: str) -> bool:
+    '''
+    We decode from base58 and verify that the epk generates the expected checksum
+    '''
+    hex_addy = hex(base58_to_int(address))[2:]
+    epk = hex_addy[:-8]
+    checksum = hex_addy[-8:]
+
+    return sha256(
+        sha256(epk.encode()).hexdigest().encode()
+    ).hexdigest()[:8] == checksum
