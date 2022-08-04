@@ -33,9 +33,9 @@ def test_wallet_signature():
     tx_id = sha256(random_string.encode()).hexdigest()
 
     w = Wallet()
-    (hr, hs) = w.sign_transaction(tx_id)
+    signature = w.sign_transaction(tx_id)
     curve = secp256k1()
-    assert curve.verify_signature((int(hr, 16), int(hs, 16)), tx_id, w.public_key)
+    assert curve.verify_signature(signature, tx_id, w.public_key)
 
 
 def test_base58():
@@ -51,6 +51,11 @@ def test_base58():
     random_base58_string = ''
     for x in range(0, string_length):
         random_base58_string += random.choice(BASE58_ALPHABET)
+
+    # Remove prepended zeros from random_string
+    while random_base58_string[:1] == '1':
+        random_base58_string = random_base58_string[1:]
+
     assert int_to_base58(base58_to_int(random_base58_string)) == random_base58_string
 
 

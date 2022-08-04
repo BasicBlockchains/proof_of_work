@@ -142,8 +142,7 @@ class Wallet():
 
     # --- SIGN TRANSACTION --- #
     def sign_transaction(self, tx_id: str):
-        (r, s) = self.curve.generate_signature(self.private_key, tx_id)
-        return (hex(r), hex(s))
+        return self.curve.generate_signature(self.private_key, tx_id)
 
 
 # --- RECOVER WALLET --- #
@@ -229,6 +228,10 @@ def verify_address(address: str) -> bool:
     hex_addy = hex(base58_to_int(address))[2:]
     epk = hex_addy[:-8]
     checksum = hex_addy[-8:]
+
+    # Make sure epk is 40 characters
+    while len(epk) != 40:
+        epk = '0' + epk
 
     return sha256(
         sha256(epk.encode()).hexdigest().encode()
