@@ -259,21 +259,21 @@ class DataBase:
         data_tuple = (tx_id, hex(tx_index))
         self.query_db(query, data_tuple)
 
-    ### --- RAW BLOCKS --- ###
-    # GET
-    def get_raw_block(self, height: int):
-        query = """SELECT raw_block from raw_blocks where rowid = ?"""
-        data_tuple = (height,)
-        return self.query_db(query, data_tuple)
-
-    # POST
-    def post_raw_block(self, raw_block: str):
-        query = """INSERT INTO raw_blocks VALUES (?)"""
-        data_tuple = (raw_block,)
-        self.query_db(query, data_tuple)
-
-    # DELETE
-    def delete_raw_block(self, height: str):
-        query = """DELETE FROM raw_blocks WHERE rowid = ?"""
-        data_tuple = (height,)
-        self.query_db(query, data_tuple)
+    # ### --- RAW BLOCKS --- ###
+    # # GET
+    # def get_raw_block(self, height: int):
+    #     query = """SELECT raw_block from raw_blocks where rowid = ?"""
+    #     data_tuple = (height,)
+    #     return self.query_db(query, data_tuple)
+    #
+    # # POST
+    # def post_raw_block(self, raw_block: str):
+    #     query = """INSERT INTO raw_blocks VALUES (?)"""
+    #     data_tuple = (raw_block,)
+    #     self.query_db(query, data_tuple)
+    #
+    # # DELETE
+    # def delete_raw_block(self, height: str):
+    #     query = """DELETE FROM raw_blocks WHERE rowid = ?"""
+    #     data_tuple = (height,)
+    #     self.query_db(query, data_tuple)
