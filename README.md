@@ -19,3 +19,5 @@ The create_address algorithm is as follows:
 ## Transactions
 
 ## Block
+
+### Merkle root
