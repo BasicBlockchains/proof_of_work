@@ -146,11 +146,12 @@ class Wallet():
 
     def encode_signature(self, signature: tuple):
         '''
-        We are given an integer signature (r,s) and we encode as
+        Given a signature tuple (r,s) for a given tx_id, the signature can be verified with the public key.
+        Hence to encode the signature, we provide the compressed public key and the values r and s.
+        Each value will be written as a hex string WITHOUT the leading '0x'. As these values can vary, they will be preceded by a 1-byte length code.
+        Thus the signature will be encoded as:
 
-            r_length + hex(r) + s_length + hex(s)
-
-        Lengths will be formatted to be 2 hex chars. Both hex(r) and hex(s) will NOT have the leading '0x'
+            compressed_key_length + compressed_key + r_length + r + s_length + s
         '''
         r, s = signature
         h_r = hex(r)[2:]
@@ -158,18 +159,43 @@ class Wallet():
         r_length = format(len(h_r), '02x')
         s_length = format(len(h_s), '02x')
 
-        return r_length + h_r + s_length + h_s
+        cpk = self.compressed_public_key[2:]
+        cpk_length = format(len(cpk), '02x')
 
-    def decode_signature(self, signature: str):
-        '''
-        Given the signature string, we decode and return the signature tuple (r,s)
-        '''
-        r_length = int(signature[:2], 16)
-        r = int(signature[2:2 + r_length], 16)
-        s_length = int(signature[2 + r_length:4 + r_length], 16)
-        s = int(signature[4 + r_length:4 + r_length + s_length], 16)
+        return cpk_length + cpk + r_length + h_r + s_length + h_s
 
-        return (r, s)
+    @staticmethod
+    def decode_signature(signature: str):
+        '''
+        We decode and return CPK, (r,s). NOTE: CPK will be a hex string again starting with '0x'
+        '''
+        # CPK
+        cpk_length = int(signature[:2], 16)
+        cpk = '0x' + signature[2:2 + cpk_length]
+
+        # R
+        r_index = 2 + cpk_length
+        r_length = int(signature[r_index:r_index + 2], 16)
+        r = int(signature[r_index + 2:r_index + 2 + r_length], 16)
+
+        # S
+        s_index = r_index + 2 + r_length
+        s_length = int(signature[s_index:s_index + 2], 16)
+        s = int(signature[s_index + 2:s_index + 2 + s_length], 16)
+
+        return cpk, (r, s)
+
+    # def decode_signature(self, signature: str):
+    #     '''
+    #     Given the signature string, we decode and return the signature tuple (r,s)
+    #     '''
+    #     cpk_length =
+    #     # r_length = int(signature[:2], 16)
+    #     # r = int(signature[2:2 + r_length], 16)
+    #     # s_length = int(signature[2 + r_length:4 + r_length], 16)
+    #     # s = int(signature[4 + r_length:4 + r_length + s_length], 16)
+    #
+    #     #return (r, s)
 
 
 # --- RECOVER WALLET --- #

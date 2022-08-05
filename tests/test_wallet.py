@@ -41,7 +41,10 @@ def test_signature_encoding():
     tx_id = random_tx_id()
     w = Wallet()
     signature_tuple = w.sign_transaction(tx_id)
-    assert w.decode_signature(w.encode_signature(signature_tuple)) == signature_tuple
+    encoded_signature = w.encode_signature(signature_tuple)
+    calc_cpk, (calc_r, calc_s) = w.decode_signature(encoded_signature)
+    assert calc_cpk == w.compressed_public_key
+    assert (calc_r, calc_s) == signature_tuple
 
 
 def test_base58():
