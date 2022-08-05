@@ -109,7 +109,9 @@ def test_merkle_root():
 
 def test_block():
     transactions = []
-    random_length = secrets.randbelow(6)
+    random_length = 0
+    while random_length < 1:
+        random_length = secrets.randbits(4)
     for x in range(random_length):
         transactions.append(get_random_transaction())
 
