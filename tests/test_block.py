@@ -9,6 +9,7 @@ from src.bb_pow.block import Block, calc_merkle_root, merkle_proof
 from .test_wallet import random_tx_id
 from hashlib import sha256
 from src.bb_pow.timestamp import utc_to_seconds
+import json
 
 
 # ---Helpers---#
@@ -38,8 +39,8 @@ def get_random_utxo_output():
 
 
 def get_random_transaction():
-    input_count = secrets.randbits(8)
-    output_count = secrets.randbits(8)
+    input_count = secrets.randbits(4)
+    output_count = secrets.randbits(4)
 
     inputs = []
     for x in range(0, input_count):
@@ -104,3 +105,26 @@ def test_merkle_root():
     assert layer1_3['is_left'] == True
     assert layer0_3[0] == test_block.merkle_root
     assert layer0_3['root_verified'] == True
+
+
+def test_block():
+    transactions = []
+    random_length = secrets.randbelow(6)
+    for x in range(random_length):
+        transactions.append(get_random_transaction())
+
+    prev_id = random_tx_id()
+    target = secrets.randbits(256)
+    nonce = secrets.randbits(256)
+    timestamp = utc_to_seconds()
+
+    test_block = Block(prev_id, target, nonce, timestamp, transactions)
+    calc_block = Block(
+        test_block.previous_id,
+        int(test_block.target, 16),
+        test_block.nonce,
+        test_block.timestamp,
+        test_block.transactions
+    )
+    assert test_block.id == calc_block.id
+    print(json.dumps(json.loads(test_block.to_json), indent=3))

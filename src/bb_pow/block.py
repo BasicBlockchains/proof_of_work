@@ -3,6 +3,7 @@ The Block class
 '''
 from .transactions import Transaction
 from hashlib import sha256
+import json
 
 
 class Block():
@@ -27,9 +28,31 @@ class Block():
         # Calculate merkle root
         self.merkle_root = calc_merkle_root(self.tx_ids)
 
+    def __repr__(self):
+        return self.to_json
+
+    @property
+    def to_json(self):
+        block_dict = {
+            "previous_id": self.previous_id,
+            "target": self.target,
+            "nonce": self.nonce,
+            "timestamp": self.timestamp,
+            "tx_count": len(self.transactions)
+        }
+        for t in self.transactions:
+            block_dict.update({
+                f'tx_{self.transactions.index(t)}': json.loads(t.to_json)
+            })
+        return json.dumps(block_dict)
+
     @property
     def tx_ids(self):
         return [tx.id for tx in self.transactions]
+
+    @property
+    def id(self):
+        return sha256(self.to_json.encode()).hexdigest()
 
 
 # --- Merkle Root Calculations ---#
