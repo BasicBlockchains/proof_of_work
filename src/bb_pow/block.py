@@ -71,10 +71,6 @@ def calc_merkle_root(hash_list: list):
     return tx_hashes[0]
 
 
-def hashlist(list_to_hash: list):
-    return [sha256(raw_hex.encode()).hexdigest() for raw_hex in list_to_hash]
-
-
 def hashpairs(list_to_hash: list):
     if len(list_to_hash) == 1:
         return list_to_hash
