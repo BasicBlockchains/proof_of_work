@@ -127,4 +127,3 @@ def test_block():
         test_block.transactions
     )
     assert test_block.id == calc_block.id
-    print(json.dumps(json.loads(test_block.to_json), indent=3))
