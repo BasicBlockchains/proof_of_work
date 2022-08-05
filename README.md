@@ -21,3 +21,13 @@ The create_address algorithm is as follows:
 ## Block
 
 ### Merkle root
+
+## Blockchain
+
+### Database
+
+We use SQLite3 as our database. This has a type limitation as their integers are signed and only store (-2^63+1,
+2^63-1). Thus all integers saved to the db will be given as hex strings with a prepended '0x'.
+
+I would like to thank Jurko Gospodnetic of stackoverflow for his db query design.
+-https://stackoverflow.com/questions/9561832/what-if-i-dont-close-the-database-connection-in-python-sqlite
