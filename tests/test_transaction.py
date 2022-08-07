@@ -14,7 +14,7 @@ def test_transaction():
     tx_id = random_tx_id()
     index = secrets.randbelow(100)
     w1 = Wallet()
-    signature = w1.encode_signature(w1.sign_transaction(tx_id))
+    signature = w1.sign_transaction(tx_id)
 
     utxo_input = UTXO_INPUT(tx_id, index, signature)
 

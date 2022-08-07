@@ -7,6 +7,7 @@ from hashlib import sha256, sha512, sha1
 from pathlib import Path
 from basicblockchains_ecc import elliptic_curve as EC
 import pandas as pd
+from .signature import Signature
 
 
 class Wallet():
@@ -141,61 +142,8 @@ class Wallet():
         return private_key, public_key
 
     # --- SIGN TRANSACTION --- #
-    def sign_transaction(self, tx_id: str):
-        return self.curve.generate_signature(self.private_key, tx_id)
-
-    def encode_signature(self, signature: tuple):
-        '''
-        Given a signature tuple (r,s) for a given tx_id, the signature can be verified with the public key.
-        Hence to encode the signature, we provide the compressed public key and the values r and s.
-        Each value will be written as a hex string WITHOUT the leading '0x'. As these values can vary, they will be preceded by a 1-byte length code.
-        Thus the signature will be encoded as:
-
-            compressed_key_length + compressed_key + r_length + r + s_length + s
-        '''
-        r, s = signature
-        h_r = hex(r)[2:]
-        h_s = hex(s)[2:]
-        r_length = format(len(h_r), '02x')
-        s_length = format(len(h_s), '02x')
-
-        cpk = self.compressed_public_key[2:]
-        cpk_length = format(len(cpk), '02x')
-
-        return cpk_length + cpk + r_length + h_r + s_length + h_s
-
-    @staticmethod
-    def decode_signature(signature: str):
-        '''
-        We decode and return CPK, (r,s). NOTE: CPK will be a hex string again starting with '0x'
-        '''
-        # CPK
-        cpk_length = int(signature[:2], 16)
-        cpk = '0x' + signature[2:2 + cpk_length]
-
-        # R
-        r_index = 2 + cpk_length
-        r_length = int(signature[r_index:r_index + 2], 16)
-        r = int(signature[r_index + 2:r_index + 2 + r_length], 16)
-
-        # S
-        s_index = r_index + 2 + r_length
-        s_length = int(signature[s_index:s_index + 2], 16)
-        s = int(signature[s_index + 2:s_index + 2 + s_length], 16)
-
-        return cpk, (r, s)
-
-    # def decode_signature(self, signature: str):
-    #     '''
-    #     Given the signature string, we decode and return the signature tuple (r,s)
-    #     '''
-    #     cpk_length =
-    #     # r_length = int(signature[:2], 16)
-    #     # r = int(signature[2:2 + r_length], 16)
-    #     # s_length = int(signature[2 + r_length:4 + r_length], 16)
-    #     # s = int(signature[4 + r_length:4 + r_length + s_length], 16)
-    #
-    #     #return (r, s)
+    def sign_transaction(self, tx_id: str) -> Signature:
+        return Signature(tx_id, self.private_key)
 
 
 # --- RECOVER WALLET --- #

@@ -9,6 +9,7 @@ from src.bb_pow.block import Block, calc_merkle_root, merkle_proof
 from .test_wallet import random_tx_id
 from hashlib import sha256
 from src.bb_pow.timestamp import utc_to_seconds
+from src.bb_pow.signature import Signature
 import json
 
 
@@ -16,11 +17,11 @@ import json
 def get_random_utxo_input():
     # Id and index
     tx_id = random_tx_id()
-    index = secrets.randbits(8)
+    index = secrets.randbits(4)
     wallet = Wallet()
 
     # Signature
-    signature = wallet.encode_signature(wallet.sign_transaction(tx_id))
+    signature = wallet.sign_transaction(tx_id)
 
     # UTXO
     return UTXO_INPUT(tx_id, index, signature)

@@ -16,7 +16,7 @@ def test_utxo():
     w = Wallet()
     tx_id = random_tx_id()
     random_num = secrets.randbelow(100)
-    signature = w.encode_signature(w.sign_transaction(tx_id))
+    signature = w.sign_transaction(tx_id)
     utxo_input = UTXO_INPUT(tx_id, random_num, signature)
     calc_input = UTXO_INPUT(utxo_input.tx_id, utxo_input.index, utxo_input.signature)
     assert utxo_input.id == calc_input.id

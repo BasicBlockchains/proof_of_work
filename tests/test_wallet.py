@@ -8,6 +8,7 @@ import secrets
 import string
 from hashlib import sha256
 from basicblockchains_ecc.elliptic_curve import secp256k1
+from src.bb_pow.signature import Signature
 
 
 def test_seed_recover():
@@ -31,20 +32,7 @@ def test_wallet_signature():
     w = Wallet()
     signature = w.sign_transaction(tx_id)
     curve = secp256k1()
-    assert curve.verify_signature(signature, tx_id, w.public_key)
-
-
-def test_signature_encoding():
-    '''
-    We create a signature, then encode and decode the signature to make sure we have the same point
-    '''
-    tx_id = random_tx_id()
-    w = Wallet()
-    signature_tuple = w.sign_transaction(tx_id)
-    encoded_signature = w.encode_signature(signature_tuple)
-    calc_cpk, (calc_r, calc_s) = w.decode_signature(encoded_signature)
-    assert calc_cpk == w.compressed_public_key
-    assert (calc_r, calc_s) == signature_tuple
+    assert curve.verify_signature(signature.ecdsa_tuple, tx_id, w.public_key)
 
 
 def test_base58():
