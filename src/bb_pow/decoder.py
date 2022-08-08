@@ -1,7 +1,7 @@
 '''
 Decoder - decodes various formatted data structs
 '''
-import basicblockchains_ecc.elliptic_curve
+from basicblockchains_ecc.elliptic_curve import secp256k1
 
 from .formatter import Formatter
 from hashlib import sha256
@@ -19,7 +19,7 @@ class Decoder:
         parity = int(cpk[:-self.F.HASH_CHARS], 16) % 2
         x = int(cpk[-self.F.HASH_CHARS:], 16)
 
-        curve = basicblockchains_ecc.elliptic_curve.secp256k1()
+        curve = secp256k1()
 
         # Check x
         try:
@@ -73,7 +73,7 @@ class Decoder:
         # Return cpk and ecdsa tuple
         return cpk, (r, s)
 
-    def signature_json(self, signature):
+    def signature_json(self, signature: str):
         cpk, (r, s) = self.decode_signature(signature)
         signature_dict = {
             "compressed_public_key": cpk,
@@ -115,3 +115,11 @@ class Decoder:
         return sha256(
             sha256(epk.encode()).hexdigest().encode()
         ).hexdigest()[:self.F.CHECKSUM_CHARS] == checksum
+
+    def verify_signature(self, signature: str, tx_id: str):
+        # Get signature parts
+        cpk, ecdsa_tuple = self.decode_signature(signature)
+
+        # Verify address
+        curve = secp256k1()
+        return curve.verify_signature(ecdsa_tuple, tx_id, curve.decompress_point(cpk))

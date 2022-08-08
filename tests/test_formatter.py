@@ -6,6 +6,7 @@ import secrets
 from src.bb_pow.wallet import Wallet
 from src.bb_pow.decoder import Decoder
 from src.bb_pow.formatter import Formatter
+from .test_wallet import random_tx_id
 
 
 def test_cpk():
@@ -46,3 +47,13 @@ def test_verify_address():
     # Decoder
     d = Decoder()
     assert d.verify_address(Wallet().address)
+
+
+def test_verify_signature():
+    d = Decoder()
+    f = Formatter()
+    tx_id = random_tx_id()
+    w = Wallet()
+    signature = f.signature(w.private_key, tx_id)
+    assert d.verify_signature(signature, tx_id)
+    assert d.verify_signature(w.sign_transaction(tx_id), tx_id)
