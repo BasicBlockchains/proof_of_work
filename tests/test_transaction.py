@@ -7,14 +7,18 @@ from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
 from src.bb_pow.transactions import Transaction
 from src.bb_pow.wallet import Wallet
 from .test_wallet import random_tx_id
+from src.bb_pow.decoder import Decoder
 
 
 def test_transaction():
+    # Decoder
+    d = Decoder()
+
     # Random utxo_input
     tx_id = random_tx_id()
     index = secrets.randbelow(100)
     w1 = Wallet()
-    signature = w1.encode_signature(w1.sign_transaction(tx_id))
+    signature = w1.sign_transaction(tx_id)
 
     utxo_input = UTXO_INPUT(tx_id, index, signature)
 
@@ -28,5 +32,8 @@ def test_transaction():
 
     # Transaction
     tx = Transaction(inputs=[utxo_input], outputs=[utxo_output])
-    calc_tx = Transaction(inputs=tx.inputs, outputs=tx.outputs)
-    assert tx.id == calc_tx.id
+    recovered_tx = d.raw_transaction(tx.raw_tx)
+
+    # Assertions
+    assert tx.id == recovered_tx.id
+    assert tx.raw_tx == recovered_tx.raw_tx

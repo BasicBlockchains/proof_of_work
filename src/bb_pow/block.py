@@ -4,6 +4,7 @@ The Block class
 from .transactions import Transaction
 from hashlib import sha256
 import json
+from .formatter import Formatter
 
 
 class Block():
@@ -17,10 +18,12 @@ class Block():
 
     The Merkle Root for the transaction list will be calculated automatically
     '''
+    # Formatter
+    F = Formatter()
 
     def __init__(self, prev_id: str, target: int, nonce: int, timestamp: int, transactions: list):
         self.previous_id = prev_id
-        self.target = hex(target)  # Keep target as hex string for ease of use
+        self.target = target
         self.nonce = nonce
         self.timestamp = timestamp
         self.transactions = transactions
@@ -30,6 +33,19 @@ class Block():
 
     def __repr__(self):
         return self.to_json
+
+    @property
+    def raw_headers(self):
+        return self.F.block_headers(self.previous_id, self.merkle_root, self.target, self.nonce, self.timestamp)
+
+    @property
+    def raw_transactions(self):
+        return self.F.block_transactions(self.transactions)
+
+    @property
+    def raw_block(self):
+        return self.F.block(self.previous_id, self.merkle_root, self.target, self.nonce, self.timestamp,
+                            self.transactions)
 
     @property
     def to_json(self):
@@ -52,7 +68,7 @@ class Block():
 
     @property
     def id(self):
-        return sha256(self.to_json.encode()).hexdigest()
+        return sha256(self.raw_headers.encode()).hexdigest()
 
 
 # --- Merkle Root Calculations ---#

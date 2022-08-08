@@ -1,0 +1,330 @@
+'''
+Decoder - decodes various formatted data structs
+'''
+from basicblockchains_ecc.elliptic_curve import secp256k1
+
+from .formatter import Formatter
+from hashlib import sha256
+import json
+from .utxo import UTXO_INPUT, UTXO_OUTPUT
+from .transactions import Transaction
+from .block import Block
+
+
+class Decoder:
+    F = Formatter()
+    t_index = F.TYPE_CHARS
+    v_index = t_index + F.VERSION_CHARS
+
+    # Verify type version
+    def verify_type_version(self, data_type: int, data_version: int, raw_data: str) -> bool:
+        # Type and version
+        type = int(raw_data[:self.t_index], 16)
+        version = int(raw_data[self.t_index:self.v_index], 16)
+
+        try:
+            assert type == data_type
+            assert version == data_version
+            assert data_version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Type/version error when decoding raw data.')
+            print(f'Type: {type}, data_type: {data_type}')
+            print(f'Version: {version}, data_version: {data_version}')
+            print(f'Raw Data: {raw_data}')
+            return False
+        return True
+
+    # Decode target
+    def int_from_target(self, encoded_target: str):
+        # Index
+        coeff_index = self.F.TARGET_COEFFICIENT_CHARS
+        exp_index = self.F.TARGET_EXPONENT_CHARS + coeff_index
+
+        coeff = int(encoded_target[:coeff_index], 16)
+        exp = int(encoded_target[coeff_index:exp_index], 16)
+
+        return coeff * pow(2, 8 * (exp - 3))
+
+    ##CPK, Signature, Address
+
+    def decode_cpk(self, cpk: str) -> tuple:
+        '''
+        The cpk is a hex string - this may or may not have a leading '0x' indicator.
+        Hence, we obtain the x point first by moving from EOS backwards, then what's left is parity integer.
+        '''
+        parity = int(cpk[:-self.F.HASH_CHARS], 16) % 2
+        x = int(cpk[-self.F.HASH_CHARS:], 16)
+
+        curve = secp256k1()
+
+        # Check x
+        try:
+            assert curve.is_x_on_curve(x)
+        except AssertionError:
+            # Logging
+            print('x not on curve')
+            return (None,)
+
+        # Get y
+        temp_y = curve.find_y_from_x(x)
+
+        # Check parity
+        y = temp_y if temp_y % 2 == parity else curve.p - temp_y
+
+        # Check point
+        try:
+            assert curve.is_point_on_curve((x, y))
+        except AssertionError:
+            # Logging
+            print('Point not on curve')
+            return (None,)
+        # Return point
+        return (x, y)
+
+    def decode_signature(self, signature: str):
+
+        # Verify type/version
+        type = int(signature[:self.F.TYPE_CHARS], 16)
+        version = int(signature[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS], 16)
+
+        try:
+            assert type == self.F.SIGNATURE_TYPE
+            assert version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Signature has incorrect type and/or version')
+            return False
+
+        # Indexing
+        start_index = self.F.TYPE_CHARS + self.F.VERSION_CHARS
+        cpk_index = start_index + self.F.COEFF_CHARS + self.F.HASH_CHARS
+        r_index = cpk_index + self.F.HASH_CHARS
+        s_index = r_index + self.F.HASH_CHARS
+
+        # Values
+        cpk = '0x' + signature[start_index:cpk_index]
+        r = int(signature[cpk_index:r_index], 16)
+        s = int(signature[r_index:s_index], 16)
+
+        # Return cpk and ecdsa tuple
+        return cpk, (r, s)
+
+    def signature_json(self, signature: str):
+        cpk, (r, s) = self.decode_signature(signature)
+        signature_dict = {
+            "compressed_public_key": cpk,
+            "r": hex(r),
+            "s": hex(s)
+        }
+        return json.dumps(signature_dict)
+
+    def verify_address(self, address: str) -> bool:
+        '''
+        We decode from base58 and verify that the epk generates the expected checksum.
+        Leading 0 loss may occur going from str to int - we remove the type/version and checksum and what remains is epk.
+        '''
+        # First get hex value - remove leading '0x'
+        hex_addy = hex(self.F.base58_to_int(address))[2:]
+
+        # Verify type/version
+        type = int(hex_addy[:self.F.TYPE_CHARS], 16)
+        version = int(hex_addy[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS], 16)
+
+        try:
+            assert type == self.F.ADDRESS_TYPE
+            assert version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Address has incorrect type and/or version')
+            return False
+
+        # Indexing
+        start_index = self.F.TYPE_CHARS + self.F.VERSION_CHARS
+        end_index = -self.F.CHECKSUM_CHARS
+
+        epk = hex_addy[start_index:end_index]
+        checksum = hex_addy[end_index:]
+
+        while len(epk) != self.F.ADDRESS_DIGEST:
+            epk = '0' + epk
+
+        return sha256(
+            sha256(epk.encode()).hexdigest().encode()
+        ).hexdigest()[:self.F.CHECKSUM_CHARS] == checksum
+
+    def verify_signature(self, signature: str, tx_id: str):
+        # Get signature parts
+        cpk, ecdsa_tuple = self.decode_signature(signature)
+
+        # Verify address
+        curve = secp256k1()
+        return curve.verify_signature(ecdsa_tuple, tx_id, curve.decompress_point(cpk))
+
+    # UTXOS
+
+    def raw_utxo_input(self, raw_utxo: str):
+        # Type and version
+        type = int(raw_utxo[:self.t_index], 16)
+        version = int(raw_utxo[self.t_index:self.v_index], 16)
+
+        try:
+            assert type == self.F.UTXO_INPUT_TYPE
+            assert version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Type/version error when decoding raw utxo input')
+            return None
+
+        # tx_id, tx_index, signature
+        index0 = self.v_index
+        index1 = index0 + self.F.HASH_CHARS
+        index2 = index1 + self.F.INDEX_CHARS
+        index3 = index2 + self.F.SIGNATURE_CHARS
+
+        tx_id = raw_utxo[index0:index1]
+        tx_index = int(raw_utxo[index1:index2], 16)
+        signature = raw_utxo[index2:index3]
+
+        return UTXO_INPUT(tx_id, tx_index, signature)
+
+    def raw_utxo_output(self, raw_utxo: str):
+        # Type and version
+        type = int(raw_utxo[:self.t_index], 16)
+        version = int(raw_utxo[self.t_index:self.v_index], 16)
+
+        try:
+            assert type == self.F.UTXO_OUTPUT_TYPE
+            assert version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Type/version error when decoding raw utxo output')
+            return None
+
+        # tx_id, tx_index, signature
+        index0 = self.v_index
+        index1 = index0 + self.F.AMOUNT_CHARS
+        index2 = index1 + self.F.ADDRESS_CHARS
+        index3 = index2 + self.F.HEIGHT_CHARS
+
+        amount = int(raw_utxo[index0:index1], 16)
+        address = self.F.int_to_base58(int(raw_utxo[index1:index2], 16))
+        block_height = int(raw_utxo[index2:index3], 16)
+
+        return UTXO_OUTPUT(amount, address, block_height)
+
+    # Transaction
+    def raw_transaction(self, raw_tx: str):
+        # Type and version
+        type = int(raw_tx[:self.t_index], 16)
+        version = int(raw_tx[self.t_index:self.v_index], 16)
+
+        try:
+            assert type == self.F.TX_TYPE
+            assert version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Type/version error when decoding raw transaction')
+            return None
+
+        temp_index = self.v_index + self.F.COUNT_CHARS
+
+        # Get inputs
+        input_count = int(raw_tx[self.v_index:temp_index], 16)
+        inputs = []
+        for x in range(input_count):
+            utxo_input = self.raw_utxo_input(raw_tx[temp_index:])
+            inputs.append(utxo_input)
+            temp_index += len(utxo_input.raw_utxo)
+
+        # Get outputs
+        output_count = int(raw_tx[temp_index:temp_index + self.F.COUNT_CHARS], 16)
+        outputs = []
+        temp_index += self.F.COUNT_CHARS
+        for y in range(output_count):
+            utxo_output = self.raw_utxo_output(raw_tx[temp_index:])
+            outputs.append(utxo_output)
+            temp_index += len(utxo_output.raw_utxo)
+
+        # Return Transaction
+        return Transaction(inputs, outputs)
+
+    # Block
+    def raw_block(self, raw_block: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_TYPE, self.F.VERSION, raw_block):
+            # Logging
+            print('Type/Version error in raw block')
+            return None
+
+        # Indexing
+        header_index = self.v_index + self.F.HEADERS_CHARS
+
+        # Headers
+        header_dict = self.raw_block_headers(raw_block[self.v_index:self.v_index + self.F.HEADERS_CHARS])
+        transactions = self.raw_block_transactions(raw_block[self.v_index + self.F.HEADERS_CHARS:])
+
+        # Get header values
+        prev_id = header_dict['prev_id']
+        merkle_root = header_dict['merkle_root']
+        target = header_dict['target']
+        nonce = header_dict['nonce']
+        timestamp = header_dict['timestamp']
+
+        # Get block and verify merkle root
+        block = Block(prev_id, target, nonce, timestamp, transactions)
+        if block.merkle_root != merkle_root:
+            # Logging
+            print('Merkle root error when recreating block from raw')
+            return None
+        return block
+
+    def raw_block_headers(self, raw_headers: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_HEADER_TYPE, self.F.VERSION, raw_headers):
+            # Logging
+            print('Type/Version error in raw block headers')
+            return None
+
+        # Indexing
+        index0 = self.v_index
+        index1 = index0 + self.F.HASH_CHARS
+        index2 = index1 + self.F.HASH_CHARS
+        index3 = index2 + self.F.TARGET_CHARS
+        index4 = index3 + self.F.NONCE_CHARS
+        index5 = index4 + self.F.TIMESTAMP_CHARS
+
+        # Recover values
+        prev_id = raw_headers[index0:index1]
+        merkle_root = raw_headers[index1:index2]
+        target = self.int_from_target(raw_headers[index2:index3])
+        nonce = int(raw_headers[index3:index4], 16)
+        timestamp = int(raw_headers[index4:index5], 16)
+
+        # Return dict
+        return {
+            "prev_id": prev_id,
+            "merkle_root": merkle_root,
+            "target": target,
+            "nonce": nonce,
+            "timestamp": timestamp
+        }
+
+    def raw_block_transactions(self, raw_txs: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_TX_TYPE, self.F.VERSION, raw_txs):
+            # Logging
+            print('Type/Version error in raw block transactions')
+            return None
+
+        # Tx_count
+        tx_count = int(raw_txs[self.v_index:self.v_index + self.F.COUNT_CHARS], 16)
+        transactions = []
+        temp_index = self.v_index + self.F.COUNT_CHARS
+        for x in range(tx_count):
+            tx = self.raw_transaction(raw_txs[temp_index:])
+            transactions.append(tx)
+            temp_index += len(tx.raw_tx)
+
+        # Return tx_list
+        return transactions

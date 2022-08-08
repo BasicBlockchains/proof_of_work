@@ -120,7 +120,7 @@ class DataBase:
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
-                "target": target,
+                "target": int(target, 16),
                 "nonce": int(h_nonce, 16),
                 "timestamp": int(h_timestamp, 16)
             })
@@ -138,7 +138,7 @@ class DataBase:
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
-                "target": target,
+                "target": int(target, 16),
                 "nonce": int(h_nonce, 16),
                 "timestamp": int(h_timestamp, 16)
             })
@@ -156,7 +156,7 @@ class DataBase:
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
-                "target": target,
+                "target": int(target, 16),
                 "nonce": int(h_nonce, 16),
                 "timestamp": int(h_timestamp, 16)
             })
@@ -167,7 +167,7 @@ class DataBase:
     def post_block(self, block: Block, height: int):
         query = """INSERT INTO block_headers VALUES (?,?,?,?,?,?,?)"""
         data_tuple = (
-            hex(height), block.id, block.previous_id, block.merkle_root, block.target, hex(block.nonce),
+            hex(height), block.id, block.previous_id, block.merkle_root, hex(block.target), hex(block.nonce),
             hex(block.timestamp))
         self.query_db(query, data_tuple)
 
