@@ -4,12 +4,15 @@ The Transactions class
 from .utxo import UTXO_OUTPUT, UTXO_INPUT
 import json
 from hashlib import sha256
+from .formatter import Formatter
 
 
 class Transaction():
     '''
     Transactions are instantiated with a list of utxo_inputs and utxo_outputs
     '''
+    # Formatter
+    f = Formatter()
 
     def __init__(self, inputs: list, outputs: list):
         self.inputs = inputs
@@ -34,5 +37,9 @@ class Transaction():
         return json.dumps(tx_dict)
 
     @property
+    def raw_tx(self):
+        return self.f.transaction(self.inputs, self.outputs)
+
+    @property
     def id(self):
-        return sha256(self.to_json.encode()).hexdigest()
+        return sha256(self.raw_tx.encode()).hexdigest()

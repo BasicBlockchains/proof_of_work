@@ -183,3 +183,25 @@ class Formatter():
 
         # Raw utxo = type (2 hex) + version (2 hex) + amount (16 hex) + address (52 hex) + block_height (16 hex) = 44 bytes
         return type + self.FORMATTED_VERSION + f_amount + f_address + f_block_height
+
+    # Transaction
+    def transaction(self, inputs: list, outputs: list):
+        # Type
+        type = format(self.TX_TYPE, f'0{self.TYPE_CHARS}x')
+
+        # Format input/output counts
+        input_count = format(len(inputs), f'0{self.COUNT_CHARS}x')
+        output_count = format(len(outputs), f'0{self.COUNT_CHARS}x')
+
+        # Format inputs
+        input_string = ''
+        for utxo_input in inputs:
+            input_string += utxo_input.raw_utxo
+
+        # Format outputs
+        output_string = ''
+        for utxo_output in outputs:
+            output_string += utxo_output.raw_utxo
+
+        # Raw = type + version + input_count + input_string + output_count + output_string
+        return type + self.FORMATTED_VERSION + input_count + input_string + output_count + output_string
