@@ -1,7 +1,6 @@
 '''
 The Miner class
 '''
-from timestamp import utc_to_seconds
 from .block import Block
 
 
@@ -14,8 +13,9 @@ class Miner():
         self.is_mining = True
 
         # Start Mining
-        while int(block.id, 16) > int(block.target, 16) and self.is_mining:
+        while int(block.id, 16) > block.target and self.is_mining:
             block.nonce += 1
+            # print(f'Current block id: {block.id}', end='\r')
 
         if self.is_mining:
             return block
