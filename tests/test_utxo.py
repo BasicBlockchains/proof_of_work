@@ -3,7 +3,8 @@ Tests for the UTXO class
 '''
 import secrets
 
-from src.bb_pow.utxo import *
+from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
+from src.bb_pow.wallet import Wallet
 from .test_wallet import random_tx_id
 
 

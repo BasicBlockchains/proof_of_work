@@ -2,15 +2,14 @@
 We test the Block class and related functions
 '''
 import secrets
-from src.bb_pow.wallet import Wallet
-from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.transactions import Transaction
-from src.bb_pow.block import Block, calc_merkle_root, merkle_proof
-from .test_wallet import random_tx_id
 from hashlib import sha256
+
+from src.bb_pow.block import Block, calc_merkle_root, merkle_proof
 from src.bb_pow.timestamp import utc_to_seconds
-from src.bb_pow.signature import Signature
-import json
+from src.bb_pow.transactions import Transaction
+from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
+from src.bb_pow.wallet import Wallet
+from .test_wallet import random_tx_id
 
 
 # ---Helpers---#

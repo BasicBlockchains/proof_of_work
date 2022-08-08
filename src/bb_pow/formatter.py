@@ -2,6 +2,7 @@
 TESTING
 '''
 import basicblockchains_ecc.elliptic_curve
+from hashlib import sha256, sha1
 
 
 class Formatter():
@@ -10,6 +11,7 @@ class Formatter():
     '''
     # Fixed version to start
     VERSION = 0x01
+    ACCEPTED_VERSIONS = [0x01]
 
     # Mine parameters
     TOTAL_MINING_AMOUNT = pow(2, 64) - 1
@@ -76,6 +78,43 @@ class Formatter():
     ERROR_TYPE = 0x02
     PING_TYPE = 0x03
 
+    # --- BASE58 ENCODING/DECODING --- #
+    BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+    BASE58_LIST = [x for x in BASE58_ALPHABET]
+
+    def int_to_base58(self, num: int) -> str:
+        '''
+        We create the string by successively dividing by 58 and appending the corresponding symbol to our string.
+        '''
+        # Start with empty string
+        base58_string = ''
+
+        # Return empty string if integer is negative
+        if num < 0:
+            return base58_string
+
+        # Catch zero case
+        if num == 0:
+            base58_string = '1'
+
+        # Create string from successive residues
+        else:
+            while num > 0:
+                remainder = num % 58
+                base58_string = self.BASE58_LIST[remainder] + base58_string
+                num = num // 58
+        return base58_string
+
+    def base58_to_int(self, base58_string: str) -> int:
+        '''
+        To convert a base58 string back to an int:
+            -For each character, find the numeric index in the list of alphabet characters
+            -Multiply this numeric value by a corresponding power of 58
+            -Sum all values
+        '''
+        return sum([self.BASE58_LIST.index(base58_string[x:x + 1]) * pow(58, len(base58_string) - x - 1) for x in
+                    range(0, len(base58_string))])
+
     def format_int(self, num: int, character_format: int):
         return format(num, f'0{character_format}x')
 
@@ -88,3 +127,41 @@ class Formatter():
         (x, y) = public_key
         prefix = '0x02' if (y % 2) == 0 else '0x03'
         return prefix + format(x, f'0{self.HASH_CHARS}x')
+
+    def address(self, cpk: str):
+        epk = sha1(
+            sha256(cpk.encode()).hexdigest().encode()
+        ).hexdigest()
+
+        # Verify epk message digest
+        while len(epk) != self.ADDRESS_DIGEST:
+            epk = '0' + epk
+
+        checksum = sha256(
+            sha256(epk.encode()).hexdigest().encode()
+        ).hexdigest()[:self.CHECKSUM_CHARS]
+
+        # Prefix type and version
+        type = format(self.ADDRESS_TYPE, f'0{self.TYPE_CHARS}x')
+        version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
+
+        # Address = type + version + epk + checksum (26 byte address)
+        return self.int_to_base58(int(type + version + epk + checksum, 16))
+
+    def signature(self, private_key: int, tx_id: str):
+        # Get curve
+        curve = basicblockchains_ecc.elliptic_curve.secp256k1()
+
+        # Format ecdsa tuple
+        (r, s) = curve.generate_signature(private_key, tx_id)
+        h_r = format(r, f'0{self.HASH_CHARS}x')
+        h_s = format(s, f'0{self.HASH_CHARS}x')
+
+        # Get formatted cpk - remove leading '0x'
+        cpk = self.cpk(curve.scalar_multiplication(private_key, curve.generator))[2:]
+
+        # signature = type + version + cpk + h_r + h_s (100 bytes)
+        type = format(self.SIGNATURE_TYPE, f'0{self.TYPE_CHARS}x')
+        version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
+
+        return type + version + cpk + h_r + h_s

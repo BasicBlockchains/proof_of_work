@@ -2,13 +2,14 @@
 Tests for the Wallet class
 '''
 import random
-
-from src.bb_pow.wallet import Wallet, recover_wallet, int_to_base58, base58_to_int, BASE58_ALPHABET, verify_address
 import secrets
 import string
 from hashlib import sha256
+
 from basicblockchains_ecc.elliptic_curve import secp256k1
-from src.bb_pow.signature import Signature
+
+from src.bb_pow.wallet import Wallet, recover_wallet
+from src.bb_pow.decoder import Decoder
 
 
 def test_seed_recover():
@@ -28,37 +29,19 @@ def test_wallet_recovery():
 
 
 def test_wallet_signature():
+    # Setup: decoder and curve
+    d = Decoder()
+    curve = secp256k1()
+
+    # Generate transaction
     tx_id = random_tx_id()
     w = Wallet()
     signature = w.sign_transaction(tx_id)
-    curve = secp256k1()
-    assert curve.verify_signature(signature.ecdsa_tuple, tx_id, w.public_key)
 
-
-def test_base58():
-    '''
-    We test base58 encoding and decoding
-    '''
-    # Verify int -> base58 -> int
-    random_num = secrets.randbits(256)
-    assert base58_to_int(int_to_base58(random_num)) == random_num
-
-    # Verify base58 -> int -> base58
-    string_length = secrets.randbelow(pow(2, 8))
-    random_base58_string = ''
-    for x in range(0, string_length):
-        random_base58_string += random.choice(BASE58_ALPHABET)
-
-    # Remove prepended zeros from random_string
-    while random_base58_string[:1] == '1':
-        random_base58_string = random_base58_string[1:]
-
-    assert int_to_base58(base58_to_int(random_base58_string)) == random_base58_string
-
-
-def test_verify_address():
-    random_address = Wallet().address
-    assert verify_address(random_address)
+    # Get parts back
+    cpk, ecdsa_tuple = d.decode_signature(signature)
+    
+    assert curve.verify_signature(ecdsa_tuple, tx_id, curve.decompress_point(cpk))
 
 
 # --- HELPER METHODS --- #
