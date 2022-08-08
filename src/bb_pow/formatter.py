@@ -23,7 +23,7 @@ class Formatter():
     REWARD_CHARS = 8
     TARGET_COEFFICIENT_CHARS = 6
     TARGET_EXPONENT_CHARS = 2
-    NONCE_CHARS = 6
+    NONCE_CHARS = 8
     DELAY_CHARS = 2
     HEARTBEAT_CHARS = 2
     MAX_BIT_CHARS = 8
@@ -42,8 +42,10 @@ class Formatter():
     DATA_LENGTH_CHARS = 8
     TIMESTAMP_CHARS = 8
 
+    TARGET_CHARS = TARGET_COEFFICIENT_CHARS + TARGET_EXPONENT_CHARS
     SIGNATURE_CHARS = TYPE_CHARS + VERSION_CHARS + COEFF_CHARS + 3 * HASH_CHARS
     ADDRESS_CHARS = TYPE_CHARS + VERSION_CHARS + ADDRESS_DIGEST + CHECKSUM_CHARS
+    HEADERS_CHARS = TYPE_CHARS + VERSION_CHARS + 2 * HASH_CHARS + TARGET_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
 
     # Type parameters
     GENESIS_TX_TYPE = 0xff
@@ -52,6 +54,8 @@ class Formatter():
     UTXO_OUTPUT_TYPE = 0x12
     TX_TYPE = 0x21
     BLOCK_TYPE = 0x31
+    BLOCK_HEADER_TYPE = 0x32
+    BLOCK_TX_TYPE = 0x33
     ADDRESS_TYPE = 0x41
     SIGNATURE_TYPE = 0x51
 
@@ -164,6 +168,38 @@ class Formatter():
 
         return type + version + cpk + h_r + h_s
 
+    # Target
+    def get_target_parts(self, target: int):
+        '''
+        We return the corresponding coefficient and exponent parts of the integer target
+        '''
+        # Get max power of 2 dividing target
+        max_power = 0
+        while target % pow(2, max_power) == 0:
+            max_power += 1
+        max_power -= 1
+
+        # Get largest multiple of 8 strictly less than max_power
+        temp_val = max_power - (max_power % 8)
+
+        # Get the exponent
+        E = (temp_val // 8) + 3
+
+        # Get the coefficient
+        c = target // pow(2, 8 * (E - 3))
+
+        return c, E
+
+    def target_from_int(self, target_num: int):
+        c, E = self.get_target_parts(target_num)
+        h_coeff = format(c, f'0{self.TARGET_COEFFICIENT_CHARS}x')
+        h_exp = format(E, f'0{self.TARGET_EXPONENT_CHARS}x')
+
+        return h_coeff + h_exp
+
+    def target_from_parts(self, coeff: int, exp: int):
+        return coeff * pow(2, 8 * (exp - 3))
+
     # UTXOS
     def utxo_input(self, tx_id: str, index: int, signature: str):
         type = format(self.UTXO_INPUT_TYPE, f'0{self.TYPE_CHARS}x')
@@ -205,3 +241,46 @@ class Formatter():
 
         # Raw = type + version + input_count + input_string + output_count + output_string
         return type + self.FORMATTED_VERSION + input_count + input_string + output_count + output_string
+
+    # Block
+    def block(self, prev_id: str, merkle_root: str, target: int, nonce: int, timestamp: int, transactions: list):
+        # Type
+        type = format(self.BLOCK_TYPE, f'0{self.TYPE_CHARS}x')
+
+        # Headers
+        headers = self.block_headers(prev_id, merkle_root, target, nonce, timestamp)
+
+        # Txs
+        txs = self.block_transactions(transactions)
+
+        # Raw = type + version + headers + txs
+        return type + self.FORMATTED_VERSION + headers + txs
+
+    def block_headers(self, prev_id: str, merkle_root: str, target_num: int, nonce: int, timestamp: int):
+        # Type
+        type = format(self.BLOCK_HEADER_TYPE, f'0{self.TYPE_CHARS}x')
+
+        # Headers
+        h_prev_id = self.format_hex(prev_id, self.HASH_CHARS)
+        h_merkle_root = self.format_hex(merkle_root, self.HASH_CHARS)
+        h_target = self.target_from_int(target_num)
+        h_nonce = self.format_int(nonce, self.NONCE_CHARS)
+        h_timestamp = self.format_int(timestamp, self.TIMESTAMP_CHARS)
+
+        # Raw = type + version (2 bytes) + prev_id + merkle_root (64 bytes) + target + nonce + timestamp (12 bytes) = 78 bytes
+        return type + self.FORMATTED_VERSION + h_prev_id + h_merkle_root + h_target + h_nonce + h_timestamp
+
+    def block_transactions(self, transactions: list):
+        # Type
+        type = format(self.BLOCK_TX_TYPE, f'0{self.TYPE_CHARS}x')
+
+        # Count
+        tx_count = format(len(transactions), f'0{self.COUNT_CHARS}x')
+
+        # tx_string
+        tx_string = ''
+        for tx in transactions:
+            tx_string += tx.raw_tx
+
+        # Raw = type + version (2 bytes) + tx_count (1 byte) + raw_txs (var)
+        return type + self.FORMATTED_VERSION + tx_count + tx_string

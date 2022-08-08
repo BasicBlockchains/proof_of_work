@@ -9,6 +9,10 @@ from src.bb_pow.timestamp import utc_to_seconds
 from src.bb_pow.transactions import Transaction
 from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
 from src.bb_pow.wallet import Wallet
+
+from src.bb_pow.decoder import Decoder
+from src.bb_pow.formatter import Formatter
+
 from .test_wallet import random_tx_id
 
 
@@ -51,6 +55,14 @@ def get_random_transaction():
         outputs.append(get_random_utxo_output())
 
     return Transaction(inputs=inputs, outputs=outputs)
+
+
+def get_random_target():
+    random_coeff = secrets.randbits(24)
+    random_exp = 0
+    while random_exp < 4:
+        random_exp = secrets.randbits(8)
+    return Formatter().target_from_parts(random_coeff, random_exp)
 
 
 def test_merkle_root():
@@ -108,6 +120,10 @@ def test_merkle_root():
 
 
 def test_block():
+    # Decoder and Formatter
+    d = Decoder()
+    f = Formatter()
+
     transactions = []
     random_length = 0
     while random_length < 1:
@@ -116,16 +132,23 @@ def test_block():
         transactions.append(get_random_transaction())
 
     prev_id = random_tx_id()
-    target = secrets.randbits(256)
-    nonce = secrets.randbits(256)
+    target = get_random_target()
+    nonce = secrets.randbits(4 * f.NONCE_CHARS)
     timestamp = utc_to_seconds()
 
     test_block = Block(prev_id, target, nonce, timestamp, transactions)
-    calc_block = Block(
-        test_block.previous_id,
-        int(test_block.target, 16),
-        test_block.nonce,
-        test_block.timestamp,
-        test_block.transactions
-    )
-    assert test_block.id == calc_block.id
+    decoded_block = d.raw_block(test_block.raw_block)
+
+    # Assertions
+    assert test_block.raw_headers == decoded_block.raw_headers
+    assert test_block.raw_transactions == decoded_block.raw_transactions
+    assert test_block.raw_block == decoded_block.raw_block
+    assert test_block.id == decoded_block.id
+
+    # Verify values
+    header_dict = d.raw_block_headers(test_block.raw_headers)
+    assert header_dict['prev_id'] == prev_id
+    assert header_dict['merkle_root'] == test_block.merkle_root
+    assert header_dict['target'] == target
+    assert header_dict['nonce'] == nonce
+    assert header_dict['timestamp'] == timestamp

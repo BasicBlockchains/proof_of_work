@@ -8,12 +8,45 @@ from hashlib import sha256
 import json
 from .utxo import UTXO_INPUT, UTXO_OUTPUT
 from .transactions import Transaction
+from .block import Block
 
 
 class Decoder:
     F = Formatter()
     t_index = F.TYPE_CHARS
     v_index = t_index + F.VERSION_CHARS
+
+    # Verify type version
+    def verify_type_version(self, data_type: int, data_version: int, raw_data: str) -> bool:
+        # Type and version
+        type = int(raw_data[:self.t_index], 16)
+        version = int(raw_data[self.t_index:self.v_index], 16)
+
+        try:
+            assert type == data_type
+            assert version == data_version
+            assert data_version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Type/version error when decoding raw data.')
+            print(f'Type: {type}, data_type: {data_type}')
+            print(f'Version: {version}, data_version: {data_version}')
+            print(f'Raw Data: {raw_data}')
+            return False
+        return True
+
+    # Decode target
+    def int_from_target(self, encoded_target: str):
+        # Index
+        coeff_index = self.F.TARGET_COEFFICIENT_CHARS
+        exp_index = self.F.TARGET_EXPONENT_CHARS + coeff_index
+
+        coeff = int(encoded_target[:coeff_index], 16)
+        exp = int(encoded_target[coeff_index:exp_index], 16)
+
+        return coeff * pow(2, 8 * (exp - 3))
+
+    ##CPK, Signature, Address
 
     def decode_cpk(self, cpk: str) -> tuple:
         '''
@@ -215,3 +248,83 @@ class Decoder:
 
         # Return Transaction
         return Transaction(inputs, outputs)
+
+    # Block
+    def raw_block(self, raw_block: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_TYPE, self.F.VERSION, raw_block):
+            # Logging
+            print('Type/Version error in raw block')
+            return None
+
+        # Indexing
+        header_index = self.v_index + self.F.HEADERS_CHARS
+
+        # Headers
+        header_dict = self.raw_block_headers(raw_block[self.v_index:self.v_index + self.F.HEADERS_CHARS])
+        transactions = self.raw_block_transactions(raw_block[self.v_index + self.F.HEADERS_CHARS:])
+
+        # Get header values
+        prev_id = header_dict['prev_id']
+        merkle_root = header_dict['merkle_root']
+        target = header_dict['target']
+        nonce = header_dict['nonce']
+        timestamp = header_dict['timestamp']
+
+        # Get block and verify merkle root
+        block = Block(prev_id, target, nonce, timestamp, transactions)
+        if block.merkle_root != merkle_root:
+            # Logging
+            print('Merkle root error when recreating block from raw')
+            return None
+        return block
+
+    def raw_block_headers(self, raw_headers: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_HEADER_TYPE, self.F.VERSION, raw_headers):
+            # Logging
+            print('Type/Version error in raw block headers')
+            return None
+
+        # Indexing
+        index0 = self.v_index
+        index1 = index0 + self.F.HASH_CHARS
+        index2 = index1 + self.F.HASH_CHARS
+        index3 = index2 + self.F.TARGET_CHARS
+        index4 = index3 + self.F.NONCE_CHARS
+        index5 = index4 + self.F.TIMESTAMP_CHARS
+
+        # Recover values
+        prev_id = raw_headers[index0:index1]
+        merkle_root = raw_headers[index1:index2]
+        target = self.int_from_target(raw_headers[index2:index3])
+        nonce = int(raw_headers[index3:index4], 16)
+        timestamp = int(raw_headers[index4:index5], 16)
+
+        # Return dict
+        return {
+            "prev_id": prev_id,
+            "merkle_root": merkle_root,
+            "target": target,
+            "nonce": nonce,
+            "timestamp": timestamp
+        }
+
+    def raw_block_transactions(self, raw_txs: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_TX_TYPE, self.F.VERSION, raw_txs):
+            # Logging
+            print('Type/Version error in raw block transactions')
+            return None
+
+        # Tx_count
+        tx_count = int(raw_txs[self.v_index:self.v_index + self.F.COUNT_CHARS], 16)
+        transactions = []
+        temp_index = self.v_index + self.F.COUNT_CHARS
+        for x in range(tx_count):
+            tx = self.raw_transaction(raw_txs[temp_index:])
+            transactions.append(tx)
+            temp_index += len(tx.raw_tx)
+
+        # Return tx_list
+        return transactions
