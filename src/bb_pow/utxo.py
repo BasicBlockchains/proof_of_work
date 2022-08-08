@@ -11,6 +11,8 @@ class UTXO_INPUT():
     '''
     The UTXO INPUT will reference an existing UTXO_OUTPUT by tx_id
     '''
+    # Setup formatter
+    f = Formatter()
 
     def __init__(self, tx_id: str, index: int, signature: str):
         self.tx_id = tx_id
@@ -30,19 +32,7 @@ class UTXO_INPUT():
 
     @property
     def raw_utxo(self):
-        # Setup formatter
-        f = Formatter()
-
-        # Format tx_id, index - signature assumed to be formatted properly
-        tx_id = f.format_hex(self.tx_id, f.HASH_CHARS)
-        index = f.format_int(self.index, f.INDEX_CHARS)
-
-        # Format type and version
-        type = f.format_int(f.UTXO_INPUT_TYPE, f.TYPE_CHARS)
-        version = f.format_int(f.VERSION, f.VERSION_CHARS)
-
-        # raw
-        return type + version + tx_id + index + self.signature
+        return self.f.utxo_input(self.tx_id, self.index, self.signature)
 
     @property
     def id(self):
@@ -54,6 +44,8 @@ class UTXO_OUTPUT():
     The UTXO output will contain an amount, an address and a block_height where the amount can first be used.
     Block_height = 0 by default (used for Mining Outputs)
     '''
+    # Setup formatter
+    f = Formatter()
 
     def __init__(self, amount: int, address: str, block_height=0):
         self.amount = amount
@@ -73,20 +65,7 @@ class UTXO_OUTPUT():
 
     @property
     def raw_utxo(self):
-        # Setup formatter
-        f = Formatter()
-
-        # format utxo values
-        amount = f.format_int(self.amount, f.AMOUNT_CHARS)
-        address = f.format_hex(hex(f.base58_to_int(self.address)), f.ADDRESS_CHARS)
-        block_height = f.format_int(self.block_height, f.HEIGHT_CHARS)
-
-        # format type and version
-        type = f.format_int(f.UTXO_OUTPUT_TYPE, f.TYPE_CHARS)
-        version = f.format_int(f.VERSION, f.VERSION_CHARS)
-
-        # Raw
-        return type + version + amount + address + block_height
+        return self.f.utxo_output(self.amount, self.address, self.block_height)
 
     @property
     def id(self):

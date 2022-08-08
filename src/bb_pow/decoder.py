@@ -6,10 +6,13 @@ from basicblockchains_ecc.elliptic_curve import secp256k1
 from .formatter import Formatter
 from hashlib import sha256
 import json
+from .utxo import UTXO_INPUT, UTXO_OUTPUT
 
 
 class Decoder:
     F = Formatter()
+    t_index = F.TYPE_CHARS
+    v_index = t_index + F.VERSION_CHARS
 
     def decode_cpk(self, cpk: str) -> tuple:
         '''
@@ -123,3 +126,53 @@ class Decoder:
         # Verify address
         curve = secp256k1()
         return curve.verify_signature(ecdsa_tuple, tx_id, curve.decompress_point(cpk))
+
+    def raw_utxo_input(self, raw_utxo: str):
+        # Type and version
+        type = int(raw_utxo[:self.t_index], 16)
+        version = int(raw_utxo[self.t_index:self.v_index], 16)
+
+        try:
+            assert type == self.F.UTXO_INPUT_TYPE
+            assert version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Type/version error when decoding raw utxo input')
+            return None
+
+        # tx_id, tx_index, signature
+        index0 = self.v_index
+        index1 = index0 + self.F.HASH_CHARS
+        index2 = index1 + self.F.INDEX_CHARS
+        index3 = index2 + self.F.SIGNATURE_CHARS
+
+        tx_id = raw_utxo[index0:index1]
+        tx_index = int(raw_utxo[index1:index2], 16)
+        signature = raw_utxo[index2:index3]
+
+        return UTXO_INPUT(tx_id, tx_index, signature)
+
+    def raw_utxo_output(self, raw_utxo: str):
+        # Type and version
+        type = int(raw_utxo[:self.t_index], 16)
+        version = int(raw_utxo[self.t_index:self.v_index], 16)
+
+        try:
+            assert type == self.F.UTXO_OUTPUT_TYPE
+            assert version in self.F.ACCEPTED_VERSIONS
+        except AssertionError:
+            # Logging
+            print('Type/version error when decoding raw utxo output')
+            return None
+
+        # tx_id, tx_index, signature
+        index0 = self.v_index
+        index1 = index0 + self.F.AMOUNT_CHARS
+        index2 = index1 + self.F.ADDRESS_CHARS
+        index3 = index2 + self.F.HEIGHT_CHARS
+
+        amount = int(raw_utxo[index0:index1], 16)
+        address = self.F.int_to_base58(int(raw_utxo[index1:index2], 16))
+        block_height = int(raw_utxo[index2:index3], 16)
+
+        return UTXO_OUTPUT(amount, address, block_height)

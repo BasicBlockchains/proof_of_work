@@ -6,13 +6,6 @@ from hashlib import sha256, sha1
 
 
 class Formatter():
-    '''
-
-    '''
-    # Fixed version to start
-    VERSION = 0x01
-    ACCEPTED_VERSIONS = [0x01]
-
     # Mine parameters
     TOTAL_MINING_AMOUNT = pow(2, 64) - 1
     STARTING_TARGET_COEFFICIENT = 0x1fffff
@@ -38,7 +31,6 @@ class Formatter():
     INDEX_CHARS = 2
     LENGTH_CHARS = 2
     AMOUNT_CHARS = 16
-    ADDRESS_CHARS = 48
     ADDRESS_DIGEST = 40
     CHECKSUM_CHARS = 8
     HEIGHT_CHARS = 16
@@ -50,33 +42,23 @@ class Formatter():
     DATA_LENGTH_CHARS = 8
     TIMESTAMP_CHARS = 8
 
+    SIGNATURE_CHARS = TYPE_CHARS + VERSION_CHARS + COEFF_CHARS + 3 * HASH_CHARS
+    ADDRESS_CHARS = TYPE_CHARS + VERSION_CHARS + ADDRESS_DIGEST + CHECKSUM_CHARS
+
     # Type parameters
     GENESIS_TX_TYPE = 0xff
     GENESIS_BLOCK_TYPE = 0xfe
     UTXO_INPUT_TYPE = 0x11
     UTXO_OUTPUT_TYPE = 0x12
-    MINING_TX_TYPE = 0x21
-    USER_TX_TYPE = 0x22
+    TX_TYPE = 0x21
     BLOCK_TYPE = 0x31
     ADDRESS_TYPE = 0x41
     SIGNATURE_TYPE = 0x51
-    NODE_CONNECT_TYPE = 0x61
-    NETWORK_CONNECT_TYPE = 0x62
-    DISCONNECT_TYPE = 0x63
-    NEW_TX_TYPE = 0x64
-    REQUEST_TX_TYPE = 0x65
-    NEW_BLOCK_TYPE = 0x66
-    INDEXED_BLOCK_TYPE = 0x67
-    STATUS_TYPE = 0x68
-    HASH_MATCH_TYPE = 0x69
-    NODE_LIST_TYPE = 0x6a
-    WALLET_CONNECT_TYPE = 0x71
-    GET_UTXO_TYPE = 0x72
-    GET_HEIGHT_TYPE = 0x73
-    CONFIRM_TX_TYPE = 0x74
-    CONFIRM_TYPE = 0x01
-    ERROR_TYPE = 0x02
-    PING_TYPE = 0x03
+
+    # Fixed version to start
+    VERSION = 0x01
+    ACCEPTED_VERSIONS = [0x01]
+    FORMATTED_VERSION = format(VERSION, f'0{VERSION_CHARS}x')
 
     # --- BASE58 ENCODING/DECODING --- #
     BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
@@ -115,13 +97,15 @@ class Formatter():
         return sum([self.BASE58_LIST.index(base58_string[x:x + 1]) * pow(58, len(base58_string) - x - 1) for x in
                     range(0, len(base58_string))])
 
+    # Ease of use formatting
+
     def format_int(self, num: int, character_format: int):
         return format(num, f'0{character_format}x')
 
     def format_hex(self, hex_string: str, character_format: int):
-        while len(hex_string) != character_format:
-            hex_string = '0' + hex_string
-        return hex_string
+        return format(int(hex_string, 16), f'0{character_format}x')
+
+    ##CPk, Address, Signature
 
     def cpk(self, public_key: tuple):
         (x, y) = public_key
@@ -148,6 +132,20 @@ class Formatter():
         # Address = type + version + epk + checksum (26 byte address)
         return self.int_to_base58(int(type + version + epk + checksum, 16))
 
+    def hex_address(self, address: str):
+        temp_hex = hex(self.base58_to_int(address))[2:]
+        if len(temp_hex) == self.ADDRESS_CHARS:
+            return temp_hex
+        else:
+            t = temp_hex[:self.TYPE_CHARS]
+            v = temp_hex[self.TYPE_CHARS:self.TYPE_CHARS + self.VERSION_CHARS]
+            s_index = self.TYPE_CHARS + self.VERSION_CHARS
+            epk = temp_hex[s_index: -self.CHECKSUM_CHARS]
+            checksum = temp_hex[-self.CHECKSUM_CHARS:]
+            while len(epk) != self.ADDRESS_DIGEST:
+                epk = '0' + epk
+            return t + v + epk + checksum
+
     def signature(self, private_key: int, tx_id: str):
         # Get curve
         curve = basicblockchains_ecc.elliptic_curve.secp256k1()
@@ -165,3 +163,23 @@ class Formatter():
         version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
 
         return type + version + cpk + h_r + h_s
+
+    # UTXOS
+    def utxo_input(self, tx_id: str, index: int, signature: str):
+        type = format(self.UTXO_INPUT_TYPE, f'0{self.TYPE_CHARS}x')
+
+        f_tx_id = self.format_hex(tx_id, self.HASH_CHARS)
+        f_index = self.format_int(index, self.INDEX_CHARS)
+
+        # Raw utxo = type (2 hex) + version (2 hex) + tx_id (64 hex) + index (2 hex) + signature(99 hex) =~ 85 bytes
+        return type + self.FORMATTED_VERSION + f_tx_id + f_index + signature
+
+    def utxo_output(self, amount: int, address: str, block_height: int):
+        type = format(self.UTXO_OUTPUT_TYPE, f'0{self.TYPE_CHARS}x')
+
+        f_amount = self.format_int(amount, self.AMOUNT_CHARS)
+        f_address = self.hex_address(address)
+        f_block_height = self.format_int(block_height, self.HEIGHT_CHARS)
+
+        # Raw utxo = type (2 hex) + version (2 hex) + amount (16 hex) + address (52 hex) + block_height (16 hex) = 44 bytes
+        return type + self.FORMATTED_VERSION + f_amount + f_address + f_block_height
