@@ -107,7 +107,10 @@ class Formatter():
         return format(num, f'0{character_format}x')
 
     def format_hex(self, hex_string: str, character_format: int):
-        return format(int(hex_string, 16), f'0{character_format}x')
+        if hex_string:
+            return format(int(hex_string, 16), f'0{character_format}x')
+        else:
+            return format(0, f'0{character_format}x')
 
     ##CPk, Address, Signature
 

@@ -34,8 +34,8 @@ class Wallet():
         # Allow seed_bits to be variable
         self.seed_bits = seed_bits
 
-        # Establish seed
-        if not seed:
+        # Establish seed - allow for zero case
+        if seed is None:
             seed = self.get_seed()
 
         # Create seed phrase

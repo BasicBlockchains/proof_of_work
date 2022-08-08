@@ -178,6 +178,7 @@ class DataBase:
 
     # POST METHODS
     def post_block(self, block: Block, height: int):
+        # TODO: Remove height from table - use rowid
         # Header Table
         query = """INSERT INTO block_headers VALUES (?,?,?,?,?,?,?)"""
         data_tuple = (
