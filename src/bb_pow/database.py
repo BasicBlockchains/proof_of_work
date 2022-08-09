@@ -99,6 +99,15 @@ class DataBase:
 
     # GET METHODS
 
+    def get_height(self):
+        query = """SELECT COUNT(*) FROM raw_blocks"""
+        height_tuple = self.query_db(query)
+        (height,) = height_tuple[0]
+        height_dict = {
+            "height": height - 1
+        }
+        return height_dict
+
     def get_raw_block(self, height: int):
         query = """SELECT raw_block from raw_blocks where rowid = ?"""
         data_tuple = (height + 1,)
