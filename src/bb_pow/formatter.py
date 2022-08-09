@@ -47,12 +47,9 @@ class Formatter():
     AMOUNT_CHARS = 16
     HEIGHT_CHARS = 16
 
-    #
-    #
-    #
-    #
-    #
-    #
+    # TRANSACTION FORMATTING
+    COUNT_CHARS = 2
+
     # # Mine parameters
     # TOTAL_MINING_AMOUNT = pow(2, 64) - 1
     # STARTING_TARGET_COEFFICIENT = 0x1fffff

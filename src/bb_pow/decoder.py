@@ -195,41 +195,43 @@ class Decoder:
 
         return UTXO_OUTPUT(amount, address, block_height)
 
-    # # Transaction
-    # def raw_transaction(self, raw_tx: str):
-    #     # Type and version
-    #     type = int(raw_tx[:self.t_index], 16)
-    #     version = int(raw_tx[self.t_index:self.v_index], 16)
-    #
-    #     try:
-    #         assert type == self.F.TX_TYPE
-    #         assert version in self.F.ACCEPTED_VERSIONS
-    #     except AssertionError:
-    #         # Logging
-    #         print('Type/version error when decoding raw transaction')
-    #         return None
-    #
-    #     temp_index = self.v_index + self.F.COUNT_CHARS
-    #
-    #     # Get inputs
-    #     input_count = int(raw_tx[self.v_index:temp_index], 16)
-    #     inputs = []
-    #     for x in range(input_count):
-    #         utxo_input = self.raw_utxo_input(raw_tx[temp_index:])
-    #         inputs.append(utxo_input)
-    #         temp_index += len(utxo_input.raw_utxo)
-    #
-    #     # Get outputs
-    #     output_count = int(raw_tx[temp_index:temp_index + self.F.COUNT_CHARS], 16)
-    #     outputs = []
-    #     temp_index += self.F.COUNT_CHARS
-    #     for y in range(output_count):
-    #         utxo_output = self.raw_utxo_output(raw_tx[temp_index:])
-    #         outputs.append(utxo_output)
-    #         temp_index += len(utxo_output.raw_utxo)
-    #
-    #     # Return Transaction
-    #     return Transaction(inputs, outputs)
+    # Transaction
+    def raw_transaction(self, raw_tx: str):
+        # Type version
+        if not self.verify_type_version(self.F.TX_TYPE, self.F.VERSION, raw_tx):
+            # Logging
+            print('Type/Version error in raw transaction')
+            return None
+
+        temp_index = self.v_index + self.F.COUNT_CHARS
+
+        # Get inputs
+        input_count = int(raw_tx[self.v_index:temp_index], 16)
+        inputs = []
+        for x in range(input_count):
+            utxo_input = self.raw_utxo_input(raw_tx[temp_index:])
+            inputs.append(utxo_input)
+            temp_index += len(utxo_input.raw_utxo)
+
+        # Get outputs
+        output_count = int(raw_tx[temp_index:temp_index + self.F.COUNT_CHARS], 16)
+        outputs = []
+        temp_index += self.F.COUNT_CHARS
+        for y in range(output_count):
+            utxo_output = self.raw_utxo_output(raw_tx[temp_index:])
+            outputs.append(utxo_output)
+            temp_index += len(utxo_output.raw_utxo)
+
+        # Return Transaction
+        return Transaction(inputs, outputs)
+
+    def raw_mining_transaction(self, raw_tx: str):
+        # Type version
+        if not self.verify_type_version(self.F.MINING_TX_TYPE, self.F.VERSION, raw_tx):
+            # Logging
+            print('Type/Version error in raw mininig transaction')
+            return None
+
     #
     # # Block
     # def raw_block(self, raw_block: str):
