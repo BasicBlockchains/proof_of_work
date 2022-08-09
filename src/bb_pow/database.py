@@ -17,7 +17,9 @@ class DataBase:
     The db will be created with 3 tables:
         1) Block headers
         2) UTXO Pool
-        3) Raw Block
+        3) Raw blocks
+
+
 
     NOTE: SQLite has a max integer size of 2^63-1 so we store integers as hex strings
 
@@ -58,7 +60,6 @@ class DataBase:
 
         # Table 1
         c.execute("""CREATE TABLE block_headers (
-                    height text,
                     id text,                      
                     previous_id text, 
                     merkle_root text, 
@@ -106,7 +107,6 @@ class DataBase:
         if raw_block_tuple_list:
             (raw_block,) = raw_block_tuple_list[0]
             raw_block_dict.update({
-                "height": height,
                 "raw_block": raw_block
             })
         return raw_block_dict
@@ -123,13 +123,12 @@ class DataBase:
         return id_dict
 
     def get_headers_by_height(self, height: int) -> dict:
-        query = """SELECT * FROM block_headers WHERE height = ?"""
-        header_tuple_list = self.query_db(query, (hex(height),))
+        query = """SELECT * FROM block_headers WHERE rowid = ?"""
+        header_tuple_list = self.query_db(query, (height + 1,))
         header_dict = {}
         if header_tuple_list:
-            _, id, prev_id, merkle_root, target, h_nonce, h_timestamp = header_tuple_list[0]
+            id, prev_id, merkle_root, target, h_nonce, h_timestamp = header_tuple_list[0]
             header_dict.update({
-                "height": height,
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
@@ -145,9 +144,8 @@ class DataBase:
         header_tuple_list = self.query_db(query, (id,))
         header_dict = {}
         if header_tuple_list:
-            h_height, _, prev_id, merkle_root, target, h_nonce, h_timestamp = header_tuple_list[0]
+            _, prev_id, merkle_root, target, h_nonce, h_timestamp = header_tuple_list[0]
             header_dict.update({
-                "height": int(h_height, 16),
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
@@ -163,9 +161,8 @@ class DataBase:
         header_tuple_list = self.query_db(query, (merkle_root,))
         header_dict = {}
         if header_tuple_list:
-            h_height, id, prev_id, _, target, h_nonce, h_timestamp = header_tuple_list[0]
+            id, prev_id, _, target, h_nonce, h_timestamp = header_tuple_list[0]
             header_dict.update({
-                "height": int(h_height, 16),
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
@@ -177,13 +174,11 @@ class DataBase:
         return header_dict
 
     # POST METHODS
-    def post_block(self, block: Block, height: int):
-        # TODO: Remove height from table - use rowid
+    def post_block(self, block: Block):
         # Header Table
-        query = """INSERT INTO block_headers VALUES (?,?,?,?,?,?,?)"""
-        data_tuple = (
-            hex(height), block.id, block.prev_id, block.merkle_root, hex(block.target), hex(block.nonce),
-            hex(block.timestamp))
+        query = """INSERT INTO block_headers VALUES (?,?,?,?,?,?)"""
+        data_tuple = (block.id, block.prev_id, block.merkle_root,
+                      hex(block.target), hex(block.nonce), hex(block.timestamp))
         self.query_db(query, data_tuple)
 
         # Raw Block table
@@ -194,8 +189,8 @@ class DataBase:
     # DELETE METHODS
     def delete_block(self, height: int):
         # Header Table
-        query = """DELETE FROM block_headers WHERE height = ?"""
-        data_tuple = (hex(height),)
+        query = """DELETE FROM block_headers WHERE rowid = ?"""
+        data_tuple = (height + 1,)
         self.query_db(query, data_tuple)
 
         # Raw Block Table
