@@ -39,8 +39,13 @@ class Blockchain():
         self.dir_path = dir_path
         self.db_file = db_file
 
+        # Check for db
+        new_db = False if Path(self.dir_path, self.db_file).exists() else True
+
         # Create db - Database will create file
         self.chain_db = DataBase(self.dir_path, self.db_file)
+        if new_db:  # Create db if path doesn't already exist
+            self.chain_db.create_db()
 
         # Mining values
         self.total_mining_amount = self.f.TOTAL_MINING_AMOUNT
@@ -51,10 +56,20 @@ class Blockchain():
         # Create chain list to hold last HEARTBEAT blocks
         self.chain = []
 
-        # Create genesis block
-        self.add_block(self.create_genesis_block())
+        # Create genesis block - if db is new, then loading = False
+        self.add_block(self.create_genesis_block(), loading=not new_db)
 
         # Load rest of chain if it exists
+        temp_height = len(self.chain) - 1
+        while temp_height != self.height:
+            temp_raw_block = self.chain_db.get_raw_block(temp_height + 1)
+            temp_block = self.d.raw_block(temp_raw_block)
+            if self.add_block(temp_block, loading=True):
+                temp_height += 1
+            else:
+                # Logging
+                print('Error loading blocks from chain_db')
+                temp_height = self.height
 
     # Properties
     @property
@@ -143,7 +158,7 @@ class Blockchain():
 
         return True
 
-    def add_block(self, block: Block):
+    def add_block(self, block: Block, loading=False):
         valid_block = False
 
         # Account for genesis
@@ -158,21 +173,22 @@ class Blockchain():
             valid_block = self.validate_block(block)
 
         if valid_block:
-            # Consume UTXOS
-            for tx in block.transactions:
-                # Consume UTXOS in tx inputs
-                for utxo_input in tx.inputs:
-                    self.chain_db.delete_utxo(utxo_input.tx_id, utxo_input.index)
+            if not loading:
+                # Consume UTXOS
+                for tx in block.transactions:
+                    # Consume UTXOS in tx inputs
+                    for utxo_input in tx.inputs:
+                        self.chain_db.delete_utxo(utxo_input.tx_id, utxo_input.index)
 
-                # Add UTXOS in tx outputs
-                for utxo_output in tx.outputs:
-                    self.chain_db.post_utxo(tx.id, tx.outputs.index(utxo_output), utxo_output)
+                    # Add UTXOS in tx outputs
+                    for utxo_output in tx.outputs:
+                        self.chain_db.post_utxo(tx.id, tx.outputs.index(utxo_output), utxo_output)
 
-            # Add UTXOs in Mining Tx
-            self.chain_db.post_utxo(block.mining_tx.id, 0, block.mining_tx.mining_utxo)
+                # Add UTXOs in Mining Tx
+                self.chain_db.post_utxo(block.mining_tx.id, 0, block.mining_tx.mining_utxo)
 
-            # Save block the chain_db
-            self.chain_db.post_block(block)
+                # Save block the chain_db
+                self.chain_db.post_block(block)
 
             # Save block to mem_chain
             self.chain.append(block)

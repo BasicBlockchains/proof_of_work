@@ -32,9 +32,9 @@ class DataBase:
         # Get file_path for future use
         self.file_path = join(dir_path, db_file)
 
-        if Path(self.file_path).exists():
-            self.wipe_db()
-        self.create_db()
+        # if Path(self.file_path).exists():
+        #     self.wipe_db()
+        # self.create_db()
 
     def wipe_db(self):
         conn = sqlite3.connect(self.file_path)
