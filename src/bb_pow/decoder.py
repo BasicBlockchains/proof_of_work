@@ -7,7 +7,7 @@ from .formatter import Formatter
 from hashlib import sha256
 import json
 from .utxo import UTXO_INPUT, UTXO_OUTPUT
-from .transactions import Transaction
+from .transactions import Transaction, MiningTransaction
 from .block import Block
 
 
@@ -225,7 +225,35 @@ class Decoder:
         # Return Transaction
         return Transaction(inputs, outputs)
 
+<<<<<<< HEAD
     def raw_mining_transaction(self, raw_tx: str):
+=======
+    def raw_mining_tx(self, raw_tx: str):
+        # Type version
+        if not self.verify_type_version(self.F.MINING_TX_TYPE, self.F.VERSION, raw_tx):
+            # Logging
+            print('Type/Version error in raw mining transaction')
+            return None
+
+        # Indexing
+        index0 = self.v_index
+        index1 = index0 + self.F.HEIGHT_CHARS
+        index2 = index1 + self.F.REWARD_CHARS
+        index3 = index2 + self.F.AMOUNT_CHARS
+        index4 = index3 + self.F.ADDRESS_CHARS
+
+        # Values
+        height = int(raw_tx[index0:index1], 16)
+        reward = int(raw_tx[index1:index2], 16)
+        block_fees = int(raw_tx[index2:index3], 16)
+        address = self.F.int_to_base58(int(raw_tx[index3:index4], 16))
+
+        # Return MiningTx
+        return MiningTransaction(height, reward, block_fees, address)
+
+    # Block
+    def raw_block(self, raw_block: str):
+>>>>>>> mining_tx
         # Type version
         if not self.verify_type_version(self.F.MINING_TX_TYPE, self.F.VERSION, raw_tx):
             # Logging

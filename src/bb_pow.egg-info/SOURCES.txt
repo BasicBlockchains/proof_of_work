@@ -1,0 +1,12 @@
+LICENSE.txt
+README.md
+pyproject.toml
+setup.py
+src/bb_pow/__init__.py
+src/bb_pow/utxo.py
+src/bb_pow/wallet.py
+src/bb_pow.egg-info/PKG-INFO
+src/bb_pow.egg-info/SOURCES.txt
+src/bb_pow.egg-info/dependency_links.txt
+src/bb_pow.egg-info/requires.txt
+src/bb_pow.egg-info/top_level.txt

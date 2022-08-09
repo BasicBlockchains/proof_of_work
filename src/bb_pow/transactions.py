@@ -5,6 +5,42 @@ from .utxo import UTXO_OUTPUT, UTXO_INPUT
 import json
 from hashlib import sha256
 from .formatter import Formatter
+from .utxo import UTXO_OUTPUT
+
+
+class MiningTransaction():
+    '''
+    Every block must contain a MiningTransaction. We create the class instead of Transaction for ease of use.
+    '''
+    # Formatter
+    f = Formatter()
+
+    def __init__(self, height: int, reward: int, block_fees: int, address: str):
+        self.height = height
+        self.reward = reward
+        self.block_fees = block_fees
+        self.mining_utxo = UTXO_OUTPUT(self.reward + self.block_fees, address, self.height + self.f.MINING_DELAY)
+
+    def __repr__(self):
+        return self.to_json
+
+    @property
+    def to_json(self):
+        mining_dict = {
+            "height": self.height,
+            "reward": self.reward,
+            "block_fees": self.block_fees,
+            "mining_utxo": json.dumps(json.loads(self.mining_utxo.to_json))
+        }
+        return json.dumps(mining_dict)
+
+    @property
+    def raw_tx(self):
+        return self.f.mining_tx(self.height, self.reward, self.block_fees, self.mining_utxo.address)
+
+    @property
+    def id(self):
+        return sha256(self.raw_tx.encode()).hexdigest()
 
 
 class Transaction():
