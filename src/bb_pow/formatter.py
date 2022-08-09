@@ -64,45 +64,7 @@ class Formatter():
     MINING_DELAY = 0  # TESTING #100
     HEARTBEAT = 5  # TESTING #60
 
-    #
-    # # Formatting parameters
-    # TYPE_CHARS = 2
-    # VERSION_CHARS = 2
-    # COEFF_CHARS = 2
-    # HASH_CHARS = 64
-    # TOTAL_MINE_CHARS = 16
-    # REWARD_CHARS = 8
-    # TARGET_COEFFICIENT_CHARS = 6
-    # TARGET_EXPONENT_CHARS = 2
-    # NONCE_CHARS = 8
-    # DELAY_CHARS = 2
-    # HEARTBEAT_CHARS = 2
-    # MAX_BIT_CHARS = 8
-    # BLOCK_TX_CHARS = 4
-    # INDEX_CHARS = 2
-    # LENGTH_CHARS = 2
-    # AMOUNT_CHARS = 16
-    # ADDRESS_DIGEST = 40
-    # CHECKSUM_CHARS = 8
-    # HEIGHT_CHARS = 16
-    # COUNT_CHARS = 2
-    # IP_CHARS = 8
-    # PORT_CHARS = 4
-    # TIMEOUT_CHARS = 2
-    # RETRY_CHARS = 2
-    # DATA_LENGTH_CHARS = 8
-    # TIMESTAMP_CHARS = 8
-    #
-    # TARGET_CHARS = TARGET_COEFFICIENT_CHARS + TARGET_EXPONENT_CHARS
-    # SIGNATURE_CHARS = TYPE_CHARS + VERSION_CHARS + COEFF_CHARS + 3 * HASH_CHARS
-    # ADDRESS_CHARS = TYPE_CHARS + VERSION_CHARS + ADDRESS_DIGEST + CHECKSUM_CHARS
-    # HEADERS_CHARS = TYPE_CHARS + VERSION_CHARS + 2 * HASH_CHARS + TARGET_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
-    #
-    # # Type parameters
-    # GENESIS_TX_TYPE = 0xff
-    # GENESIS_BLOCK_TYPE = 0xfe
-
-    #
+    # Ease of use formatting
     def format_hex(self, hex_string: str, hex_length: int):
         if hex_string:
             while len(hex_string) != hex_length:
@@ -241,46 +203,4 @@ class Formatter():
     #     return coeff * pow(2, 8 * (exp - 3))
     #
 
-    #
-    # # Block
-    # def block(self, prev_id: str, merkle_root: str, target: int, nonce: int, timestamp: int, transactions: list):
-    #     # Type
-    #     type = format(self.BLOCK_TYPE, f'0{self.TYPE_CHARS}x')
-    #
-    #     # Headers
-    #     headers = self.block_headers(prev_id, merkle_root, target, nonce, timestamp)
-    #
-    #     # Txs
-    #     txs = self.block_transactions(transactions)
-    #
-    #     # Raw = type + version + headers + txs
-    #     return type + self.FORMATTED_VERSION + headers + txs
-    #
-    # def block_headers(self, prev_id: str, merkle_root: str, target_num: int, nonce: int, timestamp: int):
-    #     # Type
-    #     type = format(self.BLOCK_HEADER_TYPE, f'0{self.TYPE_CHARS}x')
-    #
-    #     # Headers
-    #     h_prev_id = self.format_hex(prev_id, self.HASH_CHARS)
-    #     h_merkle_root = self.format_hex(merkle_root, self.HASH_CHARS)
-    #     h_target = self.target_from_int(target_num)
-    #     h_nonce = self.format_int(nonce, self.NONCE_CHARS)
-    #     h_timestamp = self.format_int(timestamp, self.TIMESTAMP_CHARS)
-    #
-    #     # Raw = type + version (2 bytes) + prev_id + merkle_root (64 bytes) + target + nonce + timestamp (12 bytes) = 78 bytes
-    #     return type + self.FORMATTED_VERSION + h_prev_id + h_merkle_root + h_target + h_nonce + h_timestamp
-    #
-    # def block_transactions(self, transactions: list):
-    #     # Type
-    #     type = format(self.BLOCK_TX_TYPE, f'0{self.TYPE_CHARS}x')
-    #
-    #     # Count
-    #     tx_count = format(len(transactions), f'0{self.COUNT_CHARS}x')
-    #
-    #     # tx_string
-    #     tx_string = ''
-    #     for tx in transactions:
-    #         tx_string += tx.raw_tx
-    #
-    #     # Raw = type + version (2 bytes) + tx_count (1 byte) + raw_txs (var)
-    #     return type + self.FORMATTED_VERSION + tx_count + tx_string
+
