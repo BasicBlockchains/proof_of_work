@@ -199,8 +199,5 @@ class Formatter():
     #
     #     return h_coeff + h_exp
     #
-    # def target_from_parts(self, coeff: int, exp: int):
-    #     return coeff * pow(2, 8 * (exp - 3))
-    #
-
-
+    def target_from_parts(self, coeff: int, exp: int):
+        return coeff * pow(2, 8 * (exp - 3))

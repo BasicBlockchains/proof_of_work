@@ -113,7 +113,7 @@ def test_block_header_methods():
         block_list.append(sample_block)
 
         # Post
-        db.post_block(sample_block, x)
+        db.post_block(sample_block)
 
     # get_block_ids
     id_dict = {
@@ -129,7 +129,6 @@ def test_block_header_methods():
     for z in range(random_length):
         temp_block = block_list[z]
         height_dict = {
-            "height": z,
             "id": temp_block.id,
             "prev_id": temp_block.prev_id,
             "merkle_root": temp_block.merkle_root,
@@ -138,7 +137,6 @@ def test_block_header_methods():
             "timestamp": temp_block.timestamp
         }
         raw_block_dict = {
-            "height": z,
             "raw_block": temp_block.raw_block
         }
         assert db.get_headers_by_height(z) == height_dict
