@@ -36,7 +36,20 @@ class MiningTransaction():
 
     @property
     def raw_tx(self):
-        return self.f.mining_tx(self.height, self.reward, self.block_fees, self.mining_utxo.address)
+        # Setup formatter
+        f = Formatter()
+
+        # Type/version
+        type = format(f.MINING_TX_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Block info
+        height = format(self.height, f'0{f.HEIGHT_CHARS}x')
+        reward = format(self.reward, f'0{f.REWARD_CHARS}x')
+        block_fees = format(self.block_fees, f'0{f.AMOUNT_CHARS}x')
+
+        # Raw = type + version + block_info + mining_utxo
+        return type + version + height + reward + block_fees + self.mining_utxo.raw_utxo
 
     @property
     def id(self):

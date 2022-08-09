@@ -48,14 +48,22 @@ class Formatter():
 
     # TRANSACTION FORMATTING
     COUNT_CHARS = 2
+    REWARD_CHARS = 10
 
-    # # Mine parameters
-    # TOTAL_MINING_AMOUNT = pow(2, 64) - 1
-    # STARTING_TARGET_COEFFICIENT = 0x1fffff
-    # STARTING_TARGET_EXPONENT = 0x1e
-    # STARTING_REWARD = 0x00010000
-    # MINING_DELAY = 0  # TESTING #100
-    # HEARTBEAT = 5  # TESTING #60
+    # BLOCK FORMATTING
+    NONCE_CHARS = 16
+    TIMESTAMP_CHARS = 8
+    BLOCK_TX_CHARS = 2
+    HEADER_CHARS = TYPE_CHARS + VERSION_CHARS + 3 * HASH_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
+
+    # Mine parameters
+    TOTAL_MINING_AMOUNT = pow(2, 64) - 1
+    STARTING_TARGET_COEFFICIENT = 0x1fffff
+    STARTING_TARGET_EXPONENT = 0x1e
+    STARTING_REWARD = pow(2, 10) * pow(10, 9)
+    MINING_DELAY = 0  # TESTING #100
+    HEARTBEAT = 5  # TESTING #60
+
     #
     # # Formatting parameters
     # TYPE_CHARS = 2
@@ -95,8 +103,14 @@ class Formatter():
     # GENESIS_BLOCK_TYPE = 0xfe
 
     #
+    def format_hex(self, hex_string: str, hex_length: int):
+        if hex_string:
+            while len(hex_string) != hex_length:
+                hex_string = '0' + hex_string
+            return hex_string
+        else:
+            return format(0, f'0{hex_length}x')
 
-    #
     # --- BASE58 ENCODING/DECODING --- #
     BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
     BASE58_LIST = [x for x in BASE58_ALPHABET]
@@ -192,7 +206,7 @@ class Formatter():
         version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
 
         return type + version + cpk + h_r + h_s
-<<<<<<< HEAD
+
     #
     # # Target
     # def get_target_parts(self, target: int):
@@ -226,47 +240,7 @@ class Formatter():
     # def target_from_parts(self, coeff: int, exp: int):
     #     return coeff * pow(2, 8 * (exp - 3))
     #
-    # # UTXOS
-    # def utxo_input(self, tx_id: str, index: int, signature: str):
-    #     type = format(self.UTXO_INPUT_TYPE, f'0{self.TYPE_CHARS}x')
-    #
-    #     f_tx_id = self.format_hex(tx_id, self.HASH_CHARS)
-    #     f_index = self.format_int(index, self.INDEX_CHARS)
-    #
-    #     # Raw utxo = type (2 hex) + version (2 hex) + tx_id (64 hex) + index (2 hex) + signature(99 hex) =~ 85 bytes
-    #     return type + self.FORMATTED_VERSION + f_tx_id + f_index + signature
-    #
-    # def utxo_output(self, amount: int, address: str, block_height: int):
-    #     type = format(self.UTXO_OUTPUT_TYPE, f'0{self.TYPE_CHARS}x')
-    #
-    #     f_amount = self.format_int(amount, self.AMOUNT_CHARS)
-    #     f_address = self.hex_address(address)
-    #     f_block_height = self.format_int(block_height, self.HEIGHT_CHARS)
-    #
-    #     # Raw utxo = type (2 hex) + version (2 hex) + amount (16 hex) + address (52 hex) + block_height (16 hex) = 44 bytes
-    #     return type + self.FORMATTED_VERSION + f_amount + f_address + f_block_height
-    #
-    # # Transaction
-    # def transaction(self, inputs: list, outputs: list):
-    #     # Type
-    #     type = format(self.TX_TYPE, f'0{self.TYPE_CHARS}x')
-    #
-    #     # Format input/output counts
-    #     input_count = format(len(inputs), f'0{self.COUNT_CHARS}x')
-    #     output_count = format(len(outputs), f'0{self.COUNT_CHARS}x')
-    #
-    #     # Format inputs
-    #     input_string = ''
-    #     for utxo_input in inputs:
-    #         input_string += utxo_input.raw_utxo
-    #
-    #     # Format outputs
-    #     output_string = ''
-    #     for utxo_output in outputs:
-    #         output_string += utxo_output.raw_utxo
-    #
-    #     # Raw = type + version + input_count + input_string + output_count + output_string
-    #     return type + self.FORMATTED_VERSION + input_count + input_string + output_count + output_string
+
     #
     # # Block
     # def block(self, prev_id: str, merkle_root: str, target: int, nonce: int, timestamp: int, transactions: list):
@@ -310,135 +284,3 @@ class Formatter():
     #
     #     # Raw = type + version (2 bytes) + tx_count (1 byte) + raw_txs (var)
     #     return type + self.FORMATTED_VERSION + tx_count + tx_string
-=======
-
-    # Target
-    def get_target_parts(self, target: int):
-        '''
-        We return the corresponding coefficient and exponent parts of the integer target
-        '''
-        # Get max power of 2 dividing target
-        max_power = 0
-        while target % pow(2, max_power) == 0:
-            max_power += 1
-        max_power -= 1
-
-        # Get largest multiple of 8 strictly less than max_power
-        temp_val = max_power - (max_power % 8)
-
-        # Get the exponent
-        E = (temp_val // 8) + 3
-
-        # Get the coefficient
-        c = target // pow(2, 8 * (E - 3))
-
-        return c, E
-
-    def target_from_int(self, target_num: int):
-        c, E = self.get_target_parts(target_num)
-        h_coeff = format(c, f'0{self.TARGET_COEFFICIENT_CHARS}x')
-        h_exp = format(E, f'0{self.TARGET_EXPONENT_CHARS}x')
-
-        return h_coeff + h_exp
-
-    def target_from_parts(self, coeff: int, exp: int):
-        return coeff * pow(2, 8 * (exp - 3))
-
-    # UTXOS
-    def utxo_input(self, tx_id: str, index: int, signature: str):
-        type = format(self.UTXO_INPUT_TYPE, f'0{self.TYPE_CHARS}x')
-
-        f_tx_id = self.format_hex(tx_id, self.HASH_CHARS)
-        f_index = self.format_int(index, self.INDEX_CHARS)
-
-        # Raw utxo = type (2 hex) + version (2 hex) + tx_id (64 hex) + index (2 hex) + signature(99 hex) =~ 85 bytes
-        return type + self.FORMATTED_VERSION + f_tx_id + f_index + signature
-
-    def utxo_output(self, amount: int, address: str, block_height: int):
-        type = format(self.UTXO_OUTPUT_TYPE, f'0{self.TYPE_CHARS}x')
-
-        f_amount = self.format_int(amount, self.AMOUNT_CHARS)
-        f_address = self.hex_address(address)
-        f_block_height = self.format_int(block_height, self.HEIGHT_CHARS)
-
-        # Raw utxo = type (2 hex) + version (2 hex) + amount (16 hex) + address (52 hex) + block_height (16 hex) = 44 bytes
-        return type + self.FORMATTED_VERSION + f_amount + f_address + f_block_height
-
-    # Transactions
-    def transaction(self, inputs: list, outputs: list):
-        # Type
-        type = format(self.TX_TYPE, f'0{self.TYPE_CHARS}x')
-
-        # Format input/output counts
-        input_count = format(len(inputs), f'0{self.COUNT_CHARS}x')
-        output_count = format(len(outputs), f'0{self.COUNT_CHARS}x')
-
-        # Format inputs
-        input_string = ''
-        for utxo_input in inputs:
-            input_string += utxo_input.raw_utxo
-
-        # Format outputs
-        output_string = ''
-        for utxo_output in outputs:
-            output_string += utxo_output.raw_utxo
-
-        # Raw = type + version + input_count + input_string + output_count + output_string
-        return type + self.FORMATTED_VERSION + input_count + input_string + output_count + output_string
-
-    def mining_tx(self, height: int, reward: int, block_fees: int, address: str):
-        # Type
-        type = format(self.MINING_TX_TYPE, f'0{self.TYPE_CHARS}x')
-
-        # Mining info
-        h_height = format(height, f'0{self.HEIGHT_CHARS}x')
-        h_reward = format(reward, f'0{self.REWARD_CHARS}x')
-        h_fees = format(block_fees, f'0{self.AMOUNT_CHARS}x')
-        h_address = self.hex_address(address)
-
-        # Raw = type + version + height + reward + fees + address
-        return type + self.FORMATTED_VERSION + h_height + h_reward + h_fees + h_address
-
-    # Block
-    def block(self, prev_id: str, merkle_root: str, target: int, nonce: int, timestamp: int, transactions: list):
-        # Type
-        type = format(self.BLOCK_TYPE, f'0{self.TYPE_CHARS}x')
-
-        # Headers
-        headers = self.block_headers(prev_id, merkle_root, target, nonce, timestamp)
-
-        # Txs
-        txs = self.block_transactions(transactions)
-
-        # Raw = type + version + headers + txs
-        return type + self.FORMATTED_VERSION + headers + txs
-
-    def block_headers(self, prev_id: str, merkle_root: str, target_num: int, nonce: int, timestamp: int):
-        # Type
-        type = format(self.BLOCK_HEADER_TYPE, f'0{self.TYPE_CHARS}x')
-
-        # Headers
-        h_prev_id = self.format_hex(prev_id, self.HASH_CHARS)
-        h_merkle_root = self.format_hex(merkle_root, self.HASH_CHARS)
-        h_target = self.target_from_int(target_num)
-        h_nonce = self.format_int(nonce, self.NONCE_CHARS)
-        h_timestamp = self.format_int(timestamp, self.TIMESTAMP_CHARS)
-
-        # Raw = type + version (2 bytes) + prev_id + merkle_root (64 bytes) + target + nonce + timestamp (12 bytes) = 78 bytes
-        return type + self.FORMATTED_VERSION + h_prev_id + h_merkle_root + h_target + h_nonce + h_timestamp
-
-    def block_transactions(self, transactions: list):
-        # Type
-        type = format(self.BLOCK_TX_TYPE, f'0{self.TYPE_CHARS}x')
-
-        # Count
-        tx_count = format(len(transactions), f'0{self.COUNT_CHARS}x')
-
-        # tx_string
-        tx_string = ''
-        for tx in transactions:
-            tx_string += tx.raw_tx
-
-        # Raw = type + version (2 bytes) + tx_count (1 byte) + raw_txs (var)
-        return type + self.FORMATTED_VERSION + tx_count + tx_string
->>>>>>> mining_tx

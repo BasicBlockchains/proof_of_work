@@ -225,14 +225,11 @@ class Decoder:
         # Return Transaction
         return Transaction(inputs, outputs)
 
-<<<<<<< HEAD
     def raw_mining_transaction(self, raw_tx: str):
-=======
-    def raw_mining_tx(self, raw_tx: str):
         # Type version
         if not self.verify_type_version(self.F.MINING_TX_TYPE, self.F.VERSION, raw_tx):
             # Logging
-            print('Type/Version error in raw mining transaction')
+            print('Type/Version error in raw mininig transaction')
             return None
 
         # Indexing
@@ -240,103 +237,101 @@ class Decoder:
         index1 = index0 + self.F.HEIGHT_CHARS
         index2 = index1 + self.F.REWARD_CHARS
         index3 = index2 + self.F.AMOUNT_CHARS
-        index4 = index3 + self.F.ADDRESS_CHARS
 
         # Values
         height = int(raw_tx[index0:index1], 16)
         reward = int(raw_tx[index1:index2], 16)
         block_fees = int(raw_tx[index2:index3], 16)
-        address = self.F.int_to_base58(int(raw_tx[index3:index4], 16))
 
-        # Return MiningTx
+        # Mining UTXO
+        mining_utxo = self.raw_utxo_output(raw_tx[index3:])
+        address = mining_utxo.address
+
         return MiningTransaction(height, reward, block_fees, address)
 
     # Block
     def raw_block(self, raw_block: str):
->>>>>>> mining_tx
         # Type version
-        if not self.verify_type_version(self.F.MINING_TX_TYPE, self.F.VERSION, raw_tx):
+        if not self.verify_type_version(self.F.BLOCK_TYPE, self.F.VERSION, raw_block):
             # Logging
-            print('Type/Version error in raw mininig transaction')
+            print('Type/Version error in raw block')
             return None
 
-    #
-    # # Block
-    # def raw_block(self, raw_block: str):
-    #     # Type version
-    #     if not self.verify_type_version(self.F.BLOCK_TYPE, self.F.VERSION, raw_block):
-    #         # Logging
-    #         print('Type/Version error in raw block')
-    #         return None
-    #
-    #     # Indexing
-    #     header_index = self.v_index + self.F.HEADERS_CHARS
-    #
-    #     # Headers
-    #     header_dict = self.raw_block_headers(raw_block[self.v_index:self.v_index + self.F.HEADERS_CHARS])
-    #     transactions = self.raw_block_transactions(raw_block[self.v_index + self.F.HEADERS_CHARS:])
-    #
-    #     # Get header values
-    #     prev_id = header_dict['prev_id']
-    #     merkle_root = header_dict['merkle_root']
-    #     target = header_dict['target']
-    #     nonce = header_dict['nonce']
-    #     timestamp = header_dict['timestamp']
-    #
-    #     # Get block and verify merkle root
-    #     block = Block(prev_id, target, nonce, timestamp, transactions)
-    #     if block.merkle_root != merkle_root:
-    #         # Logging
-    #         print('Merkle root error when recreating block from raw')
-    #         return None
-    #     return block
-    #
-    # def raw_block_headers(self, raw_headers: str):
-    #     # Type version
-    #     if not self.verify_type_version(self.F.BLOCK_HEADER_TYPE, self.F.VERSION, raw_headers):
-    #         # Logging
-    #         print('Type/Version error in raw block headers')
-    #         return None
-    #
-    #     # Indexing
-    #     index0 = self.v_index
-    #     index1 = index0 + self.F.HASH_CHARS
-    #     index2 = index1 + self.F.HASH_CHARS
-    #     index3 = index2 + self.F.TARGET_CHARS
-    #     index4 = index3 + self.F.NONCE_CHARS
-    #     index5 = index4 + self.F.TIMESTAMP_CHARS
-    #
-    #     # Recover values
-    #     prev_id = raw_headers[index0:index1]
-    #     merkle_root = raw_headers[index1:index2]
-    #     target = self.int_from_target(raw_headers[index2:index3])
-    #     nonce = int(raw_headers[index3:index4], 16)
-    #     timestamp = int(raw_headers[index4:index5], 16)
-    #
-    #     # Return dict
-    #     return {
-    #         "prev_id": prev_id,
-    #         "merkle_root": merkle_root,
-    #         "target": target,
-    #         "nonce": nonce,
-    #         "timestamp": timestamp
-    #     }
-    #
-    # def raw_block_transactions(self, raw_txs: str):
-    #     # Type version
-    #     if not self.verify_type_version(self.F.BLOCK_TX_TYPE, self.F.VERSION, raw_txs):
-    #         # Logging
-    #         print('Type/Version error in raw block transactions')
-    #         return None
-    #
-    #     # Tx_count
-    #     tx_count = int(raw_txs[self.v_index:self.v_index + self.F.COUNT_CHARS], 16)
-    #     transactions = []
-    #     temp_index = self.v_index + self.F.COUNT_CHARS
-    #     for x in range(tx_count):
-    #         tx = self.raw_transaction(raw_txs[temp_index:])
-    #         transactions.append(tx)
-    #         temp_index += len(tx.raw_tx)
-    #
-    #     # Return tx_list
-    #     return transactions
+        # Indexing
+        header_index = self.v_index + self.F.HEADER_CHARS
+
+        # Headers
+        header_dict = self.raw_block_header(raw_block[self.v_index:self.v_index + self.F.HEADER_CHARS])
+        mining_tx, transactions = self.raw_block_transactions(raw_block[self.v_index + self.F.HEADER_CHARS:])
+
+        # Get header values
+        prev_id = header_dict['prev_id']
+        merkle_root = header_dict['merkle_root']
+        target = header_dict['target']
+        nonce = header_dict['nonce']
+        timestamp = header_dict['timestamp']
+
+        # Get block and verify merkle root
+        block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
+        if block.merkle_root != merkle_root:
+            # Logging
+            print('Merkle root error when recreating block from raw')
+            return None
+        return block
+
+    def raw_block_header(self, raw_header: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_HEADER_TYPE, self.F.VERSION, raw_header):
+            # Logging
+            print('Type/Version error in raw block headers')
+            return None
+
+        # Indexing
+        index0 = self.v_index
+        index1 = index0 + self.F.HASH_CHARS
+        index2 = index1 + self.F.HASH_CHARS
+        index3 = index2 + self.F.HASH_CHARS
+        index4 = index3 + self.F.NONCE_CHARS
+        index5 = index4 + self.F.TIMESTAMP_CHARS
+
+        # Recover values
+        prev_id = raw_header[index0:index1]
+        merkle_root = raw_header[index1:index2]
+        target = int(raw_header[index2:index3], 16)
+        nonce = int(raw_header[index3:index4], 16)
+        timestamp = int(raw_header[index4:index5], 16)
+
+        # Return dict
+        return {
+            "prev_id": prev_id,
+            "merkle_root": merkle_root,
+            "target": target,
+            "nonce": nonce,
+            "timestamp": timestamp
+        }
+
+    def raw_block_transactions(self, raw_txs: str):
+        # Type version
+        if not self.verify_type_version(self.F.BLOCK_TX_TYPE, self.F.VERSION, raw_txs):
+            # Logging
+            print('Type/Version error in raw block transactions')
+            return None
+
+            # Get mining_tx
+        mining_tx = self.raw_mining_transaction(raw_txs[self.v_index:])
+
+        # Indexing
+        mining_index = self.v_index + len(mining_tx.raw_tx)
+        count_index = self.F.BLOCK_TX_CHARS + mining_index
+        tx_count = int(raw_txs[mining_index: count_index], 16)
+
+        # Get UserTx's
+        transactions = []
+        temp_index = count_index
+        for x in range(0, tx_count):
+            new_tx = self.raw_transaction(raw_txs[temp_index:])
+            transactions.append(new_tx)
+            temp_index += len(new_tx.raw_tx)
+
+        # Return MiningTx, and UserTx list
+        return mining_tx, transactions

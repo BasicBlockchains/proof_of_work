@@ -19,15 +19,16 @@ class Block():
 
     The Merkle Root for the transaction list will be calculated automatically
     '''
-    # Formatter
-    F = Formatter()
 
     def __init__(self, prev_id: str, target: int, nonce: int, timestamp: int, mining_tx: MiningTransaction,
                  transactions: list):
-        self.previous_id = prev_id
+        # Block headers
+        self.prev_id = prev_id
         self.target = target
         self.nonce = nonce
         self.timestamp = timestamp
+
+        # Block Transactions
         self.mining_tx = mining_tx
         self.transactions = transactions
 
@@ -38,25 +39,68 @@ class Block():
         return self.to_json
 
     @property
-    def raw_headers(self):
-        return self.F.block_headers(self.previous_id, self.merkle_root, self.target, self.nonce, self.timestamp)
+    def raw_header(self):
+        # Setup formatter
+        f = Formatter()
+
+        # Type/version
+        type = format(f.BLOCK_HEADER_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Format headers
+        prev_id = f.format_hex(self.prev_id, f.HASH_CHARS)
+        merkle_root = f.format_hex(self.merkle_root, f.HASH_CHARS)
+        target = format(self.target, f'0{f.HASH_CHARS}x')
+        nonce = format(self.nonce, f'0{f.NONCE_CHARS}x')
+        timestamp = format(self.timestamp, f'0{f.TIMESTAMP_CHARS}x')
+
+        # Raw = type + version + prev_hash + merkle_root + target + nonce + timestamp
+        return type + version + prev_id + merkle_root + target + nonce + timestamp
 
     @property
     def raw_transactions(self):
-        return self.F.block_transactions(self.transactions)
+        # Setup formatter
+        f = Formatter()
+
+        # Type/version
+        type = format(f.BLOCK_TX_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Format tx_count
+        tx_count = format(len(self.transactions), f'0{f.BLOCK_TX_CHARS}x')
+
+        # Format UserTxs
+        transaction_string = ''
+        for t in self.transactions:
+            transaction_string += t.raw_tx
+
+        # Raw = raw_mining_tx + tx_count +  transaction_string
+        return type + version + self.mining_tx.raw_tx + tx_count + transaction_string
 
     @property
     def raw_block(self):
-        return self.F.block(self.previous_id, self.merkle_root, self.target, self.nonce, self.timestamp,
-                            self.transactions)
+        # Setup formatter
+        f = Formatter()
+
+        # Type/version
+        type = format(f.BLOCK_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Raw = type + version + raw_headers + raw_transactions
+        return type + version + self.raw_header + self.raw_transactions
+
+    @property
+    def id(self):
+        return sha256(self.raw_header.encode()).hexdigest()
 
     @property
     def to_json(self):
         block_dict = {
-            "previous_id": self.previous_id,
+            "prev_id": self.prev_id,
             "target": self.target,
             "nonce": self.nonce,
             "timestamp": self.timestamp,
+            "mining_tx": json.dumps(json.loads(self.mining_tx.to_json)),
             "tx_count": len(self.transactions)
         }
         for t in self.transactions:
@@ -68,10 +112,6 @@ class Block():
     @property
     def tx_ids(self):
         return [self.mining_tx.id] + [tx.id for tx in self.transactions]
-
-    @property
-    def id(self):
-        return sha256(self.raw_headers.encode()).hexdigest()
 
 
 # --- Merkle Root Calculations ---#

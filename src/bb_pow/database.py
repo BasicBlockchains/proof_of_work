@@ -182,7 +182,7 @@ class DataBase:
         # Header Table
         query = """INSERT INTO block_headers VALUES (?,?,?,?,?,?,?)"""
         data_tuple = (
-            hex(height), block.id, block.previous_id, block.merkle_root, hex(block.target), hex(block.nonce),
+            hex(height), block.id, block.prev_id, block.merkle_root, hex(block.target), hex(block.nonce),
             hex(block.timestamp))
         self.query_db(query, data_tuple)
 

@@ -6,7 +6,7 @@ from hashlib import sha256
 
 from src.bb_pow.block import Block, calc_merkle_root, merkle_proof
 from src.bb_pow.timestamp import utc_to_seconds
-from src.bb_pow.transactions import Transaction
+from src.bb_pow.transactions import Transaction, MiningTransaction
 from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
 from src.bb_pow.wallet import Wallet
 
@@ -57,20 +57,35 @@ def get_random_transaction():
     return Transaction(inputs=inputs, outputs=outputs)
 
 
-def get_random_target():
-    random_coeff = secrets.randbits(24)
-    random_exp = 0
-    while random_exp < 4:
-        random_exp = secrets.randbits(8)
-    return Formatter().target_from_parts(random_coeff, random_exp)
+def get_random_mining_tx():
+    # Formatter/Decoder
+    f = Formatter()
+    w = Wallet()
+    height = secrets.randbits(64)
+    reward = secrets.randbits(40)
+    block_fees = secrets.randbits(64)
+
+    return MiningTransaction(height, reward, block_fees, w.address)
+
+
+# def get_random_target():
+#     random_coeff = secrets.randbits(24)
+#     random_exp = 0
+#     while random_exp < 4:
+#         random_exp = secrets.randbits(8)
+#     return Formatter().target_from_parts(random_coeff, random_exp)
 
 
 def test_merkle_root():
     transactions = []
-    for x in range(3):
+    for x in range(0, 2):
         transactions.append(get_random_transaction())
 
-    test_block = Block(prev_id='', target=0, nonce=0, timestamp=utc_to_seconds(), transactions=transactions)
+    mining_tx = get_random_mining_tx()
+
+    test_block = Block(prev_id='', target=secrets.randbits(256), nonce=secrets.randbits(64), timestamp=utc_to_seconds(),
+                       mining_tx=mining_tx,
+                       transactions=transactions)
 
     tx_ids = test_block.tx_ids
     calculated_merkle_root = calc_merkle_root(tx_ids)
@@ -124,31 +139,44 @@ def test_block():
     d = Decoder()
     f = Formatter()
 
-    transactions = []
-    random_length = 0
-    while random_length < 1:
-        random_length = secrets.randbits(4)
-    for x in range(random_length):
-        transactions.append(get_random_transaction())
-
+    # Get header values
     prev_id = random_tx_id()
-    target = get_random_target()
-    nonce = secrets.randbits(4 * f.NONCE_CHARS)
+    target = secrets.randbits(256)
+    nonce = secrets.randbits(64)
     timestamp = utc_to_seconds()
 
-    test_block = Block(prev_id, target, nonce, timestamp, transactions)
-    decoded_block = d.raw_block(test_block.raw_block)
+    # Get mining_tx
+    mining_tx = get_random_mining_tx()
 
-    # Assertions
-    assert test_block.raw_headers == decoded_block.raw_headers
-    assert test_block.raw_transactions == decoded_block.raw_transactions
-    assert test_block.raw_block == decoded_block.raw_block
-    assert test_block.id == decoded_block.id
+    # Get transactions
+    transactions = []
+    tx_num = secrets.randbits(4)
+    for x in range(0, tx_num):
+        transactions.append(get_random_transaction())
 
-    # Verify values
-    header_dict = d.raw_block_headers(test_block.raw_headers)
+    # Create Block
+    block1 = Block(prev_id=prev_id, target=target, nonce=nonce, timestamp=timestamp, mining_tx=mining_tx,
+                   transactions=transactions)
+    raw_block = block1.raw_block
+    raw_header = block1.raw_header
+    raw_block_transactions = block1.raw_transactions
+    header_dict = d.raw_block_header(raw_header)
+    temp_mining_tx, temp_transactions = d.raw_block_transactions(raw_block_transactions)
+    block2 = d.raw_block(raw_block)
+
+    # Verify raw block
+    assert block2.raw_block == raw_block
+
+    # Verify mining_Tx
+    assert temp_mining_tx.raw_tx == mining_tx.raw_tx
+
+    # Verify UserTx
+    for y in range(0, tx_num):
+        assert transactions[y].raw_tx == temp_transactions[y].raw_tx
+
+    # Verify dict values
     assert header_dict['prev_id'] == prev_id
-    assert header_dict['merkle_root'] == test_block.merkle_root
-    assert header_dict['target'] == target
+    assert header_dict['merkle_root'] == block1.merkle_root
     assert header_dict['nonce'] == nonce
+    assert header_dict['target'] == target
     assert header_dict['timestamp'] == timestamp
