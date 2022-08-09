@@ -53,6 +53,7 @@ class Formatter():
     UTXO_INPUT_TYPE = 0x11
     UTXO_OUTPUT_TYPE = 0x12
     TX_TYPE = 0x21
+    MINING_TX_TYPE = 0x22
     BLOCK_TYPE = 0x31
     BLOCK_HEADER_TYPE = 0x32
     BLOCK_TX_TYPE = 0x33
@@ -223,7 +224,7 @@ class Formatter():
         # Raw utxo = type (2 hex) + version (2 hex) + amount (16 hex) + address (52 hex) + block_height (16 hex) = 44 bytes
         return type + self.FORMATTED_VERSION + f_amount + f_address + f_block_height
 
-    # Transaction
+    # Transactions
     def transaction(self, inputs: list, outputs: list):
         # Type
         type = format(self.TX_TYPE, f'0{self.TYPE_CHARS}x')
@@ -244,6 +245,19 @@ class Formatter():
 
         # Raw = type + version + input_count + input_string + output_count + output_string
         return type + self.FORMATTED_VERSION + input_count + input_string + output_count + output_string
+
+    def mining_tx(self, height: int, reward: int, block_fees: int, address: str):
+        # Type
+        type = format(self.MINING_TX_TYPE, f'0{self.TYPE_CHARS}x')
+
+        # Mining info
+        h_height = format(height, f'0{self.HEIGHT_CHARS}x')
+        h_reward = format(reward, f'0{self.REWARD_CHARS}x')
+        h_fees = format(block_fees, f'0{self.AMOUNT_CHARS}x')
+        h_address = self.hex_address(address)
+
+        # Raw = type + version + height + reward + fees + address
+        return type + self.FORMATTED_VERSION + h_height + h_reward + h_fees + h_address
 
     # Block
     def block(self, prev_id: str, merkle_root: str, target: int, nonce: int, timestamp: int, transactions: list):
