@@ -59,7 +59,7 @@ class Blockchain():
     # Properties
     @property
     def height(self):
-        return len(self.chain) - 1
+        return self.chain_db.get_height()['height']
 
     @property
     def last_block(self):
@@ -73,7 +73,7 @@ class Blockchain():
             return False
 
         # Check target
-        if int(block.id) > self.target:
+        if int(block.id, 16) > self.target:
             # Logging
             return False
 
@@ -152,6 +152,7 @@ class Blockchain():
         # Check for fork
         elif block.prev_id == self.last_block.prev_id:
             self.create_fork(block)
+            return False
         else:
             # Validate Block
             valid_block = self.validate_block(block)
@@ -180,9 +181,56 @@ class Blockchain():
             self.total_mining_amount -= block.mining_tx.reward
 
             # Blockchain maintenance when height % heartbeat == 0
+        return True
 
-    def pop_block(self):
-        pass
+    def pop_block(self) -> bool:
+        '''
+        Will pop the last block in the chain provided it's not the genesis block
+        '''
+        # Don't pop the genesis block
+        if self.height == 0:
+            return False
+
+        # Remove top most block from mem
+        removed_block = self.chain.pop(-1)
+
+        # Add reward
+        self.total_mining_amount += removed_block.mining_tx.reward
+
+        # Remove mining utxo from db
+        self.chain_db.delete_utxo(removed_block.mining_tx.id, 0)
+
+        # Remove output utxos and restore inputs for each transaction
+
+        for tx in removed_block.transactions:
+            # Outputs
+            for utxo_output in tx.outputs:
+                self.chain_db.delete_utxo(tx.id, tx.outputs.index(utxo_output))
+
+            # Inputs
+            for utxo_input in tx.inputs:
+                tx_id = utxo_input.tx_id
+                tx_index = utxo_input.index
+
+                temp_tx = self.get_tx_by_id(tx_id)
+                type = int(temp_tx.raw_tx[:self.f.TYPE_CHARS], 16)
+                if type == self.f.MINING_TX_TYPE:
+                    utxo_output = temp_tx.mining_utxo
+                else:
+                    utxo_output = temp_tx.outputs[tx_index]
+
+                # Add utxo_output
+                amount = utxo_output.amount
+                address = utxo_output.address
+                block_height = utxo_output.block_height
+
+                # Database
+                self.chain_db.post_utxo(tx_id, tx_index, UTXO_OUTPUT(amount, address, block_height))
+
+        # Remove block from db
+        self.chain_db.delete_block(self.height)
+
+        return True
 
     def create_genesis_block(self) -> Block:
         genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0).address)
@@ -198,3 +246,37 @@ class Blockchain():
 
     def create_fork(self, block: Block):
         pass
+
+    # Search methods
+    def find_block_by_tx_id(self, tx_id: str):
+        '''
+        Will return a Block if the tx_id is in its list. Otherwise return None
+        THIS IS EXPENSIVE
+        '''
+        temp_height = self.height
+        block = None
+        block_found = False
+        while temp_height > 0 and not block_found:
+            temp_block = self.d.raw_block(
+                self.chain_db.get_raw_block(temp_height)['raw_block']
+            )
+            if tx_id in temp_block.tx_ids:
+                block = temp_block
+                block_found = True
+            temp_height -= 1
+        return block
+
+    def get_tx_by_id(self, tx_id: str):
+        '''
+        We return the Transaction object if the tx_id is in a Block
+        '''
+        tx = None
+        temp_block = self.find_block_by_tx_id(tx_id)
+        if temp_block:
+            # Check for mining tx
+            if temp_block.mining_tx.id == tx_id:
+                tx = temp_block.mining_tx
+            else:
+                tx_index = temp_block.tx_ids.index(tx_id) - 1  # -1 to account for mining tx
+                tx = temp_block.transactions[tx_index]
+        return tx
