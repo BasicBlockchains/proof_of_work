@@ -7,7 +7,7 @@ from src.bb_pow.database import DataBase
 from src.bb_pow.block import Block
 import os
 from pathlib import Path
-from .test_block import get_random_transaction, get_random_utxo_input, get_random_utxo_output
+from .test_block import get_random_transaction, get_random_utxo_input, get_random_utxo_output, get_random_mining_tx
 from .test_wallet import random_tx_id
 from src.bb_pow.wallet import Wallet
 import json
@@ -107,7 +107,9 @@ def test_block_header_methods():
             tx_length = secrets.randbits(2)
         transactions = [get_random_transaction() for r in range(tx_length)]
 
-        sample_block = Block(prev_id, target, nonce, timestamp, transactions)
+        mining_tx = get_random_mining_tx()
+
+        sample_block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
         block_list.append(sample_block)
 
         # Post
@@ -129,7 +131,7 @@ def test_block_header_methods():
         height_dict = {
             "height": z,
             "id": temp_block.id,
-            "prev_id": temp_block.previous_id,
+            "prev_id": temp_block.prev_id,
             "merkle_root": temp_block.merkle_root,
             "target": temp_block.target,
             "nonce": temp_block.nonce,

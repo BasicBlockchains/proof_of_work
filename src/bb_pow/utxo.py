@@ -11,8 +11,6 @@ class UTXO_INPUT():
     '''
     The UTXO INPUT will reference an existing UTXO_OUTPUT by tx_id
     '''
-    # Setup formatter
-    f = Formatter()
 
     def __init__(self, tx_id: str, index: int, signature: str):
         self.tx_id = tx_id
@@ -32,7 +30,19 @@ class UTXO_INPUT():
 
     @property
     def raw_utxo(self):
-        return self.f.utxo_input(self.tx_id, self.index, self.signature)
+        # Setup formatter
+        f = Formatter()
+
+        # Type version
+        type = format(f.UTXO_INPUT_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Input values - signature already formatted
+        tx_id = format(int(self.tx_id, 16), f'0{f.HASH_CHARS}x')
+        index = format(self.index, f'0{f.INDEX_CHARS}x')
+
+        # Raw = type + version + tx_id + index + signature
+        return type + version + tx_id + index + self.signature
 
     @property
     def id(self):
@@ -65,8 +75,21 @@ class UTXO_OUTPUT():
 
     @property
     def raw_utxo(self):
-        return self.f.utxo_output(self.amount, self.address, self.block_height)
+        # Setup formatter
+        f = Formatter()
+
+        # Type version
+        type = format(f.UTXO_OUTPUT_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Format values
+        amount = format(self.amount, f'0{f.AMOUNT_CHARS}x')
+        address = f.hex_address(self.address)
+        block_height = format(self.block_height, f'0{f.HEIGHT_CHARS}x')
+
+        # Raw = type + version + amount + address + block_height
+        return type + version + amount + address + block_height
 
     @property
     def id(self):
-        return sha256(self.to_json.encode()).hexdigest()
+        return sha256(self.raw_utxo.encode()).hexdigest()

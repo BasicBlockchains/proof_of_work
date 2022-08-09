@@ -36,7 +36,20 @@ class MiningTransaction():
 
     @property
     def raw_tx(self):
-        return self.f.mining_tx(self.height, self.reward, self.block_fees, self.mining_utxo.address)
+        # Setup formatter
+        f = Formatter()
+
+        # Type/version
+        type = format(f.MINING_TX_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Block info
+        height = format(self.height, f'0{f.HEIGHT_CHARS}x')
+        reward = format(self.reward, f'0{f.REWARD_CHARS}x')
+        block_fees = format(self.block_fees, f'0{f.AMOUNT_CHARS}x')
+
+        # Raw = type + version + block_info + mining_utxo
+        return type + version + height + reward + block_fees + self.mining_utxo.raw_utxo
 
     @property
     def id(self):
@@ -74,7 +87,29 @@ class Transaction():
 
     @property
     def raw_tx(self):
-        return self.f.transaction(self.inputs, self.outputs)
+        # Setup formatter
+        f = Formatter()
+
+        # Type/version
+        type = format(f.TX_TYPE, f'0{f.TYPE_CHARS}x')
+        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+
+        # Format counts
+        input_count = format(self.input_count, f'0{f.COUNT_CHARS}x')
+        output_count = format(self.output_count, f'0{f.COUNT_CHARS}x')
+
+        # Format input string
+        input_string = ''
+        for i in self.inputs:
+            input_string += i.raw_utxo
+
+        # Format output string
+        output_string = ''
+        for t in self.outputs:
+            output_string += t.raw_utxo
+
+        # Raw = type + version + input_count + inputs + output_count + output
+        return type + version + input_count + input_string + output_count + output_string
 
     @property
     def id(self):

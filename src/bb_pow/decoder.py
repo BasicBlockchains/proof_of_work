@@ -35,16 +35,16 @@ class Decoder:
             return False
         return True
 
-    # Decode target
-    def int_from_target(self, encoded_target: str):
-        # Index
-        coeff_index = self.F.TARGET_COEFFICIENT_CHARS
-        exp_index = self.F.TARGET_EXPONENT_CHARS + coeff_index
-
-        coeff = int(encoded_target[:coeff_index], 16)
-        exp = int(encoded_target[coeff_index:exp_index], 16)
-
-        return coeff * pow(2, 8 * (exp - 3))
+    # # Decode target
+    # def int_from_target(self, encoded_target: str):
+    #     # Index
+    #     coeff_index = self.F.TARGET_COEFFICIENT_CHARS
+    #     exp_index = self.F.TARGET_EXPONENT_CHARS + coeff_index
+    #
+    #     coeff = int(encoded_target[:coeff_index], 16)
+    #     exp = int(encoded_target[coeff_index:exp_index], 16)
+    #
+    #     return coeff * pow(2, 8 * (exp - 3))
 
     ##CPK, Signature, Address
 
@@ -83,22 +83,16 @@ class Decoder:
         return (x, y)
 
     def decode_signature(self, signature: str):
-
-        # Verify type/version
-        type = int(signature[:self.F.TYPE_CHARS], 16)
-        version = int(signature[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS], 16)
-
-        try:
-            assert type == self.F.SIGNATURE_TYPE
-            assert version in self.F.ACCEPTED_VERSIONS
-        except AssertionError:
+        # Type version
+        if not self.verify_type_version(self.F.SIGNATURE_TYPE, self.F.VERSION, signature):
             # Logging
-            print('Signature has incorrect type and/or version')
-            return False
+            print('Type/Version error in raw utxo_input')
+            return None
 
         # Indexing
+
         start_index = self.F.TYPE_CHARS + self.F.VERSION_CHARS
-        cpk_index = start_index + self.F.COEFF_CHARS + self.F.HASH_CHARS
+        cpk_index = start_index + self.F.CPK_CHARS
         r_index = cpk_index + self.F.HASH_CHARS
         s_index = r_index + self.F.HASH_CHARS
 
@@ -146,7 +140,7 @@ class Decoder:
         epk = hex_addy[start_index:end_index]
         checksum = hex_addy[end_index:]
 
-        while len(epk) != self.F.ADDRESS_DIGEST:
+        while len(epk) != self.F.EPK_CHARS:
             epk = '0' + epk
 
         return sha256(
@@ -164,16 +158,10 @@ class Decoder:
     # UTXOS
 
     def raw_utxo_input(self, raw_utxo: str):
-        # Type and version
-        type = int(raw_utxo[:self.t_index], 16)
-        version = int(raw_utxo[self.t_index:self.v_index], 16)
-
-        try:
-            assert type == self.F.UTXO_INPUT_TYPE
-            assert version in self.F.ACCEPTED_VERSIONS
-        except AssertionError:
+        # Type version
+        if not self.verify_type_version(self.F.UTXO_INPUT_TYPE, self.F.VERSION, raw_utxo):
             # Logging
-            print('Type/version error when decoding raw utxo input')
+            print('Type/Version error in raw utxo_input')
             return None
 
         # tx_id, tx_index, signature
@@ -189,16 +177,10 @@ class Decoder:
         return UTXO_INPUT(tx_id, tx_index, signature)
 
     def raw_utxo_output(self, raw_utxo: str):
-        # Type and version
-        type = int(raw_utxo[:self.t_index], 16)
-        version = int(raw_utxo[self.t_index:self.v_index], 16)
-
-        try:
-            assert type == self.F.UTXO_OUTPUT_TYPE
-            assert version in self.F.ACCEPTED_VERSIONS
-        except AssertionError:
+        # Type version
+        if not self.verify_type_version(self.F.UTXO_OUTPUT_TYPE, self.F.VERSION, raw_utxo):
             # Logging
-            print('Type/version error when decoding raw utxo output')
+            print('Type/Version error in raw utxo_output')
             return None
 
         # tx_id, tx_index, signature
@@ -215,16 +197,10 @@ class Decoder:
 
     # Transaction
     def raw_transaction(self, raw_tx: str):
-        # Type and version
-        type = int(raw_tx[:self.t_index], 16)
-        version = int(raw_tx[self.t_index:self.v_index], 16)
-
-        try:
-            assert type == self.F.TX_TYPE
-            assert version in self.F.ACCEPTED_VERSIONS
-        except AssertionError:
+        # Type version
+        if not self.verify_type_version(self.F.TX_TYPE, self.F.VERSION, raw_tx):
             # Logging
-            print('Type/version error when decoding raw transaction')
+            print('Type/Version error in raw transaction')
             return None
 
         temp_index = self.v_index + self.F.COUNT_CHARS
@@ -249,11 +225,11 @@ class Decoder:
         # Return Transaction
         return Transaction(inputs, outputs)
 
-    def raw_mining_tx(self, raw_tx: str):
+    def raw_mining_transaction(self, raw_tx: str):
         # Type version
         if not self.verify_type_version(self.F.MINING_TX_TYPE, self.F.VERSION, raw_tx):
             # Logging
-            print('Type/Version error in raw mining transaction')
+            print('Type/Version error in raw mininig transaction')
             return None
 
         # Indexing
@@ -261,15 +237,16 @@ class Decoder:
         index1 = index0 + self.F.HEIGHT_CHARS
         index2 = index1 + self.F.REWARD_CHARS
         index3 = index2 + self.F.AMOUNT_CHARS
-        index4 = index3 + self.F.ADDRESS_CHARS
 
         # Values
         height = int(raw_tx[index0:index1], 16)
         reward = int(raw_tx[index1:index2], 16)
         block_fees = int(raw_tx[index2:index3], 16)
-        address = self.F.int_to_base58(int(raw_tx[index3:index4], 16))
 
-        # Return MiningTx
+        # Mining UTXO
+        mining_utxo = self.raw_utxo_output(raw_tx[index3:])
+        address = mining_utxo.address
+
         return MiningTransaction(height, reward, block_fees, address)
 
     # Block
@@ -281,11 +258,11 @@ class Decoder:
             return None
 
         # Indexing
-        header_index = self.v_index + self.F.HEADERS_CHARS
+        header_index = self.v_index + self.F.HEADER_CHARS
 
         # Headers
-        header_dict = self.raw_block_headers(raw_block[self.v_index:self.v_index + self.F.HEADERS_CHARS])
-        transactions = self.raw_block_transactions(raw_block[self.v_index + self.F.HEADERS_CHARS:])
+        header_dict = self.raw_block_header(raw_block[self.v_index:self.v_index + self.F.HEADER_CHARS])
+        mining_tx, transactions = self.raw_block_transactions(raw_block[self.v_index + self.F.HEADER_CHARS:])
 
         # Get header values
         prev_id = header_dict['prev_id']
@@ -295,16 +272,16 @@ class Decoder:
         timestamp = header_dict['timestamp']
 
         # Get block and verify merkle root
-        block = Block(prev_id, target, nonce, timestamp, transactions)
+        block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
         if block.merkle_root != merkle_root:
             # Logging
             print('Merkle root error when recreating block from raw')
             return None
         return block
 
-    def raw_block_headers(self, raw_headers: str):
+    def raw_block_header(self, raw_header: str):
         # Type version
-        if not self.verify_type_version(self.F.BLOCK_HEADER_TYPE, self.F.VERSION, raw_headers):
+        if not self.verify_type_version(self.F.BLOCK_HEADER_TYPE, self.F.VERSION, raw_header):
             # Logging
             print('Type/Version error in raw block headers')
             return None
@@ -313,16 +290,16 @@ class Decoder:
         index0 = self.v_index
         index1 = index0 + self.F.HASH_CHARS
         index2 = index1 + self.F.HASH_CHARS
-        index3 = index2 + self.F.TARGET_CHARS
+        index3 = index2 + self.F.HASH_CHARS
         index4 = index3 + self.F.NONCE_CHARS
         index5 = index4 + self.F.TIMESTAMP_CHARS
 
         # Recover values
-        prev_id = raw_headers[index0:index1]
-        merkle_root = raw_headers[index1:index2]
-        target = self.int_from_target(raw_headers[index2:index3])
-        nonce = int(raw_headers[index3:index4], 16)
-        timestamp = int(raw_headers[index4:index5], 16)
+        prev_id = raw_header[index0:index1]
+        merkle_root = raw_header[index1:index2]
+        target = int(raw_header[index2:index3], 16)
+        nonce = int(raw_header[index3:index4], 16)
+        timestamp = int(raw_header[index4:index5], 16)
 
         # Return dict
         return {
@@ -340,14 +317,21 @@ class Decoder:
             print('Type/Version error in raw block transactions')
             return None
 
-        # Tx_count
-        tx_count = int(raw_txs[self.v_index:self.v_index + self.F.COUNT_CHARS], 16)
-        transactions = []
-        temp_index = self.v_index + self.F.COUNT_CHARS
-        for x in range(tx_count):
-            tx = self.raw_transaction(raw_txs[temp_index:])
-            transactions.append(tx)
-            temp_index += len(tx.raw_tx)
+            # Get mining_tx
+        mining_tx = self.raw_mining_transaction(raw_txs[self.v_index:])
 
-        # Return tx_list
-        return transactions
+        # Indexing
+        mining_index = self.v_index + len(mining_tx.raw_tx)
+        count_index = self.F.BLOCK_TX_CHARS + mining_index
+        tx_count = int(raw_txs[mining_index: count_index], 16)
+
+        # Get UserTx's
+        transactions = []
+        temp_index = count_index
+        for x in range(0, tx_count):
+            new_tx = self.raw_transaction(raw_txs[temp_index:])
+            transactions.append(new_tx)
+            temp_index += len(new_tx.raw_tx)
+
+        # Return MiningTx, and UserTx list
+        return mining_tx, transactions
