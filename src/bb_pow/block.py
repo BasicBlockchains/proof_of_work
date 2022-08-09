@@ -5,6 +5,7 @@ from .transactions import Transaction
 from hashlib import sha256
 import json
 from .formatter import Formatter
+from .transactions import MiningTransaction
 
 
 class Block():
@@ -21,11 +22,13 @@ class Block():
     # Formatter
     F = Formatter()
 
-    def __init__(self, prev_id: str, target: int, nonce: int, timestamp: int, transactions: list):
+    def __init__(self, prev_id: str, target: int, nonce: int, timestamp: int, mining_tx: MiningTransaction,
+                 transactions: list):
         self.previous_id = prev_id
         self.target = target
         self.nonce = nonce
         self.timestamp = timestamp
+        self.mining_tx = mining_tx
         self.transactions = transactions
 
         # Calculate merkle root
@@ -64,7 +67,7 @@ class Block():
 
     @property
     def tx_ids(self):
-        return [tx.id for tx in self.transactions]
+        return [self.mining_tx.id] + [tx.id for tx in self.transactions]
 
     @property
     def id(self):

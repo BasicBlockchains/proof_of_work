@@ -4,9 +4,10 @@ Tests for the transaction
 import secrets
 
 from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.transactions import Transaction
+from src.bb_pow.transactions import Transaction, MiningTransaction
 from src.bb_pow.wallet import Wallet
 from .test_wallet import random_tx_id
+from .test_block import get_random_utxo_output
 from src.bb_pow.decoder import Decoder
 
 
@@ -37,3 +38,21 @@ def test_transaction():
     # Assertions
     assert tx.id == recovered_tx.id
     assert tx.raw_tx == recovered_tx.raw_tx
+
+
+def test_mining_tx():
+    # Decoder
+    d = Decoder()
+
+    # Wallet for address
+    w = Wallet()
+
+    # Random mining values
+    reward = secrets.randbits(32)
+    height = secrets.randbits(64)
+    fees = secrets.randbits(64)
+
+    mining_tx = MiningTransaction(height, reward, fees, w.address)
+    recovered_mining_tx = d.raw_mining_tx(mining_tx.raw_tx)
+    assert mining_tx.raw_tx == recovered_mining_tx.raw_tx
+    assert mining_tx.id == recovered_mining_tx.id
