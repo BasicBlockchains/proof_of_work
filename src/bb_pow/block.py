@@ -100,7 +100,7 @@ class Block():
             "target": self.target,
             "nonce": self.nonce,
             "timestamp": self.timestamp,
-            "mining_tx": json.dumps(json.loads(self.mining_tx.to_json)),
+            "mining_tx": json.loads(self.mining_tx.to_json),
             "tx_count": len(self.transactions)
         }
         for t in self.transactions:

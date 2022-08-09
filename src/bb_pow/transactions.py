@@ -30,7 +30,7 @@ class MiningTransaction():
             "height": self.height,
             "reward": self.reward,
             "block_fees": self.block_fees,
-            "mining_utxo": json.dumps(json.loads(self.mining_utxo.to_json))
+            "mining_utxo": json.loads(self.mining_utxo.to_json)
         }
         return json.dumps(mining_dict)
 

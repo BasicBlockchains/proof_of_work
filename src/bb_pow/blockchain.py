@@ -8,7 +8,7 @@ from pathlib import Path
 from .formatter import Formatter
 from .decoder import Decoder
 from .utxo import UTXO_OUTPUT
-from .transactions import Transaction
+from .transactions import Transaction, MiningTransaction
 from .wallet import Wallet
 from .timestamp import utc_to_seconds
 from basicblockchains_ecc.elliptic_curve import secp256k1
@@ -20,8 +20,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 425287
-    GENESIS_TIMESTAMP = 1659990618
+    GENESIS_NONCE = 310620
+    GENESIS_TIMESTAMP = 1660065180
 
     # Directory defaults
     DIR_PATH = './data/'
@@ -68,7 +68,7 @@ class Blockchain():
     # Block methods
     def validate_block(self, block: Block) -> bool:
         # Check previous id
-        if block.previous_id != self.last_block.id:
+        if block.prev_id != self.last_block.id:
             # Logging
             return False
 
@@ -77,22 +77,19 @@ class Blockchain():
             # Logging
             return False
 
-        # Check transactions
-        if not block.transactions:
-            # Logging - missing mining tx
-            return False
-
-        # Check mining_tx
-        try:
-            mining_tx = block.transactions[0]
-            assert mining_tx.inputs == []
-            mining_utxo = mining_tx.outputs[0]
-        except IndexError:
+        # Check Mining Tx height
+        if block.mining_tx.height != self.height + 1:
             # Logging
             return False
 
-        # Check mining_utxo block height
-        if mining_utxo.block_height < self.height + 1 + self.f.MINING_DELAY:
+        # Check Mining UTXO block_height
+        if block.mining_tx.mining_utxo.block_height != self.height + 1 + self.f.MINING_DELAY:
+            # Logging
+            return False
+
+        # Check fees + reward = amount in mining_utxo
+        block_total = block.mining_tx.block_fees + block.mining_tx.reward
+        if block_total != block.mining_tx.mining_utxo.amount:
             # Logging
             return False
 
@@ -139,8 +136,8 @@ class Blockchain():
 
             fees += input_amount - output_amount
 
-        # Check fees and reward
-        if fees + self.mining_reward != mining_utxo.amount:
+        # Verify fees in block_transactions agrees with MiningTx
+        if fees != block.mining_tx.block_fees:
             # Logging
             return False
 
@@ -153,7 +150,7 @@ class Blockchain():
         if self.chain == []:
             valid_block = True
         # Check for fork
-        elif block.previous_id == self.last_block.previous_id:
+        elif block.prev_id == self.last_block.prev_id:
             self.create_fork(block)
         else:
             # Validate Block
@@ -170,14 +167,17 @@ class Blockchain():
                 for utxo_output in tx.outputs:
                     self.chain_db.post_utxo(tx.id, tx.outputs.index(utxo_output), utxo_output)
 
+            # Add UTXOs in Mining Tx
+            self.chain_db.post_utxo(block.mining_tx.id, 0, block.mining_tx.mining_utxo)
+
             # Save block the chain_db
-            self.chain_db.post_block(block, self.height + 1)
+            self.chain_db.post_block(block)
 
             # Save block to mem_chain
             self.chain.append(block)
 
             # Adjust total_mining_amount
-            self.total_mining_amount -= self.mining_reward
+            self.total_mining_amount -= block.mining_tx.reward
 
             # Blockchain maintenance when height % heartbeat == 0
 
@@ -185,9 +185,9 @@ class Blockchain():
         pass
 
     def create_genesis_block(self) -> Block:
-        genesis_utxo_output = UTXO_OUTPUT(self.mining_reward, Wallet(seed=0).address, 0xffffffffffffffff)
-        genesis_transaction = Transaction(inputs=[], outputs=[genesis_utxo_output])
-        genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, [genesis_transaction])
+        genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0).address)
+        genesis_transaction.mining_utxo.block_height = 0xffffffffffffffff
+        genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
         # Verify
         assert int(genesis_block.id, 16) < self.target
@@ -198,5 +198,3 @@ class Blockchain():
 
     def create_fork(self, block: Block):
         pass
-
-
