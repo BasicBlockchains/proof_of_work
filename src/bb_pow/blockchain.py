@@ -167,7 +167,7 @@ class Blockchain():
         if self.chain == []:
             valid_block = True
         # Create fork if adding block at same height
-        elif block.prev_id == self.last_block.prev_id:
+        elif block.mining_tx.height == self.last_block.mining_tx.height:
             self.create_fork(block)
             return False
         else:

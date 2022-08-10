@@ -9,7 +9,8 @@ from src.bb_pow.decoder import Decoder
 from src.bb_pow.formatter import Formatter
 from src.bb_pow.miner import Miner
 from src.bb_pow.timestamp import utc_to_seconds
-from src.bb_pow.transactions import MiningTransaction
+from src.bb_pow.transactions import MiningTransaction, Transaction
+from src.bb_pow.utxo import UTXO_OUTPUT, UTXO_INPUT
 from src.bb_pow.wallet import Wallet
 
 
@@ -134,7 +135,7 @@ def test_fork():
     w2 = Wallet()
 
     # Create first block
-    unmined_block1 = create_unmined_block(test_chain.last_block.id, test_chain.height + 1, test_chain.mining_reward,
+    unmined_block1 = create_unmined_block(test_chain.last_block.id, 1, test_chain.mining_reward,
                                           test_chain.target)
     mined_block1 = miner.mine_block(unmined_block1)
     assert test_chain.add_block(mined_block1)
@@ -147,10 +148,40 @@ def test_fork():
     assert test_chain.forks == [{1: mined_fork}]
 
     # Create next block for fork
-    unmined_fork2 = create_unmined_block(mined_fork.id, test_chain.height + 1, test_chain.mining_reward,
+    unmined_fork2 = create_unmined_block(mined_fork.id, 2, test_chain.mining_reward,
                                          test_chain.target)
     mined_fork2 = miner.mine_block(unmined_fork2)
 
     assert test_chain.add_block(mined_fork2)
     assert test_chain.forks == [{1: mined_block1}]
     assert test_chain.chain[1].id == mined_fork.id
+
+    # Create second block
+    unmined_block2 = create_unmined_block(mined_block1.id, 2, test_chain.mining_reward, test_chain.target)
+    mined_block2 = miner.mine_block(unmined_block2)
+    assert not test_chain.add_block(mined_block2)
+    assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}]
+
+    # Create third block
+    unmined_block3 = create_unmined_block(mined_block2.id, 3, test_chain.mining_reward, test_chain.target)
+    mined_block3 = miner.mine_block(unmined_block3)
+    assert test_chain.add_block(mined_block3)
+    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
+
+    # Create third malformed fork
+    unmined_malformed_fork = create_unmined_block(mined_fork2.id, 4, test_chain.mining_reward, test_chain.target + 1)
+    mined_malformed_fork = miner.mine_block(unmined_malformed_fork)
+    assert not test_chain.add_block(mined_malformed_fork)
+    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
+
+    # Finally create third valid fork
+    unmined_fork3 = create_unmined_block(mined_fork2.id, 3, test_chain.mining_reward, test_chain.target)
+    mined_fork3 = miner.mine_block(unmined_fork3)
+    assert not test_chain.add_block(mined_fork3)
+    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}, {3: mined_fork3}]
+
+    # Final recursive test
+    unmined_fork4 = create_unmined_block(mined_fork3.id, 4, test_chain.mining_reward, test_chain.target)
+    mined_fork4 = miner.mine_block(unmined_fork4)
+    assert test_chain.add_block(mined_fork4)
+    assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}, {3: mined_block3}]
