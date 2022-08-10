@@ -63,13 +63,14 @@ class Blockchain():
         temp_height = len(self.chain) - 1
         while temp_height != self.height:
             temp_raw_block = self.chain_db.get_raw_block(temp_height + 1)
-            temp_block = self.d.raw_block(temp_raw_block)
-            if self.add_block(temp_block, loading=True):
-                temp_height += 1
-            else:
-                # Logging
-                print('Error loading blocks from chain_db')
-                temp_height = self.height
+            if temp_raw_block:
+                temp_block = self.d.raw_block(temp_raw_block['raw_block'])
+                if self.add_block(temp_block, loading=True):
+                    temp_height += 1
+                else:
+                    # Logging
+                    print('Error loading blocks from chain_db')
+                    temp_height = self.height
 
     # Properties
     @property
@@ -85,27 +86,32 @@ class Blockchain():
         # Check previous id
         if block.prev_id != self.last_block.id:
             # Logging
+            print('Block failed validation. Block.prev_id != last_block.id')
             return False
 
         # Check target
         if int(block.id, 16) > self.target:
             # Logging
+            print('Block failed validation. Block id bigger than target')
             return False
 
         # Check Mining Tx height
-        if block.mining_tx.height != self.height + 1:
+        if block.mining_tx.height != self.last_block.mining_tx.height + 1:
             # Logging
+            print('Block failed validation. Mining_tx height incorrect')
             return False
 
         # Check Mining UTXO block_height
-        if block.mining_tx.mining_utxo.block_height != self.height + 1 + self.f.MINING_DELAY:
+        if block.mining_tx.mining_utxo.block_height != self.last_block.mining_tx.height + 1 + self.f.MINING_DELAY:
             # Logging
+            print('Block failed validation. Mining tx block height incorrect')
             return False
 
         # Check fees + reward = amount in mining_utxo
         block_total = block.mining_tx.block_fees + block.mining_tx.reward
         if block_total != block.mining_tx.mining_utxo.amount:
             # Logging
+            print('Block failed validation. Block total incorrect')
             return False
 
         # Check each tx
@@ -154,6 +160,7 @@ class Blockchain():
         # Verify fees in block_transactions agrees with MiningTx
         if fees != block.mining_tx.block_fees:
             # Logging
+            print('Block failed validation. Block fees incorrect')
             return False
 
         return True
