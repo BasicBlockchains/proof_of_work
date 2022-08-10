@@ -13,71 +13,76 @@ from src.bb_pow.wallet import Wallet
 import json
 
 
-# def test_utxo_methods():
-#     # Create db with path in tests directory
-#     current_path = os.getcwd()
-#     if '/tests' in current_path:
-#         dir_path = current_path + '/data/test_database/'
-#     else:
-#         dir_path = './tests/data/test_database/'
-#     file_name = 'test_utxos.db'
-#     db = DataBase(dir_path, file_name)
-#
-#     # Known address
-#     w = Wallet()
-#
-#     # Get random utxos
-#     random_length = 0
-#     while random_length < 1:
-#         random_length = secrets.randbits(4)
-#     utxo_list = []
-#     tx_list = []
-#     for x in range(random_length):
-#         utxo_list.append(get_random_utxo_output())
-#         tx_list.append(random_tx_id())
-#
-#     for utxo in utxo_list:
-#         utxo.address = w.address
-#
-#     # post_utxo
-#     for x in range(len(utxo_list)):
-#         db.post_utxo(tx_list[x], x, utxo_list[x])
-#
-#     # get_utxo
-#     temp_list = []  # <-- used in get_utxos_by_address
-#     for y in range(random_length):
-#         utxo_dict = {
-#             "tx_id": tx_list[y],
-#             "tx_index": y,
-#             "output": json.loads(utxo_list[y].to_json)
-#         }
-#         assert db.get_utxo(tx_list[y], y) == utxo_dict
-#         temp_list.append(utxo_dict)
-#
-#     # get_utxos_by_address
-#     address_dict = {
-#         "address": w.address,
-#         "utxo_count": random_length
-#     }
-#     for z in range(random_length):
-#         address_dict.update({
-#             f"utxo_{z}": temp_list[z]
-#         })
-#     assert address_dict == db.get_utxos_by_address(w.address)
-#
-#     # get_<...>_by_utxo
-#     random_index = secrets.randbelow(random_length)
-#     result_dict_a = db.get_address_by_utxo(tx_list[random_index], random_index)
-#     result_dict_b = db.get_amount_by_utxo(tx_list[random_index], random_index)
-#     result_dict_c = db.get_block_height_by_utxo(tx_list[random_index], random_index)
-#     assert result_dict_a["address"] == w.address
-#     assert result_dict_b["amount"] == utxo_list[random_index].amount
-#     assert result_dict_c["block_height"] == utxo_list[random_index].block_height
-#
-#     # delete_utxo
-#     for w in range(random_length):
-#         db.delete_utxo(tx_list[w], w)
-#         assert db.get_utxo(tx_list[w], w) == {}
+def test_utxo_methods():
+    # Create db with path in tests directory
+    current_path = os.getcwd()
+    if '/tests' in current_path:
+        dir_path = current_path + '/data/test_database/'
+    else:
+        dir_path = './tests/data/test_database/'
+    file_name = 'test_utxos.db'
+    db_exsts = Path(dir_path, file_name).exists()
+
+    db = DataBase(dir_path, file_name)
+    if db_exsts:
+        db.wipe_db()
+    db.create_db()
+
+    # Known address
+    w = Wallet()
+
+    # Get random utxos
+    random_length = 0
+    while random_length < 1:
+        random_length = secrets.randbits(4)
+    utxo_list = []
+    tx_list = []
+    for x in range(random_length):
+        utxo_list.append(get_random_utxo_output())
+        tx_list.append(random_tx_id())
+
+    for utxo in utxo_list:
+        utxo.address = w.address
+
+    # post_utxo
+    for x in range(len(utxo_list)):
+        db.post_utxo(tx_list[x], x, utxo_list[x])
+
+    # get_utxo
+    temp_list = []  # <-- used in get_utxos_by_address
+    for y in range(random_length):
+        utxo_dict = {
+            "tx_id": tx_list[y],
+            "tx_index": y,
+            "output": json.loads(utxo_list[y].to_json)
+        }
+        assert db.get_utxo(tx_list[y], y) == utxo_dict
+        temp_list.append(utxo_dict)
+
+    # get_utxos_by_address
+    address_dict = {
+        "address": w.address,
+        "utxo_count": random_length
+    }
+    for z in range(random_length):
+        address_dict.update({
+            f"utxo_{z}": temp_list[z]
+        })
+    assert address_dict == db.get_utxos_by_address(w.address)
+
+    # get_<...>_by_utxo
+    random_index = secrets.randbelow(random_length)
+    result_dict_a = db.get_address_by_utxo(tx_list[random_index], random_index)
+    result_dict_b = db.get_amount_by_utxo(tx_list[random_index], random_index)
+    result_dict_c = db.get_block_height_by_utxo(tx_list[random_index], random_index)
+    assert result_dict_a["address"] == w.address
+    assert result_dict_b["amount"] == utxo_list[random_index].amount
+    assert result_dict_c["block_height"] == utxo_list[random_index].block_height
+
+    # delete_utxo
+    for w in range(random_length):
+        db.delete_utxo(tx_list[w], w)
+        assert db.get_utxo(tx_list[w], w) == {}
 
 
 def test_block_header_methods():
@@ -88,7 +93,13 @@ def test_block_header_methods():
     else:
         dir_path = './tests/data/test_database/'
     file_name = 'test_headers.db'
+
+    db_exsts = Path(dir_path, file_name).exists()
+
     db = DataBase(dir_path, file_name)
+    if db_exsts:
+        db.wipe_db()
+    db.create_db()
 
     # Random length
     random_length = 3

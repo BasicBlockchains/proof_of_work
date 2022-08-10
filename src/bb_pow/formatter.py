@@ -54,13 +54,18 @@ class Formatter():
     NONCE_CHARS = 16
     TIMESTAMP_CHARS = 8
     BLOCK_TX_CHARS = 2
-    HEADER_CHARS = TYPE_CHARS + VERSION_CHARS + 3 * HASH_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
+    TARGET_EXPONENT_CHARS = 2
+    TARGET_COEFF_CHARS = 6
+    TARGET_CHARS = TARGET_COEFF_CHARS + TARGET_EXPONENT_CHARS
+    HEADER_CHARS = TYPE_CHARS + VERSION_CHARS + 2 * HASH_CHARS + TARGET_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
 
-    # Mine parameters
+    # BLOCKCHAIN FORMATTING
     TOTAL_MINING_AMOUNT = pow(2, 64) - 1
     STARTING_TARGET_COEFFICIENT = 0x1fffff
-    STARTING_TARGET_EXPONENT = 0x1e
-    STARTING_REWARD = pow(2, 10) * pow(10, 9)
+    STARTING_TARGET_EXPONENT = 0x20  # TESTING #0x1e
+    STARTING_REWARD = pow(2, 10) * pow(10, 9)  # 1,024,000,000,000
+    REWARD_REDUCTION = 0x80520  # 525,600
+    MINIMUM_REWARD = pow(10, 9)
     MINING_DELAY = 0  # TESTING #100
     HEARTBEAT = 5  # TESTING #60
 
@@ -169,35 +174,75 @@ class Formatter():
 
         return type + version + cpk + h_r + h_s
 
-    #
-    # # Target
-    # def get_target_parts(self, target: int):
-    #     '''
-    #     We return the corresponding coefficient and exponent parts of the integer target
-    #     '''
-    #     # Get max power of 2 dividing target
-    #     max_power = 0
-    #     while target % pow(2, max_power) == 0:
-    #         max_power += 1
-    #     max_power -= 1
-    #
-    #     # Get largest multiple of 8 strictly less than max_power
-    #     temp_val = max_power - (max_power % 8)
-    #
-    #     # Get the exponent
-    #     E = (temp_val // 8) + 3
-    #
-    #     # Get the coefficient
-    #     c = target // pow(2, 8 * (E - 3))
-    #
-    #     return c, E
-    #
-    # def target_from_int(self, target_num: int):
-    #     c, E = self.get_target_parts(target_num)
-    #     h_coeff = format(c, f'0{self.TARGET_COEFFICIENT_CHARS}x')
-    #     h_exp = format(E, f'0{self.TARGET_EXPONENT_CHARS}x')
-    #
-    #     return h_coeff + h_exp
-    #
+    # Target
+    def get_target_parts(self, target: int):
+        '''
+        We return the corresponding coefficient and exponent parts of the integer target
+        '''
+        # Get max power of 2 dividing target
+        max_power = 0
+        while target % pow(2, max_power) == 0:
+            max_power += 1
+        max_power -= 1
+
+        # Get largest multiple of 8 strictly less than max_power
+        temp_val = max_power - (max_power % 8)
+
+        # Get the exponent
+        E = (temp_val // 8) + 3
+
+        # Get the coefficient
+        c = target // pow(2, 8 * (E - 3))
+
+        return c, E
+
+    def target_from_int(self, target_num: int):
+        c, E = self.get_target_parts(target_num)
+        h_coeff = format(c, f'0{self.TARGET_COEFF_CHARS}x')
+        h_exp = format(E, f'0{self.TARGET_EXPONENT_CHARS}x')
+
+        return h_coeff + h_exp
+
     def target_from_parts(self, coeff: int, exp: int):
         return coeff * pow(2, 8 * (exp - 3))
+
+    def int_from_target(self, target: str):
+        coeff = int(target[:self.TARGET_COEFF_CHARS], 16)
+        exp = int(target[self.TARGET_COEFF_CHARS:], 16)
+
+        return self.target_from_parts(coeff, exp)
+
+    def adjust_target_up(self, num_target: int, adjust_amount: int):
+        # Get target parts
+        coefficient, exponent = self.get_target_parts(num_target)
+
+        # Verify adding adjust amount doesn't exceed exponent threshold
+        if coefficient + adjust_amount >= pow(2, 24):
+            exponent += 1
+            coefficient = coefficient + adjust_amount - pow(2, 24)
+        else:
+            coefficient += adjust_amount
+
+        # Not divisible by 8
+        if coefficient % 8 == 0:
+            coefficient += 1
+
+        return self.target_from_parts(coefficient, exponent)
+
+    def adjust_target_down(self, num_target: int, adjust_amount: int):
+        # Get target parts and increase coefficient by 1
+        coefficient, exponent = self.get_target_parts(num_target)
+
+        # Verify subtracting exponent doesn't go below 0
+        if coefficient - adjust_amount <= 0:
+            exponent -= 1
+            coefficient = pow(2, 24) + coefficient - adjust_amount
+
+        else:
+            coefficient -= adjust_amount
+
+        # Not divisible by 8
+        if coefficient % 8 == 0:
+            coefficient -= 1
+
+        return self.target_from_parts(coefficient, exponent)

@@ -68,12 +68,12 @@ def get_random_mining_tx():
     return MiningTransaction(height, reward, block_fees, w.address)
 
 
-# def get_random_target():
-#     random_coeff = secrets.randbits(24)
-#     random_exp = 0
-#     while random_exp < 4:
-#         random_exp = secrets.randbits(8)
-#     return Formatter().target_from_parts(random_coeff, random_exp)
+def get_random_target():
+    random_coeff = secrets.randbits(24)
+    random_exp = 0
+    while random_exp < 4:
+        random_exp = secrets.randbits(8)
+    return Formatter().target_from_parts(random_coeff, random_exp)
 
 
 def test_merkle_root():
@@ -141,7 +141,7 @@ def test_block():
 
     # Get header values
     prev_id = random_tx_id()
-    target = secrets.randbits(256)
+    target = get_random_target()
     nonce = secrets.randbits(64)
     timestamp = utc_to_seconds()
 

@@ -57,3 +57,15 @@ def test_verify_signature():
     signature = f.signature(w.private_key, tx_id)
     assert d.verify_signature(signature, tx_id)
     assert d.verify_signature(w.sign_transaction(tx_id), tx_id)
+
+
+def test_target():
+    f = Formatter()
+    coeff = secrets.randbits(24)
+    exp = 0
+    while exp <= 3:
+        exp = secrets.randbits(8)
+    target_num = f.target_from_parts(coeff, exp)
+    target = f.target_from_int(target_num)
+    num_from_target = f.int_from_target(target)
+    assert num_from_target == target_num
