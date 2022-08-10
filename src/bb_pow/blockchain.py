@@ -56,6 +56,9 @@ class Blockchain():
         # Create chain list to hold last HEARTBEAT blocks
         self.chain = []
 
+        # Create fork dictionary to index forked blocks
+        self.forks = {}
+
         # Create genesis block - if db is new, then loading = False
         self.add_block(self.create_genesis_block(), loading=not new_db)
 
@@ -161,7 +164,7 @@ class Blockchain():
         # Account for genesis
         if self.chain == []:
             valid_block = True
-        # Check for fork
+        # Create fork if adding block at same height
         elif block.prev_id == self.last_block.prev_id:
             self.create_fork(block)
             return False
@@ -204,6 +207,10 @@ class Blockchain():
 
             # Update mem_chain
             self.update_memchain()
+
+        else:
+            # Check forks
+            pass
 
         return True
 
@@ -269,7 +276,9 @@ class Blockchain():
     # Create fork
 
     def create_fork(self, block: Block):
-        pass
+        self.forks.update({
+            block.mining_tx.height: block
+        })
 
     # Updates
     def update_reward(self):
