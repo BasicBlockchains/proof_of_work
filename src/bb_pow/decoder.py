@@ -290,14 +290,14 @@ class Decoder:
         index0 = self.v_index
         index1 = index0 + self.F.HASH_CHARS
         index2 = index1 + self.F.HASH_CHARS
-        index3 = index2 + self.F.HASH_CHARS
+        index3 = index2 + self.F.TARGET_CHARS
         index4 = index3 + self.F.NONCE_CHARS
         index5 = index4 + self.F.TIMESTAMP_CHARS
 
         # Recover values
         prev_id = raw_header[index0:index1]
         merkle_root = raw_header[index1:index2]
-        target = int(raw_header[index2:index3], 16)
+        target = self.F.int_from_target(raw_header[index2:index3])
         nonce = int(raw_header[index3:index4], 16)
         timestamp = int(raw_header[index4:index5], 16)
 

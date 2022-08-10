@@ -50,7 +50,7 @@ class Block():
         # Format headers
         prev_id = f.format_hex(self.prev_id, f.HASH_CHARS)
         merkle_root = f.format_hex(self.merkle_root, f.HASH_CHARS)
-        target = format(self.target, f'0{f.HASH_CHARS}x')
+        target = f.target_from_int(self.target)
         nonce = format(self.nonce, f'0{f.NONCE_CHARS}x')
         timestamp = format(self.timestamp, f'0{f.TIMESTAMP_CHARS}x')
 

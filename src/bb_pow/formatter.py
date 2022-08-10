@@ -54,7 +54,10 @@ class Formatter():
     NONCE_CHARS = 16
     TIMESTAMP_CHARS = 8
     BLOCK_TX_CHARS = 2
-    HEADER_CHARS = TYPE_CHARS + VERSION_CHARS + 3 * HASH_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
+    TARGET_EXPONENT_CHARS = 2
+    TARGET_COEFF_CHARS = 6
+    TARGET_CHARS = TARGET_COEFF_CHARS + TARGET_EXPONENT_CHARS
+    HEADER_CHARS = TYPE_CHARS + VERSION_CHARS + 2 * HASH_CHARS + TARGET_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
 
     # Mine parameters
     TOTAL_MINING_AMOUNT = pow(2, 64) - 1
@@ -169,35 +172,40 @@ class Formatter():
 
         return type + version + cpk + h_r + h_s
 
-    #
-    # # Target
-    # def get_target_parts(self, target: int):
-    #     '''
-    #     We return the corresponding coefficient and exponent parts of the integer target
-    #     '''
-    #     # Get max power of 2 dividing target
-    #     max_power = 0
-    #     while target % pow(2, max_power) == 0:
-    #         max_power += 1
-    #     max_power -= 1
-    #
-    #     # Get largest multiple of 8 strictly less than max_power
-    #     temp_val = max_power - (max_power % 8)
-    #
-    #     # Get the exponent
-    #     E = (temp_val // 8) + 3
-    #
-    #     # Get the coefficient
-    #     c = target // pow(2, 8 * (E - 3))
-    #
-    #     return c, E
-    #
-    # def target_from_int(self, target_num: int):
-    #     c, E = self.get_target_parts(target_num)
-    #     h_coeff = format(c, f'0{self.TARGET_COEFFICIENT_CHARS}x')
-    #     h_exp = format(E, f'0{self.TARGET_EXPONENT_CHARS}x')
-    #
-    #     return h_coeff + h_exp
-    #
+    # Target
+    def get_target_parts(self, target: int):
+        '''
+        We return the corresponding coefficient and exponent parts of the integer target
+        '''
+        # Get max power of 2 dividing target
+        max_power = 0
+        while target % pow(2, max_power) == 0:
+            max_power += 1
+        max_power -= 1
+
+        # Get largest multiple of 8 strictly less than max_power
+        temp_val = max_power - (max_power % 8)
+
+        # Get the exponent
+        E = (temp_val // 8) + 3
+
+        # Get the coefficient
+        c = target // pow(2, 8 * (E - 3))
+
+        return c, E
+
+    def target_from_int(self, target_num: int):
+        c, E = self.get_target_parts(target_num)
+        h_coeff = format(c, f'0{self.TARGET_COEFF_CHARS}x')
+        h_exp = format(E, f'0{self.TARGET_EXPONENT_CHARS}x')
+
+        return h_coeff + h_exp
+
     def target_from_parts(self, coeff: int, exp: int):
         return coeff * pow(2, 8 * (exp - 3))
+
+    def int_from_target(self, target: str):
+        coeff = int(target[:self.TARGET_COEFF_CHARS], 16)
+        exp = int(target[self.TARGET_COEFF_CHARS:], 16)
+
+        return self.target_from_parts(coeff, exp)
