@@ -203,7 +203,18 @@ class Blockchain():
             # Adjust total_mining_amount
             self.total_mining_amount -= block.mining_tx.reward
 
-            # Blockchain maintenance when height % heartbeat == 0
+            # Update reward
+            if self.height % self.f.REWARD_REDUCTION == 0 or self.mining_reward > self.total_mining_amount:
+                self.update_reward()
+
+            # Update target
+            # Adjust target every heartbeat blocks
+            if self.height % self.f.HEARTBEAT == 0:
+                self.update_target()
+
+            # Update mem_chain
+            self.update_memchain()
+
         return True
 
     def pop_block(self) -> bool:
@@ -270,11 +281,54 @@ class Blockchain():
     def create_fork(self, block: Block):
         pass
 
+    # Updates
+    def update_reward(self):
+        # Account for near empty mine
+        if self.mining_reward > self.total_mining_amount:
+            self.mining_reward = self.total_mining_amount
+        # Otherwise divide by 2 up to a max of 10 times
+        elif self.mining_reward > self.f.MINIMUM_REWARD:
+            self.mining_reward //= 2
+
+    def update_target(self):
+
+        # Account for genesis
+        if len(self.chain) == 1:
+            return self.target
+
+        # Get elapsed time
+        last_block_time = self.last_block.timestamp
+        first_block_time = self.chain[-self.heartbeat].timestamp
+        elapsed_time = last_block_time - first_block_time
+
+        # Get absolute difference between desired time
+        desired_time = self.heartbeat * self.heartbeat
+        abs_diff = abs(elapsed_time - desired_time)
+
+        # Use absolute difference to find adjust factor for target
+        adjust_factor = 0
+        interval = self.heartbeat
+        while abs_diff > interval:
+            adjust_factor += 1
+            interval += self.heartbeat
+
+        # Adjust either up or down
+        if elapsed_time - desired_time > 0:  # Took longer than expected, lower target
+            self.target = self.f.adjust_target_down(self.target, adjust_factor)
+        elif elapsed_time - desired_time < 0:  # Took shorter than expected, raise target
+            self.target = self.f.adjust_target_up(self.target, adjust_factor)
+
+    def update_memchain(self):
+        # Only keep last heartbeat blocks in mem chain
+        while len(self.chain) > self.heartbeat:
+            self.chain.pop(0)
+
     # Search methods
     def find_block_by_tx_id(self, tx_id: str):
         '''
         Will return a Block if the tx_id is in its list. Otherwise return None
         THIS IS EXPENSIVE
+        TODO: Change to search through memchain first then through db
         '''
         temp_height = self.height
         block = None
