@@ -1,5 +1,7 @@
 '''
 The Blockchain Class
+
+TODO: During loading, account for file existing which doesn't contain correct genesis block
 '''
 
 from .block import Block
@@ -56,8 +58,8 @@ class Blockchain():
         # Create chain list to hold last HEARTBEAT blocks
         self.chain = []
 
-        # Create fork dictionary to index forked blocks
-        self.forks = {}
+        # Create fork list to index forked blocks
+        self.forks = []
 
         # Create genesis block - if db is new, then loading = False
         self.add_block(self.create_genesis_block(), loading=not new_db)
@@ -208,11 +210,17 @@ class Blockchain():
             # Update mem_chain
             self.update_memchain()
 
+            # Cleanup forks
+            self.cleanup_forks()
+            return True
+
         else:
             # Check forks
-            pass
+            fork_block = self.handle_fork(block)
 
-        return True
+        # Cleanup forks
+        self.cleanup_forks()
+        return fork_block
 
     def pop_block(self) -> bool:
         '''
@@ -269,16 +277,60 @@ class Blockchain():
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
         # Verify
-        assert int(genesis_block.id, 16) < self.target
+        # DISABLED FOR TESTING
+        # assert int(genesis_block.id, 16) < self.target
 
         return genesis_block
 
-    # Create fork
+    # Fork methods
 
     def create_fork(self, block: Block):
-        self.forks.update({
+        self.forks.append({
             block.mining_tx.height: block
         })
+
+    def handle_fork(self, block: Block):
+        # Look for block with height = block.height -1
+        forks_list = self.forks.copy()
+        candidate_fork = None
+        for dict in forks_list:
+            if self.height in dict.keys():
+                temp_block = dict[self.height]
+                if temp_block.id == block.prev_id:
+                    candidate_fork = temp_block
+
+        # No block found, can't handle block in the forks
+        if not candidate_fork:
+            return False
+
+        # Pop block and try candidate_fork
+        popped_block = self.chain[-1]
+        self.pop_block()
+        candidate_added = self.add_block(candidate_fork)
+        if candidate_added:
+            latest_added = self.add_block(block)
+            if latest_added:
+                # Add the popped block to forks and remove the other one
+                self.forks.remove({candidate_fork.mining_tx.height: candidate_fork})
+                self.create_fork(popped_block)
+                return True
+            # Fail to add block, return to popped block
+            else:
+                self.pop_block()
+                self.add_block(popped_block)
+                return False
+        # Fail to add candidate, return to popped block
+        else:
+            self.add_block(popped_block)
+            return False
+
+    def cleanup_forks(self):
+        # If more than heartbeat # of blocks have elapsed, remove the fork
+        fork_list = self.forks.copy()
+        for fork_dict in fork_list:
+            fork_height = list(fork_dict.keys())[0]
+            if fork_height + self.heartbeat < self.height:
+                self.forks.remove(fork_dict)
 
     # Updates
     def update_reward(self):
@@ -318,9 +370,9 @@ class Blockchain():
             self.target = self.f.adjust_target_up(self.target, adjust_factor)
 
     def update_memchain(self):
-        # Only keep last heartbeat blocks in mem chain
-        while len(self.chain) > self.heartbeat:
-            self.chain.pop(0)
+        # Only keep last heartbeat blocks in mem chain and genesis block at index 0
+        while len(self.chain) > self.heartbeat + 1:
+            self.chain.pop(1)
 
     # Search methods
     def find_block_by_tx_id(self, tx_id: str):
