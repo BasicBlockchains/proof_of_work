@@ -59,18 +59,8 @@ class Blockchain():
         # Create genesis block - if db is new, then loading = False
         self.add_block(self.create_genesis_block(), loading=not new_db)
 
-        # Load rest of chain if it exists
-        temp_height = len(self.chain) - 1
-        while temp_height != self.height:
-            temp_raw_block = self.chain_db.get_raw_block(temp_height + 1)
-            if temp_raw_block:
-                temp_block = self.d.raw_block(temp_raw_block['raw_block'])
-                if self.add_block(temp_block, loading=True):
-                    temp_height += 1
-                else:
-                    # Logging
-                    print('Error loading blocks from chain_db')
-                    temp_height = self.height
+        # Load chain if it exists
+        self.load_chain()
 
     # Properties
     @property
@@ -357,3 +347,18 @@ class Blockchain():
                 tx_index = temp_block.tx_ids.index(tx_id) - 1  # -1 to account for mining tx
                 tx = temp_block.transactions[tx_index]
         return tx
+
+    # Load chain
+    def load_chain(self):
+        # Load rest of chain if it exists
+        temp_height = len(self.chain) - 1
+        while temp_height != self.height:
+            temp_raw_block = self.chain_db.get_raw_block(temp_height + 1)
+            if temp_raw_block:
+                temp_block = self.d.raw_block(temp_raw_block['raw_block'])
+                if self.add_block(temp_block, loading=True):
+                    temp_height += 1
+                else:
+                    # Logging
+                    print('Error loading blocks from chain_db')
+                    temp_height = self.height
