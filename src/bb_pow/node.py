@@ -122,6 +122,8 @@ class Node:
                 added = self.add_block(next_block)
                 if not added:
                     self.is_mining = False
+                # Logging
+                print(f'Block mined by node. Height: {self.height}, Added: {added}')
 
     def mine_block(self, unmined_block: Block):
         mined_block = self.miner.mine_block(unmined_block)
@@ -129,8 +131,11 @@ class Node:
 
     def stop_miner(self):
         if self.is_mining:
+            if self.mining_process.is_alive():
+                self.mining_process.terminate()
             self.is_mining = False
-            self.miner.stop_mining()
+            while self.mining_thread.is_alive():
+                pass
 
     def create_next_block(self):
         # Get as many validated transactions that will fit in the Block
@@ -184,4 +189,155 @@ class Node:
     # --- ADD BLOCK --- #
     def add_block(self, block: Block) -> bool:
         added = self.blockchain.add_block(block)
+        if added:
+            # Remove validated transactions
+            validated_tx_index = self.validated_transactions.copy()
+            for tx in validated_tx_index:
+                if tx.id in self.last_block.tx_ids:
+                    self.validated_transactions.remove(tx)
+                    # Remove consumed utxos
+                    for input in tx.inputs:
+                        input_tuple = (input.tx_id, input.index)
+                        if input_tuple in self.consumed_utxos:
+                            self.consumed_utxos.remove(input_tuple)
+
+            # Check if orphaned transactions are now valid
+            self.check_for_tx_parents()
+
+            # Check if orphaned blocks are now valid
+            self.check_for_block_parents()
         return added
+
+    # --- ADD TRANSACTION --- #
+
+    def add_transaction(self, transaction: Transaction) -> bool:
+        # Make sure tx is not in chain
+        existing_tx = self.blockchain.get_tx_by_id(transaction.id)
+        if existing_tx:
+            # Logging
+            print('Transaction already in chain.')
+            return False
+
+        # Iterate over validated transactions to make sure transaction not there
+        for vt in self.validated_transactions:
+            if vt.raw_tx == transaction.raw_tx:
+                # Logging
+                print('Transaction already in validated tx pools.')
+                return False
+
+        # Make sure orphaned transaction was removed from orphaned_transactions list
+        for ot in self.orphaned_transactions:
+            if ot.raw_tx == transaction.raw_tx:
+                # Logging
+                print('Transaction already in orphaned tx pools.')
+                return False
+
+        # Set orphaned transaction Flag
+        orphan = False
+
+        # Validate inputs
+        total_input_amount = 0
+        for i in transaction.inputs:  # Looping over utxo_input objects
+
+            # Get the row index for the output utxo
+            tx_id = i.tx_id
+            tx_index = i.index
+
+            # Get values from db
+            amount_dict = self.blockchain.chain_db.get_amount_by_utxo(tx_id, tx_index)
+            address_dict = self.blockchain.chain_db.get_address_by_utxo(tx_id, tx_index)
+            block_height_dict = self.blockchain.chain_db.get_block_height_by_utxo(tx_id, tx_index)
+
+            # If values are empty lists mark for orphan
+            if amount_dict == {} or address_dict == {} or block_height_dict == {}:
+                # Logging
+                print(f'Unable to find utxo with id {tx_id} and index {tx_index}')
+                orphan = True
+
+
+            # Validate the referenced output utxo
+            else:
+                # Get values
+                amount = amount_dict['amount']
+                address = address_dict['address']
+                block_height = block_height_dict['block_height']
+
+                # Validate the block_height
+                if block_height > self.height:
+                    # Logging
+                    print(f'Block height error. UTXO not available until block {block_height}')
+                    return False
+
+                # Validate the address from compressed public key
+                cpk, (r, s) = self.d.decode_signature(i.signature)
+                if not self.f.address(cpk) == address:
+                    # Logging
+                    print(f'CPK/Address error. Address: {address}, CPK Address: {self.f.address(cpk)}')
+                    return False
+
+                # Validate the signature
+                if not self.d.verify_signature(i.signature, tx_id):
+                    # Logging
+                    print('Signature error')
+                    return False
+
+                # Check input not already scheduled for consumption
+                input_tuple = (tx_id, tx_index)
+                if input_tuple not in self.consumed_utxos:
+                    self.consumed_utxos.append(input_tuple)
+                else:
+                    # Logging
+                    print('Utxo already consumed by this node')
+                    return False
+
+                # Increase total_input_amount
+                total_input_amount += amount
+
+        # If not flagged for orphaned
+        if not orphan:
+            # Get the total output amount
+            total_output_amount = 0
+            for t in transaction.outputs:
+                total_output_amount += t.amount
+
+            # Verify the total output amount
+            if total_output_amount > total_input_amount:
+                # Logging
+                print('Input/Output amount error in tx')
+                # Unconsume the input tuple in consumed
+                for i in transaction.inputs:
+                    tx_tuple = (i.tx_id, i.output_index)
+                    if tx_tuple in self.consumed_utxos:
+                        self.consumed_utxos.remove(tx_tuple)
+                return False
+
+            # Add tx to validated tx pool
+            self.validated_transactions.append(transaction)
+
+        # Flagged for orphaned. Add to orphan pool
+        else:
+            self.orphaned_transactions.append(transaction)
+
+        return True
+
+    '''
+    ORPHANS
+    '''
+
+    def check_for_tx_parents(self):
+        '''
+        After a Block is saved, we iterate over all orphaned transactions to see if their parent UTXOs were saved.
+        However, when validating a transaction, we check if it's raw_tx is already in the validated_transactions and
+        orphaned_transactions pool. Hence, for the Node, when checking for an orphans parents, we make sure the
+        transaction itself is removed from the orphaned_transaction pool.
+        '''
+        orphan_index = self.orphaned_transactions.copy()
+        for x in range(0, len(orphan_index)):
+            tx = self.orphaned_transactions.pop(0)
+            self.add_transaction(tx)
+
+    def check_for_block_parents(self):
+        orphan_index = self.orphaned_blocks.copy()
+        for x in range(0, len(orphan_index)):
+            block = self.orphaned_blocks.pop(0)
+            self.add_block(block)
