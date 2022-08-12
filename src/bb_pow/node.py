@@ -64,6 +64,9 @@ class Node:
         # Create orphaned block list
         self.orphaned_blocks = []
 
+        # # Start REST API
+        # self.app.run()
+
     # --- PROPERTIES --- #
     @property
     def last_block(self):
@@ -320,9 +323,7 @@ class Node:
 
         return True
 
-    '''
-    ORPHANS
-    '''
+    # --- ORPHANS --- #
 
     def check_for_tx_parents(self):
         '''
