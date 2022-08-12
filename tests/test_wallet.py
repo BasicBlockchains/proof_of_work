@@ -8,8 +8,8 @@ from hashlib import sha256
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from src.bb_pow.wallet import Wallet, recover_wallet
-from src.bb_pow.decoder import Decoder
+from src.bb_pow.components.wallet import Wallet, recover_wallet
+from src.bb_pow.data_format.decoder import Decoder
 
 
 def test_seed_recover():
@@ -40,7 +40,7 @@ def test_wallet_signature():
 
     # Get parts back
     cpk, ecdsa_tuple = d.decode_signature(signature)
-    
+
     assert curve.verify_signature(ecdsa_tuple, tx_id, curve.decompress_point(cpk))
 
 

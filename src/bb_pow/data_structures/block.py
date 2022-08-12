@@ -1,11 +1,10 @@
 '''
 The Block class
 '''
-from .transactions import Transaction
 from hashlib import sha256
 import json
-from .formatter import Formatter
-from .transactions import MiningTransaction
+from src.bb_pow.data_format.formatter import Formatter
+from src.bb_pow.data_structures.transactions import MiningTransaction
 
 
 class Block():

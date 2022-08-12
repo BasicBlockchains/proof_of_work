@@ -1,11 +1,10 @@
 '''
 The Transactions class
 '''
-from .utxo import UTXO_OUTPUT, UTXO_INPUT
 import json
 from hashlib import sha256
-from .formatter import Formatter
-from .utxo import UTXO_OUTPUT
+from src.bb_pow.data_format.formatter import Formatter
+from src.bb_pow.data_structures.utxo import UTXO_OUTPUT
 
 
 class MiningTransaction():

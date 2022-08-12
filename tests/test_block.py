@@ -4,14 +4,14 @@ We test the Block class and related functions
 import secrets
 from hashlib import sha256
 
-from src.bb_pow.block import Block, calc_merkle_root, merkle_proof
-from src.bb_pow.timestamp import utc_to_seconds
-from src.bb_pow.transactions import Transaction, MiningTransaction
-from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.wallet import Wallet
+from src.bb_pow.data_structures.block import Block, calc_merkle_root, merkle_proof
+from src.bb_pow.data_format.timestamp import utc_to_seconds
+from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
+from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
+from src.bb_pow.components.wallet import Wallet
 
-from src.bb_pow.decoder import Decoder
-from src.bb_pow.formatter import Formatter
+from src.bb_pow.data_format.decoder import Decoder
+from src.bb_pow.data_format.formatter import Formatter
 
 from .test_wallet import random_tx_id
 

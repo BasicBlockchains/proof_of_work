@@ -4,15 +4,14 @@ The Blockchain Class
 TODO: During loading, account for file existing which doesn't contain correct genesis block
 '''
 
-from .block import Block
-from .database import DataBase
+from src.bb_pow.data_structures.block import Block
+from src.bb_pow.data_format.database import DataBase
 from pathlib import Path
-from .formatter import Formatter
-from .decoder import Decoder
-from .utxo import UTXO_OUTPUT
-from .transactions import Transaction, MiningTransaction
-from .wallet import Wallet
-from .timestamp import utc_to_seconds
+from src.bb_pow.data_format.formatter import Formatter
+from src.bb_pow.data_format.decoder import Decoder
+from src.bb_pow.data_structures.utxo import UTXO_OUTPUT
+from src.bb_pow.data_structures.transactions import MiningTransaction
+from src.bb_pow.components.wallet import Wallet
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
 

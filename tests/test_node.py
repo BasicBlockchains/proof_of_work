@@ -1,13 +1,13 @@
 '''
 Tests for the Node class
 '''
-from src.bb_pow.transactions import Transaction, MiningTransaction
-from src.bb_pow.node import Node
+from src.bb_pow.data_structures.transactions import Transaction
+from src.bb_pow.components.node import Node
 import os
-from src.bb_pow.timestamp import utc_to_seconds
+from src.bb_pow.data_format.timestamp import utc_to_seconds
 import sqlite3
-from src.bb_pow.wallet import Wallet
-from src.bb_pow.utxo import UTXO_OUTPUT, UTXO_INPUT
+from src.bb_pow.components.wallet import Wallet
+from src.bb_pow.data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
 
 
 def test_add_transaction():
@@ -93,7 +93,3 @@ def test_add_transaction():
     assert n.orphaned_transactions == []
     assert n.validated_transactions[0].raw_tx == orphan_tx.raw_tx
     assert n.blockchain.find_block_by_tx_id(new_tx.id).raw_block == n.last_block.raw_block
-
-    # print(f'Validated transactions: {n.validated_transactions}')
-    # print(f'Orphaned transactions: {n.orphaned_transactions}')
-    # print(f'Find new_tx: {n.blockchain.find_block_by_tx_id(new_tx.id)}')

@@ -8,8 +8,8 @@ from pathlib import Path
 import pandas as pd
 from basicblockchains_ecc import elliptic_curve as EC
 
-from .decoder import Decoder
-from .formatter import Formatter
+from src.bb_pow.data_format.decoder import Decoder
+from src.bb_pow.data_format.formatter import Formatter
 
 
 class Wallet():

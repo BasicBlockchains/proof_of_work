@@ -2,10 +2,10 @@
 The Database Class. Using SQLite
 '''
 import sqlite3
-from .block import Block
+from src.bb_pow.data_structures.block import Block
 from pathlib import Path
 from os.path import join
-from .utxo import UTXO_OUTPUT
+from src.bb_pow.data_structures.utxo import UTXO_OUTPUT
 from contextlib import closing
 import json
 
