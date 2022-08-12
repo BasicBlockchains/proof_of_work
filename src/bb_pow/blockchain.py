@@ -166,6 +166,8 @@ class Blockchain():
         # Account for genesis
         if self.chain == []:
             valid_block = True
+        elif loading:
+            valid_block = True
         # Create fork if adding block at same height
         elif block.mining_tx.height == self.last_block.mining_tx.height:
             self.create_fork(block)
@@ -199,7 +201,8 @@ class Blockchain():
             self.total_mining_amount -= block.mining_tx.reward
 
             # Update reward
-            if self.height % self.f.REWARD_REDUCTION == 0 or self.mining_reward > self.total_mining_amount:
+            if (self.height % self.f.REWARD_REDUCTION == 0 and self.height > 0) or \
+                    self.mining_reward > self.total_mining_amount:
                 self.update_reward()
 
             # Update target
@@ -344,7 +347,7 @@ class Blockchain():
     def update_target(self):
 
         # Account for genesis
-        if len(self.chain) == 1:
+        if len(self.chain) < self.heartbeat:
             return self.target
 
         # Get elapsed time
