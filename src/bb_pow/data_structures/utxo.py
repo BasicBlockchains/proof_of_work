@@ -4,7 +4,7 @@ The UTXO classes
 import json
 from hashlib import sha256
 
-from .formatter import Formatter
+from src.bb_pow.data_format.formatter import Formatter
 
 
 class UTXO_INPUT():

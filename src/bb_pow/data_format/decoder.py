@@ -3,12 +3,12 @@ Decoder - decodes various formatted data structs
 '''
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from .formatter import Formatter
+from src.bb_pow.data_format.formatter import Formatter
 from hashlib import sha256
 import json
-from .utxo import UTXO_INPUT, UTXO_OUTPUT
-from .transactions import Transaction, MiningTransaction
-from .block import Block
+from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
+from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
+from src.bb_pow.data_structures.block import Block
 
 
 class Decoder:

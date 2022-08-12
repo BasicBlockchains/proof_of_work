@@ -3,12 +3,11 @@ Tests for the transaction
 '''
 import secrets
 
-from src.bb_pow.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.transactions import Transaction, MiningTransaction
-from src.bb_pow.wallet import Wallet
+from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
+from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
+from src.bb_pow.components.wallet import Wallet
 from .test_wallet import random_tx_id
-from .test_block import get_random_utxo_output
-from src.bb_pow.decoder import Decoder
+from src.bb_pow.data_format.decoder import Decoder
 
 
 def test_transaction():

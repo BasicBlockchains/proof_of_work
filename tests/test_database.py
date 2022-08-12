@@ -3,13 +3,13 @@ Tests for the database class
 '''
 import secrets
 
-from src.bb_pow.database import DataBase
-from src.bb_pow.block import Block
+from src.bb_pow.data_format.database import DataBase
+from src.bb_pow.data_structures.block import Block
 import os
 from pathlib import Path
-from .test_block import get_random_transaction, get_random_utxo_input, get_random_utxo_output, get_random_mining_tx
+from .test_block import get_random_transaction, get_random_utxo_output, get_random_mining_tx
 from .test_wallet import random_tx_id
-from src.bb_pow.wallet import Wallet
+from src.bb_pow.components.wallet import Wallet
 import json
 
 
