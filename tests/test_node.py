@@ -23,6 +23,9 @@ def test_add_transaction():
     # Create Node
     n = Node(dir_path, file_name)
 
+    # CHANGE MINING DELAY
+    n.blockchain.f.MINING_DELAY = 0
+
     # Empty old blocks
     while n.height > 0:
         n.blockchain.pop_block()
@@ -38,13 +41,13 @@ def test_add_transaction():
     # Check mining is off
     assert not n.is_mining
 
-    # Modify block_height
-    conn = sqlite3.connect(os.path.join(dir_path, file_name))
-    c = conn.cursor()
-    insert_string = """UPDATE utxo_pool SET block_height = 0"""
-    c.execute(insert_string)
-    conn.commit()
-    conn.close()
+    # # Modify block_height
+    # conn = sqlite3.connect(os.path.join(dir_path, file_name))
+    # c = conn.cursor()
+    # insert_string = """UPDATE utxo_pool SET block_height = 0"""
+    # c.execute(insert_string)
+    # conn.commit()
+    # conn.close()
 
     # UTXO_INPUT
     tx_id = n.last_block.mining_tx.id
