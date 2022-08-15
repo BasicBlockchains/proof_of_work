@@ -7,10 +7,11 @@ from src.bb_pow.data_format.database import DataBase
 from src.bb_pow.data_structures.block import Block
 import os
 from pathlib import Path
-from .test_block import get_random_transaction, get_random_utxo_output, get_random_mining_tx
+from .test_block import get_random_transaction, get_random_utxo_output, get_random_mining_tx, get_random_target
 from .test_wallet import random_tx_id
 from src.bb_pow.components.wallet import Wallet
 import json
+from src.bb_pow.data_format.formatter import Formatter
 
 
 def test_utxo_methods():
@@ -94,6 +95,8 @@ def test_block_header_methods():
         dir_path = './tests/data/test_database/'
     file_name = 'test_headers.db'
 
+    f = Formatter()
+
     db_exsts = Path(dir_path, file_name).exists()
 
     db = DataBase(dir_path, file_name)
@@ -109,7 +112,7 @@ def test_block_header_methods():
     for x in range(random_length):
         # Create random Block
         prev_id = random_tx_id()
-        target = secrets.randbits(256)
+        target = get_random_target()
         nonce = secrets.randbits(64)
         timestamp = secrets.randbits(64)
 
@@ -143,13 +146,15 @@ def test_block_header_methods():
             "id": temp_block.id,
             "prev_id": temp_block.prev_id,
             "merkle_root": temp_block.merkle_root,
-            "target": temp_block.target,
+            "target": f.target_from_int(temp_block.target),
             "nonce": temp_block.nonce,
             "timestamp": temp_block.timestamp
         }
         raw_block_dict = {
+            "block": z,
             "raw_block": temp_block.raw_block
         }
+
         assert db.get_headers_by_height(z) == height_dict
         assert db.get_headers_by_id(temp_block.id) == height_dict
         assert db.get_headers_by_merkle_root(temp_block.merkle_root) == height_dict

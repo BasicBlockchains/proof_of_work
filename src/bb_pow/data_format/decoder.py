@@ -1,14 +1,15 @@
 '''
 Decoder - decodes various formatted data structs
 '''
+import json
+from hashlib import sha256
+
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from src.bb_pow.data_format.formatter import Formatter
-from hashlib import sha256
-import json
-from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
-from src.bb_pow.data_structures.block import Block
+from ..data_format.formatter import Formatter
+from ..data_structures.block import Block
+from ..data_structures.transactions import Transaction, MiningTransaction
+from ..data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
 
 
 class Decoder:
@@ -247,7 +248,7 @@ class Decoder:
         mining_utxo = self.raw_utxo_output(raw_tx[index3:])
         address = mining_utxo.address
 
-        return MiningTransaction(height, reward, block_fees, address)
+        return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
 
     # Block
     def raw_block(self, raw_block: str):
@@ -256,9 +257,6 @@ class Decoder:
             # Logging
             print('Type/Version error in raw block')
             return None
-
-        # Indexing
-        header_index = self.v_index + self.F.HEADER_CHARS
 
         # Headers
         header_dict = self.raw_block_header(raw_block[self.v_index:self.v_index + self.F.HEADER_CHARS])

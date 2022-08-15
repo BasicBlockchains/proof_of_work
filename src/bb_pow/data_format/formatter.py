@@ -1,8 +1,9 @@
 '''
 TESTING
 '''
-import basicblockchains_ecc.elliptic_curve
 from hashlib import sha256, sha1
+
+import basicblockchains_ecc.elliptic_curve
 
 
 class Formatter():

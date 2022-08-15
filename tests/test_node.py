@@ -8,6 +8,7 @@ from src.bb_pow.data_format.timestamp import utc_to_seconds
 import sqlite3
 from src.bb_pow.components.wallet import Wallet
 from src.bb_pow.data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
+import werkzeug
 
 
 def test_add_transaction():

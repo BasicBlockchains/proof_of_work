@@ -1,10 +1,11 @@
 '''
 The Block class
 '''
-from hashlib import sha256
 import json
-from src.bb_pow.data_format.formatter import Formatter
-from src.bb_pow.data_structures.transactions import MiningTransaction
+from hashlib import sha256
+
+from ..data_format.formatter import Formatter
+from ..data_structures.transactions import MiningTransaction
 
 
 class Block():
@@ -94,9 +95,13 @@ class Block():
 
     @property
     def to_json(self):
+        # Setup formatter
+        f = Formatter()
+
         block_dict = {
             "prev_id": self.prev_id,
-            "target": self.target,
+            "merkle_root": self.merkle_root,
+            "target": f.target_from_int(self.target),
             "nonce": self.nonce,
             "timestamp": self.timestamp,
             "mining_tx": json.loads(self.mining_tx.to_json),

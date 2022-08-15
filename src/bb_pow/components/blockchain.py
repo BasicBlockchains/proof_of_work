@@ -4,15 +4,17 @@ The Blockchain Class
 TODO: During loading, account for file existing which doesn't contain correct genesis block
 '''
 
-from src.bb_pow.data_structures.block import Block
-from src.bb_pow.data_format.database import DataBase
 from pathlib import Path
-from src.bb_pow.data_format.formatter import Formatter
-from src.bb_pow.data_format.decoder import Decoder
-from src.bb_pow.data_structures.utxo import UTXO_OUTPUT
-from src.bb_pow.data_structures.transactions import MiningTransaction
-from src.bb_pow.components.wallet import Wallet
+
 from basicblockchains_ecc.elliptic_curve import secp256k1
+
+from ..components.wallet import Wallet
+from ..data_format.database import DataBase
+from ..data_format.decoder import Decoder
+from ..data_format.formatter import Formatter
+from ..data_structures.block import Block
+from ..data_structures.transactions import MiningTransaction
+from ..data_structures.utxo import UTXO_OUTPUT
 
 
 class Blockchain():
@@ -274,7 +276,7 @@ class Blockchain():
         return True
 
     def create_genesis_block(self) -> Block:
-        genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0).address)
+        genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0, save=False).address)
         genesis_transaction.mining_utxo.block_height = 0xffffffffffffffff
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 

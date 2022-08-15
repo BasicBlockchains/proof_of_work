@@ -1,13 +1,14 @@
 '''
 The Database Class. Using SQLite
 '''
-import sqlite3
-from src.bb_pow.data_structures.block import Block
-from pathlib import Path
-from os.path import join
-from src.bb_pow.data_structures.utxo import UTXO_OUTPUT
-from contextlib import closing
 import json
+import sqlite3
+from contextlib import closing
+from os.path import join
+from pathlib import Path
+from ..data_format.formatter import Formatter
+from ..data_structures.block import Block
+from ..data_structures.utxo import UTXO_OUTPUT
 
 
 class DataBase:
@@ -24,6 +25,8 @@ class DataBase:
     NOTE: SQLite has a max integer size of 2^63-1 so we store integers as hex strings
 
     '''
+    # Formatter
+    f = Formatter()
 
     def __init__(self, dir_path: str, db_file: str):
         # Create directory if it doesn't exist
@@ -116,6 +119,7 @@ class DataBase:
         if raw_block_tuple_list:
             (raw_block,) = raw_block_tuple_list[0]
             raw_block_dict.update({
+                "block": height,
                 "raw_block": raw_block
             })
         return raw_block_dict
@@ -141,7 +145,7 @@ class DataBase:
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
-                "target": int(target, 16),
+                "target": self.f.target_from_int(int(target, 16)),
                 "nonce": int(h_nonce, 16),
                 "timestamp": int(h_timestamp, 16)
             })
@@ -158,7 +162,7 @@ class DataBase:
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
-                "target": int(target, 16),
+                "target": self.f.target_from_int(int(target, 16)),
                 "nonce": int(h_nonce, 16),
                 "timestamp": int(h_timestamp, 16)
             })
@@ -175,7 +179,7 @@ class DataBase:
                 "id": id,
                 "prev_id": prev_id,
                 "merkle_root": merkle_root,
-                "target": int(target, 16),
+                "target": self.f.target_from_int(int(target, 16)),
                 "nonce": int(h_nonce, 16),
                 "timestamp": int(h_timestamp, 16)
             })
@@ -219,6 +223,27 @@ class DataBase:
         # Get utxos as dicts
         for tuple in list_of_utxo_tuples:
             tx_id, h_index, h_amount, h_block_height = tuple
+            temp_utxo = UTXO_OUTPUT(int(h_amount, 16), address, int(h_block_height, 16))
+            transaction_dict = {
+                "tx_id": tx_id,
+                "tx_index": int(h_index, 16),
+                "output": json.loads(temp_utxo.to_json)
+            }
+            utxo_dict.update({f'utxo_{list_of_utxo_tuples.index(tuple)}': transaction_dict})
+
+        # Return dict - json serializable
+        return utxo_dict
+
+    def get_utxos_by_tx_id(self, tx_id: str):
+        query = """SELECT * from utxo_pool WHERE tx_id = ?"""
+        list_of_utxo_tuples = self.query_db(query, (tx_id,))
+        print(list_of_utxo_tuples)
+
+        utxo_dict = {'tx_id': tx_id, 'utxo_count': len(list_of_utxo_tuples)}
+
+        # Get utxos as dicts
+        for tuple in list_of_utxo_tuples:
+            tx_id, h_index, h_amount, address, h_block_height = tuple
             temp_utxo = UTXO_OUTPUT(int(h_amount, 16), address, int(h_block_height, 16))
             transaction_dict = {
                 "tx_id": tx_id,
