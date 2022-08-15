@@ -87,8 +87,7 @@ class Node:
         self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
         self.app.config['JSON_SORT_KEYS'] = False
         self.start_api()
-        # CAN'T CONNECT TO NETWORK IN GITHUB TESTS
-        # self.connect_to_network((self.LEGACY_IP, self.DEFAULT_PORT))
+        self.connect_to_network((self.LEGACY_IP, self.DEFAULT_PORT))
 
     # --- PROPERTIES --- #
     @property
@@ -146,7 +145,10 @@ class Node:
                         mining = False
             if next_block:
                 added = self.add_block(next_block)
-                if not added:
+                if added:
+                    self.send_block_to_network(next_block)
+                else:
+                    # Fail to add block, we stop mining
                     self.is_mining = False
                 # Logging
                 print(f'Block mined by node. Height: {self.height}, Added: {added}')
@@ -216,6 +218,8 @@ class Node:
     def add_block(self, block: Block) -> bool:
         added = self.blockchain.add_block(block)
         if added:
+            # Stop/start miner if it's running
+
             # Remove validated transactions
             validated_tx_index = self.validated_transactions.copy()
             for tx in validated_tx_index:
@@ -475,6 +479,9 @@ class Node:
     def send_raw_block_to_network(self, raw_block: str):
         pass
 
+    def request_indexed_block(self, block_index: int):
+        pass
+
     # --- REST API --- #
     def start_api(self):
         self.app_running = True
@@ -548,10 +555,62 @@ class Node:
 
             # Add new block at this endpoint
             if request.method == 'POST':
-                block_dict = request.get_json()
-                # prev_id = block_dict['prev_id']
+                block_dict = json.loads(request.get_json())
 
-                return Response("Block received", status=200, mimetype='application/json')
+                # Construct block
+                prev_id = block_dict['prev_id']
+                merkle_root = block_dict['merkle_root']
+                target = self.f.int_from_target(block_dict['target'])
+                nonce = block_dict['nonce']
+                timestamp = block_dict['timestamp']
+                mining_tx_dict = block_dict['mining_tx']
+                height = mining_tx_dict['height']
+                reward = mining_tx_dict['reward']
+                block_fees = mining_tx_dict['block_fees']
+                mining_utxo_dict = mining_tx_dict['mining_utxo']
+                amount = mining_utxo_dict['amount']
+                address = mining_utxo_dict['address']
+                block_height = mining_utxo_dict['block_height']
+                mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
+                tx_count = block_dict['tx_count']
+                transactions = []
+                for x in range(tx_count):
+                    tx_dict = block_dict[f'tx_{x}']
+                    input_count = tx_dict['input_count']
+                    inputs = []
+                    for y in range(input_count):
+                        input_dict = tx_dict[f'input_{y}']
+                        tx_id = input_dict['tx_id']
+                        tx_index = input_dict['index']
+                        signature = input_dict['signature']
+                        inputs.append(UTXO_INPUT(tx_id, tx_index, signature))
+                    output_count = tx_dict['output_count']
+                    outputs = []
+                    for z in range(output_count):
+                        output_dict = tx_dict[f'output_{z}']
+                        amount2 = output_dict['amount']
+                        address2 = output_dict['address']
+                        block_height2 = output_dict['block_height']
+                        outputs.append(UTXO_OUTPUT(amount2, address2, block_height2))
+                    transactions.append(Transaction(inputs, outputs))
+
+                block_from_dict = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
+                if block_from_dict.merkle_root == merkle_root:
+                    # Construction successful, try to add
+                    added = self.add_block(block_from_dict)
+                    if added:
+                        if self.is_mining:
+                            # Logging
+                            print('Restarting Miner after receiving new block.')
+                            self.stop_miner()
+                            self.start_miner()
+                        return Response("Block received and added successfully", status=200,
+                                        mimetype='application/json')
+                    else:
+                        return Response("Block received but not added. Could be forked or orphan.", status=202,
+                                        mimetype='application/json')
+                else:
+                    return Response("Block failed to reconstruct from dict.", status=406, mimetype='application/json')
 
         @self.app.route('/block/<height>/')
         def get_block_by_height(height):
@@ -607,6 +666,8 @@ class Node:
         self.app.run(host='0.0.0.0', port=self.assigned_port)
 
     def stop_api(self):
+        if self.is_mining:
+            self.stop_miner()
         self.app_running = False
         self.disconnect_from_network()
 
