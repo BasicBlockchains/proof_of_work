@@ -8,8 +8,8 @@ from pathlib import Path
 import pandas as pd
 from basicblockchains_ecc import elliptic_curve as EC
 
-from src.bb_pow.data_format.decoder import Decoder
-from src.bb_pow.data_format.formatter import Formatter
+from ..data_format.decoder import Decoder
+from ..data_format.formatter import Formatter
 
 
 class Wallet():
@@ -21,25 +21,38 @@ class Wallet():
     ./data folder unless otherwise specified. We the use the secp256k1 curve to generate keys, and for the ECDSA. We
     use Python's secrets package to generate cryptographically strong random numbers.
     '''
+    # File constants
+    DIR_PATH = './data'
+    FILE_NAME = 'wallet.dat'
 
     # ---Constants
     DICTIONARY_EXPONENT = 11
     F = Formatter()
     D = Decoder()
 
-    def __init__(self, seed=None, seed_bits=128):
+    def __init__(self, seed=None, seed_bits=128, dir_path=DIR_PATH, file_name=FILE_NAME, save=True):
         # Use secp256k1 curve as standard
         self.curve = EC.secp256k1()
+
+        # Set path and filename variables
+        self.dir_path = dir_path
+        self.file_name = file_name
 
         # Allow seed_bits to be variable
         self.seed_bits = seed_bits
 
-        # Establish seed - allow for zero case
-        if seed is None:
+        # If file exists, load seed
+        if seed is None and Path(self.dir_path, self.file_name).exists():
+            seed = self.load_wallet()
+        elif seed is None:
             seed = self.get_seed()
 
         # Create seed phrase
         self.seed_phrase = self.get_seed_phrase(seed)
+
+        # Save seed
+        if save:
+            self.save_wallet(self.dir_path, self.file_name)
 
         # Create keys - seed dropped after generating keys
         self.private_key, self.public_key = self.get_keys(seed)
@@ -47,6 +60,32 @@ class Wallet():
 
         # Create address
         self.address = self.F.address(self.compressed_public_key)
+
+    # -- SAVE/LOAD --- #
+    def save_wallet(self, dir_path: str, file_name: str):
+        '''
+        We save the necessary values to instantiate a wallet to a file.
+        '''
+        with open(f'{dir_path}/{file_name}', 'w') as f:
+            seed_string = hex(self.recover_seed(self.seed_phrase)) + '\n'
+            f.write(seed_string)
+
+    def load_wallet(self):
+        '''
+        We decode the encrypted file and use the values to instantiate the Wallet
+        '''
+        # Check for file
+        file_exists = Path(self.dir_path, self.file_name).exists()
+        if file_exists:
+            # Read in wallet file
+            with open(f'{self.dir_path}/{self.file_name}', 'r') as f:
+                seed_string = f.read()
+
+            return int(seed_string, 16)
+
+        else:
+            # Logging
+            return None
 
     # --- SEED METHODS --- #
 
@@ -92,7 +131,7 @@ class Wallet():
             # dir_path = Path(__file__).parent / "data/english_dictionary.txt"
             df_dict = pd.read_csv('./data/english_dictionary.txt', header=None)
         except FileNotFoundError:
-            self.save_seed(seed)
+            self.save_wallet(self.dir_path, self.file_name)
             return []
 
         # Retrieve the words at the given index and return the seed phrase
@@ -120,14 +159,6 @@ class Wallet():
 
         # Get the first self.bits from the binary string and return the corresponding integer
         return int(index_string[:seed_bits], 2)
-
-    def save_seed(self, seed: int, dir_path="./data/"):
-        # Create directory if it doesn't exist
-        Path(dir_path).mkdir(parents=True, exist_ok=True)
-
-        # Write seed to file as hex string
-        with open(dir_path + "wallet.dat", "w") as f:
-            f.write(hex(seed))
 
     # --- GENERATE KEYS ---#
     def get_keys(self, seed: int):

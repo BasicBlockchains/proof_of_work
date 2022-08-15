@@ -3,8 +3,9 @@ The Transactions class
 '''
 import json
 from hashlib import sha256
-from src.bb_pow.data_format.formatter import Formatter
-from src.bb_pow.data_structures.utxo import UTXO_OUTPUT
+
+from ..data_format.formatter import Formatter
+from ..data_structures.utxo import UTXO_OUTPUT
 
 
 class MiningTransaction():
@@ -14,11 +15,12 @@ class MiningTransaction():
     # Formatter
     f = Formatter()
 
-    def __init__(self, height: int, reward: int, block_fees: int, address: str):
+    def __init__(self, height: int, reward: int, block_fees: int, address: str, block_height=0):
         self.height = height
         self.reward = reward
         self.block_fees = block_fees
-        self.mining_utxo = UTXO_OUTPUT(self.reward + self.block_fees, address, self.height + self.f.MINING_DELAY)
+        self.mining_utxo = UTXO_OUTPUT(self.reward + self.block_fees, address,
+                                       max(block_height, self.height + self.f.MINING_DELAY))
 
     def __repr__(self):
         return self.to_json
