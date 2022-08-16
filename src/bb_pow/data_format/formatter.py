@@ -1,8 +1,9 @@
 '''
 TESTING
 '''
-import basicblockchains_ecc.elliptic_curve
 from hashlib import sha256, sha1
+
+import basicblockchains_ecc.elliptic_curve
 
 
 class Formatter():
@@ -64,11 +65,17 @@ class Formatter():
     STARTING_TARGET_COEFFICIENT = 0x1fffff
     STARTING_TARGET_EXPONENT = 0x1e
     STARTING_REWARD = pow(2, 10) * pow(10, 9)  # 1,024,000,000,000
-    REWARD_REDUCTION = 0x80520  # 525,600
+    REWARD_REDUCTION = 15  # TESTING #0x80520  # 525,600
     MINIMUM_REWARD = pow(10, 9)
     MAXIMUM_BIT_SIZE = 0x3e80  # 2Kb
-    MINING_DELAY = 0  # TESTING #100
+    MINING_DELAY = 5  # TESTING #100
     HEARTBEAT = 5  # TESTING #60
+    GOSSIP_NUMBER = 5
+
+    # NODE FORMATTING
+    IP_CHARS = 8
+    PORT_CHARS = 4
+    NODE_CHARS = IP_CHARS + PORT_CHARS
 
     # Ease of use formatting
     def format_hex(self, hex_string: str, hex_length: int):
@@ -247,3 +254,19 @@ class Formatter():
             coefficient -= 1
 
         return self.target_from_parts(coefficient, exponent)
+
+    # Format Node
+    def node(self, node: tuple):
+        # Tuple values
+        ip, port = node
+
+        # Encode ip
+        formatted_ip = ''
+        octet_list = ip.split('.')
+        for octet in octet_list:
+            formatted_ip += format(int(octet), '02x')
+
+        # Encode port
+        formatted_port = format(port, f'0{self.PORT_CHARS}x')
+
+        return formatted_ip + formatted_port

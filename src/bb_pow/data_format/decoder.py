@@ -1,14 +1,15 @@
 '''
 Decoder - decodes various formatted data structs
 '''
+import json
+from hashlib import sha256
+
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from src.bb_pow.data_format.formatter import Formatter
-from hashlib import sha256
-import json
-from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
-from src.bb_pow.data_structures.block import Block
+from ..data_format.formatter import Formatter
+from ..data_structures.block import Block
+from ..data_structures.transactions import Transaction, MiningTransaction
+from ..data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
 
 
 class Decoder:
@@ -34,17 +35,6 @@ class Decoder:
             print(f'Raw Data: {raw_data}')
             return False
         return True
-
-    # # Decode target
-    # def int_from_target(self, encoded_target: str):
-    #     # Index
-    #     coeff_index = self.F.TARGET_COEFFICIENT_CHARS
-    #     exp_index = self.F.TARGET_EXPONENT_CHARS + coeff_index
-    #
-    #     coeff = int(encoded_target[:coeff_index], 16)
-    #     exp = int(encoded_target[coeff_index:exp_index], 16)
-    #
-    #     return coeff * pow(2, 8 * (exp - 3))
 
     ##CPK, Signature, Address
 
@@ -247,7 +237,26 @@ class Decoder:
         mining_utxo = self.raw_utxo_output(raw_tx[index3:])
         address = mining_utxo.address
 
-        return MiningTransaction(height, reward, block_fees, address)
+        return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
+
+    def transaction_from_dict(self, tx_dict: dict):
+        input_count = tx_dict['input_count']
+        inputs = []
+        for y in range(input_count):
+            input_dict = tx_dict[f'input_{y}']
+            tx_id = input_dict['tx_id']
+            tx_index = input_dict['index']
+            signature = input_dict['signature']
+            inputs.append(UTXO_INPUT(tx_id, tx_index, signature))
+        output_count = tx_dict['output_count']
+        outputs = []
+        for z in range(output_count):
+            output_dict = tx_dict[f'output_{z}']
+            amount2 = output_dict['amount']
+            address2 = output_dict['address']
+            block_height2 = output_dict['block_height']
+            outputs.append(UTXO_OUTPUT(amount2, address2, block_height2))
+        return Transaction(inputs, outputs)
 
     # Block
     def raw_block(self, raw_block: str):
@@ -256,9 +265,6 @@ class Decoder:
             # Logging
             print('Type/Version error in raw block')
             return None
-
-        # Indexing
-        header_index = self.v_index + self.F.HEADER_CHARS
 
         # Headers
         header_dict = self.raw_block_header(raw_block[self.v_index:self.v_index + self.F.HEADER_CHARS])
@@ -335,3 +341,63 @@ class Decoder:
 
         # Return MiningTx, and UserTx list
         return mining_tx, transactions
+
+    def block_from_dict(self, block_dict: dict):
+        # Construct block
+        prev_id = block_dict['prev_id']
+        merkle_root = block_dict['merkle_root']
+        target = self.F.int_from_target(block_dict['target'])
+        nonce = block_dict['nonce']
+        timestamp = block_dict['timestamp']
+        mining_tx_dict = block_dict['mining_tx']
+        height = mining_tx_dict['height']
+        reward = mining_tx_dict['reward']
+        block_fees = mining_tx_dict['block_fees']
+        mining_utxo_dict = mining_tx_dict['mining_utxo']
+        amount = mining_utxo_dict['amount']
+        address = mining_utxo_dict['address']
+        block_height = mining_utxo_dict['block_height']
+        mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
+        tx_count = block_dict['tx_count']
+        transactions = []
+        for x in range(tx_count):
+            tx_dict = block_dict[f'tx_{x}']
+            input_count = tx_dict['input_count']
+            inputs = []
+            for y in range(input_count):
+                input_dict = tx_dict[f'input_{y}']
+                tx_id = input_dict['tx_id']
+                tx_index = input_dict['index']
+                signature = input_dict['signature']
+                inputs.append(UTXO_INPUT(tx_id, tx_index, signature))
+            output_count = tx_dict['output_count']
+            outputs = []
+            for z in range(output_count):
+                output_dict = tx_dict[f'output_{z}']
+                amount2 = output_dict['amount']
+                address2 = output_dict['address']
+                block_height2 = output_dict['block_height']
+                outputs.append(UTXO_OUTPUT(amount2, address2, block_height2))
+            transactions.append(Transaction(inputs, outputs))
+
+        temp_block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
+        if temp_block.merkle_root == merkle_root:
+            return temp_block
+        else:
+            # Logging
+            print('Block failed to reconstruct from dict.')
+            return None
+
+    # Node
+    def raw_node(self, raw_node: str):
+        hex_ip = raw_node[:self.F.IP_CHARS]
+        port = raw_node[self.F.IP_CHARS:self.F.NODE_CHARS]
+
+        ip = ''
+        for x in range(0, 4):
+            temp_string = hex_ip[2 * x:2 * (x + 1)]
+            ip += str(int(temp_string, 16))
+            if x != 3:
+                ip += '.'
+
+        return (ip, port)

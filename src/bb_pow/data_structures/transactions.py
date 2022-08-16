@@ -3,8 +3,9 @@ The Transactions class
 '''
 import json
 from hashlib import sha256
-from src.bb_pow.data_format.formatter import Formatter
-from src.bb_pow.data_structures.utxo import UTXO_OUTPUT
+
+from ..data_format.formatter import Formatter
+from ..data_structures.utxo import UTXO_OUTPUT
 
 
 class MiningTransaction():
@@ -14,11 +15,11 @@ class MiningTransaction():
     # Formatter
     f = Formatter()
 
-    def __init__(self, height: int, reward: int, block_fees: int, address: str):
+    def __init__(self, height: int, reward: int, block_fees: int, address: str, block_height=0):
         self.height = height
         self.reward = reward
         self.block_fees = block_fees
-        self.mining_utxo = UTXO_OUTPUT(self.reward + self.block_fees, address, self.height + self.f.MINING_DELAY)
+        self.mining_utxo = UTXO_OUTPUT(self.reward + self.block_fees, address, block_height)
 
     def __repr__(self):
         return self.to_json
@@ -26,6 +27,7 @@ class MiningTransaction():
     @property
     def to_json(self):
         mining_dict = {
+            "id": self.id,
             "height": self.height,
             "reward": self.reward,
             "block_fees": self.block_fees,
@@ -74,7 +76,10 @@ class Transaction():
 
     @property
     def to_json(self):
-        tx_dict = {'input_count': self.input_count}
+        tx_dict = {
+            "id": self.id,
+            'input_count': self.input_count
+        }
         for utxo_input in self.inputs:
             tx_dict.update({f'input_{self.inputs.index(utxo_input)}': json.loads(utxo_input.to_json)})
 

@@ -1,7 +1,7 @@
 '''
 The Miner class
 '''
-from src.bb_pow.data_structures.block import Block
+from ..data_structures.block import Block
 
 
 class Miner():

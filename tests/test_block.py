@@ -64,8 +64,9 @@ def get_random_mining_tx():
     height = secrets.randbits(64)
     reward = secrets.randbits(40)
     block_fees = secrets.randbits(64)
+    block_height = secrets.randbits(64)
 
-    return MiningTransaction(height, reward, block_fees, w.address)
+    return MiningTransaction(height, reward, block_fees, w.address, block_height)
 
 
 def get_random_target():

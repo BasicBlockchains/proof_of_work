@@ -50,8 +50,9 @@ def test_mining_tx():
     reward = secrets.randbits(32)
     height = secrets.randbits(64)
     fees = secrets.randbits(64)
+    block_height = secrets.randbits(64)
 
-    mining_tx = MiningTransaction(height, reward, fees, w.address)
+    mining_tx = MiningTransaction(height, reward, fees, w.address, block_height)
     recovered_mining_tx = d.raw_mining_transaction(mining_tx.raw_tx)
     assert mining_tx.raw_tx == recovered_mining_tx.raw_tx
     assert mining_tx.id == recovered_mining_tx.id

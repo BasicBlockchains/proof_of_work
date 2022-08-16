@@ -1,13 +1,36 @@
 '''
 Tests for the Node class
 '''
-from src.bb_pow.data_structures.transactions import Transaction
-from src.bb_pow.components.node import Node
 import os
-from src.bb_pow.data_format.timestamp import utc_to_seconds
 import sqlite3
+
+from src.bb_pow.components.node import Node
 from src.bb_pow.components.wallet import Wallet
+from src.bb_pow.data_structures.block import Block
+from src.bb_pow.data_format.timestamp import utc_to_seconds
+from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
 from src.bb_pow.data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
+from src.bb_pow.components.miner import Miner
+
+
+def create_test_node_block(node: Node):
+    # Get as many validated transactions that will fit in the Block
+    bit_size = 0
+    node.block_transactions = []
+    while bit_size <= node.f.MAXIMUM_BIT_SIZE and node.validated_transactions != []:
+        node.block_transactions.append(node.validated_transactions.pop(0))  # Add first validated transaction
+        bit_size += len(node.block_transactions[-1].raw_tx) * 4  # Increase bit_size by number of hex chars * 4
+
+    # Get block fees
+    block_fees = 0
+    for tx in node.block_transactions:
+        block_fees += node.get_fees(tx)
+
+    # Create Mining Transaction
+    mining_tx = MiningTransaction(node.height + 1, node.mining_reward, block_fees, node.wallet.address, node.height + 1)
+
+    # Return unmined block
+    return Block(node.last_block.id, node.target, 0, utc_to_seconds(), mining_tx, node.block_transactions)
 
 
 def test_add_transaction():
@@ -22,28 +45,14 @@ def test_add_transaction():
     # Create Node
     n = Node(dir_path, file_name)
 
-    # Empty old blocks
-    while n.height > 0:
-        n.blockchain.pop_block()
+    # CHANGE MINING DELAY
+    n.blockchain.f.MINING_DELAY = 0
 
     # Mine necessary Block
-    start_time = utc_to_seconds()
-    n.start_miner()
-    while n.height < 1:
-        pass
-    print(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}', end='\r\n')
-    n.stop_miner()
-
-    # Check mining is off
-    assert not n.is_mining
-
-    # Modify block_height
-    conn = sqlite3.connect(os.path.join(dir_path, file_name))
-    c = conn.cursor()
-    insert_string = """UPDATE utxo_pool SET block_height = 0"""
-    c.execute(insert_string)
-    conn.commit()
-    conn.close()
+    next_block = create_test_node_block(n)
+    m = Miner()
+    mined_next_block = m.mine_block(next_block)
+    assert n.add_block(mined_next_block)
 
     # UTXO_INPUT
     tx_id = n.last_block.mining_tx.id
@@ -93,3 +102,7 @@ def test_add_transaction():
     assert n.orphaned_transactions == []
     assert n.validated_transactions[0].raw_tx == orphan_tx.raw_tx
     assert n.blockchain.find_block_by_tx_id(new_tx.id).raw_block == n.last_block.raw_block
+
+    # Empty blocks for next time
+    while n.height > 0:
+        n.blockchain.pop_block()
