@@ -21,7 +21,7 @@ class Block():
     '''
 
     def __init__(self, prev_id: str, target: int, nonce: int, timestamp: int, mining_tx: MiningTransaction,
-                 transactions=[]):
+                 transactions: list):
         # Block headers
         self.prev_id = prev_id
         self.target = target

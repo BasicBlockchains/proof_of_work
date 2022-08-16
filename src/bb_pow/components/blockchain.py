@@ -23,8 +23,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 512272
-    GENESIS_TIMESTAMP = 1660142596
+    GENESIS_NONCE = 156139
+    GENESIS_TIMESTAMP = 1660652734
 
     # Directory defaults
     DIR_PATH = './data/'
@@ -98,9 +98,12 @@ class Blockchain():
             return False
 
         # Check Mining UTXO block_height
-        if block.mining_tx.mining_utxo.block_height != self.last_block.mining_tx.height + 1 + self.f.MINING_DELAY:
+        if block.mining_tx.mining_utxo.block_height < self.last_block.mining_tx.height + 1 + self.f.MINING_DELAY:
             # Logging
             print('Block failed validation. Mining tx block height incorrect')
+            # print(f'Block height in block: {block.mining_tx.mining_utxo.block_height}')
+            # print(f'Last block mining tx height + 1: {self.last_block.mining_tx.height + 1}')
+            # print(f'Mining delay: {self.f.MINING_DELAY}')
             return False
 
         # Check fees + reward = amount in mining_utxo
@@ -169,8 +172,8 @@ class Blockchain():
             valid_block = True
         elif loading:
             valid_block = True
-        # Create fork if adding block at same height
-        elif block.mining_tx.height == self.last_block.mining_tx.height:
+        # Create fork if adding block at same height - don't fork same block if gossiped back
+        elif block.mining_tx.height == self.last_block.mining_tx.height and block.id != self.last_block.id:
             self.create_fork(block)
             return False
         else:
@@ -276,8 +279,8 @@ class Blockchain():
         return True
 
     def create_genesis_block(self) -> Block:
-        genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0, save=False).address)
-        genesis_transaction.mining_utxo.block_height = 0xffffffffffffffff
+        genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0, save=False).address,
+                                                0xffffffffffffffff)
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
         # Verify
@@ -343,6 +346,8 @@ class Blockchain():
             self.mining_reward = self.total_mining_amount
         # Otherwise divide by 2 up to a max of 10 times
         elif self.mining_reward > self.f.MINIMUM_REWARD:
+            # Logging
+            print(f'Height is {self.height}. Halving available reward.')
             self.mining_reward //= 2
 
     def update_target(self):
@@ -369,8 +374,12 @@ class Blockchain():
 
         # Adjust either up or down
         if elapsed_time - desired_time > 0:  # Took longer than expected, lower target
+            # Logging
+            print(f'Updating target. Adjusting target down by {adjust_factor}')
             self.target = self.f.adjust_target_down(self.target, adjust_factor)
         elif elapsed_time - desired_time < 0:  # Took shorter than expected, raise target
+            # Logging
+            print(f'Updating target. Adjusting target up by {adjust_factor}')
             self.target = self.f.adjust_target_up(self.target, adjust_factor)
 
     def update_memchain(self):
@@ -389,9 +398,8 @@ class Blockchain():
         block = None
         block_found = False
         while temp_height > 0 and not block_found:
-            temp_block = self.d.raw_block(
-                self.chain_db.get_raw_block(temp_height)['raw_block']
-            )
+            raw_block_dict = self.chain_db.get_raw_block(temp_height)
+            temp_block = self.d.raw_block(raw_block_dict['raw_block'])
             if tx_id in temp_block.tx_ids:
                 block = temp_block
                 block_found = True

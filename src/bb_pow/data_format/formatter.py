@@ -65,11 +65,12 @@ class Formatter():
     STARTING_TARGET_COEFFICIENT = 0x1fffff
     STARTING_TARGET_EXPONENT = 0x1e
     STARTING_REWARD = pow(2, 10) * pow(10, 9)  # 1,024,000,000,000
-    REWARD_REDUCTION = 0x80520  # 525,600
+    REWARD_REDUCTION = 15  # TESTING #0x80520  # 525,600
     MINIMUM_REWARD = pow(10, 9)
     MAXIMUM_BIT_SIZE = 0x3e80  # 2Kb
-    MINING_DELAY = 0  # TESTING #100
+    MINING_DELAY = 5  # TESTING #100
     HEARTBEAT = 5  # TESTING #60
+    GOSSIP_NUMBER = 5
 
     # Ease of use formatting
     def format_hex(self, hex_string: str, hex_length: int):

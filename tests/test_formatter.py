@@ -31,7 +31,9 @@ def test_base58():
     assert f.base58_to_int(f.int_to_base58(random_num)) == random_num
 
     # Verify base58 -> int -> base58
-    string_length = secrets.randbelow(pow(2, 8))
+    string_length = 0
+    while string_length < 1:
+        string_length = secrets.randbelow(pow(2, 8))
     random_base58_string = ''
     for x in range(0, string_length):
         random_base58_string += random.choice(f.BASE58_ALPHABET)

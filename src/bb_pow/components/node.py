@@ -2,6 +2,7 @@
 The Node class
 '''
 import os
+import random
 import signal
 import threading
 import json
@@ -87,7 +88,6 @@ class Node:
         self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
         self.app.config['JSON_SORT_KEYS'] = False
         self.start_api()
-        self.connect_to_network((self.LEGACY_IP, self.DEFAULT_PORT))
 
     # --- PROPERTIES --- #
     @property
@@ -146,7 +146,7 @@ class Node:
             if next_block:
                 added = self.add_block(next_block)
                 if added:
-                    self.send_block_to_network(next_block)
+                    self.gossip_protocol_block(next_block)
                 else:
                     # Fail to add block, we stop mining
                     self.is_mining = False
@@ -179,7 +179,8 @@ class Node:
             block_fees += self.get_fees(tx)
 
         # Create Mining Transaction
-        mining_tx = MiningTransaction(self.height + 1, self.mining_reward, block_fees, self.wallet.address)
+        mining_tx = MiningTransaction(self.height + 1, self.mining_reward, block_fees, self.wallet.address,
+                                      self.height + 1 + self.f.MINING_DELAY)
 
         # Return unmined block
         return Block(self.last_block.id, self.target, 0, utc_to_seconds(), mining_tx, self.block_transactions)
@@ -218,8 +219,6 @@ class Node:
     def add_block(self, block: Block) -> bool:
         added = self.blockchain.add_block(block)
         if added:
-            # Stop/start miner if it's running
-
             # Remove validated transactions
             validated_tx_index = self.validated_transactions.copy()
             for tx in validated_tx_index:
@@ -344,6 +343,9 @@ class Node:
             # Add tx to validated tx pool
             self.validated_transactions.append(transaction)
 
+            # Send tx to network
+            self.gossip_protocol_tx(transaction)
+
         # Flagged for orphaned. Add to orphan pool
         else:
             self.orphaned_transactions.append(transaction)
@@ -410,6 +412,8 @@ class Node:
                     # Logging
                     print(f'Error connecting to {(ip, port)}')
 
+        # Catch up to network
+
     def disconnect_from_network(self):
         # Remove own node first
         try:
@@ -430,6 +434,35 @@ class Node:
                 # Logging
                 print(f'Error connecting to {node} for disconnect. Status code: {r.status_code}')
             self.node_list.remove(node)
+
+    def catchup_to_network(self):
+        node_list_index = self.node_list.copy()
+        node_list_index.remove(self.node)
+        if node_list_index != []:
+            random_node = random.choice(node_list_index)
+            network_height = self.request_height(random_node)
+            while self.height < network_height:
+                random_node = random.choice(node_list_index)
+                next_block = self.request_indexed_block(self.height + 1, random_node)
+                added = self.add_block(next_block)
+                if added:
+                    # Logging
+                    print(f'Successfully added block at height {self.height} from node {random_node}.')
+                else:
+                    # Logging
+                    print(f'Failed to add block at {self.height + 1} from node {random_node}.')
+
+    def request_height(self, node: tuple) -> int:
+        ip, port = node
+        url = f'http://{ip}:{port}/height'
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        try:
+            r = requests.get(url, headers=headers)
+        except ConnectionRefusedError:
+            # Logging
+            print(f'Error connecting to {node}.')
+            return 0
+        return r.json()['height']
 
     def check_genesis(self, node: tuple):
         '''
@@ -453,39 +486,80 @@ class Node:
             print(r.status_code)
             return False
 
-    def send_transaction_to_network(self, new_tx: Transaction):
-        for node in self.node_list:
-            ip, port = node
-            url = f'http://{ip}:{port}/transaction'
-            data = {'raw_tx': new_tx.raw_tx}
-            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            r = requests.post(url, data=json.dumps(data), headers=headers)
-            if r.status_code == 200:
-                # Logging
-                print(f'New tx sent to {node}')
-            else:
-                # Logging
-                print(f'Error sending tx to {node}. Status: {r.status_code}')
+    def send_tx_to_node(self, new_tx: Transaction, node: tuple) -> bool:
+        ip, port = node
+        url = f'http://{ip}:{port}/transaction'
+        data = {'raw_tx': new_tx.raw_tx}
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        r = requests.post(url, data=json.dumps(data), headers=headers)
+        if r.status_code == 200:
+            # Logging
+            print(f'New tx sent to {node}')
+            return True
+        else:
+            # Logging
+            print(f'Error sending tx to {node}. Status: {r.status_code}')
+            return False
 
-    def send_block_to_network(self, block: Block):
-        for node in self.node_list:
-            if node != self.node:
-                ip, port = node
-                url = f'http://{ip}:{port}/block'
-                headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-                r = requests.post(url, data=json.dumps(block.to_json), headers=headers)
-                print(r.status_code)
+    def send_block_to_node(self, block: Block, node: tuple) -> bool:
+        ip, port = node
+        url = f'http://{ip}:{port}/block'
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        r = requests.post(url, data=json.dumps(block.to_json), headers=headers)
+        if r.status_code == 200:
+            return True
+        else:
+            # Logging
+            print(
+                f'Did not receive 200 code from {node} for block at height {block.mining_tx.height}. Status code: {r.status_code}')
+            return False
 
-    def send_raw_block_to_network(self, raw_block: str):
+    def send_raw_block_to_node(self, raw_block: str, node: tuple):
         pass
 
-    def request_indexed_block(self, block_index: int):
-        pass
+    def request_indexed_block(self, block_index: int, node: tuple):
+        ip, port = node
+        url = f'http://{ip}:{port}/block/{block_index}'
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        try:
+            r = requests.get(url, headers=headers)
+        except ConnectionRefusedError:
+            # Logging
+            print(f'Error connecting to {node}.')
+            return 0
+
+        block_dict = r.json()
+        return self.d.block_from_dict(block_dict)
+
+    def gossip_protocol_tx(self, tx: Transaction):
+        gossip_list = self.get_gossip_nodes()
+        for node in gossip_list:
+            self.send_tx_to_node(tx, node)
+
+    def gossip_protocol_block(self, block: Block):
+        gossip_list = self.get_gossip_nodes()
+        for node in gossip_list:
+            self.send_block_to_node(block, node)
+
+    def gossip_protocol_raw_block(self, raw_block: str):
+        gossip_list = self.get_gossip_nodes()
+        for node in gossip_list:
+            self.send_raw_block_to_node(raw_block, node)
+
+    def get_gossip_nodes(self):
+        # Get gossip nodes
+        node_list_index = self.node_list.copy()
+        node_list_index.remove(self.node)
+        gossip_list = []
+        while len(gossip_list) < self.f.GOSSIP_NUMBER and node_list_index != []:
+            random_node = random.choice(node_list_index)
+            gossip_list.append(random_node)
+            node_list_index.remove(random_node)
+        return gossip_list
 
     # --- REST API --- #
     def start_api(self):
         self.app_running = True
-        self.kill_event = threading.Event()
         self.api_thread = threading.Thread(target=self.run_app, daemon=True)
         self.api_thread.start()
 
@@ -512,7 +586,8 @@ class Node:
                 try:
                     ip = new_node_dict['ip']
                     port = new_node_dict['port']
-                    self.node_list.append((ip, port))
+                    if (ip, port) not in self.node_list:
+                        self.node_list.append((ip, port))
                     return Response("New node received", status=200, mimetype='application/json')
                 except KeyError:
                     return Response("Submitted node malformed.", status=400, mimetype='application/json')
@@ -556,48 +631,10 @@ class Node:
             # Add new block at this endpoint
             if request.method == 'POST':
                 block_dict = json.loads(request.get_json())
-
-                # Construct block
-                prev_id = block_dict['prev_id']
-                merkle_root = block_dict['merkle_root']
-                target = self.f.int_from_target(block_dict['target'])
-                nonce = block_dict['nonce']
-                timestamp = block_dict['timestamp']
-                mining_tx_dict = block_dict['mining_tx']
-                height = mining_tx_dict['height']
-                reward = mining_tx_dict['reward']
-                block_fees = mining_tx_dict['block_fees']
-                mining_utxo_dict = mining_tx_dict['mining_utxo']
-                amount = mining_utxo_dict['amount']
-                address = mining_utxo_dict['address']
-                block_height = mining_utxo_dict['block_height']
-                mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
-                tx_count = block_dict['tx_count']
-                transactions = []
-                for x in range(tx_count):
-                    tx_dict = block_dict[f'tx_{x}']
-                    input_count = tx_dict['input_count']
-                    inputs = []
-                    for y in range(input_count):
-                        input_dict = tx_dict[f'input_{y}']
-                        tx_id = input_dict['tx_id']
-                        tx_index = input_dict['index']
-                        signature = input_dict['signature']
-                        inputs.append(UTXO_INPUT(tx_id, tx_index, signature))
-                    output_count = tx_dict['output_count']
-                    outputs = []
-                    for z in range(output_count):
-                        output_dict = tx_dict[f'output_{z}']
-                        amount2 = output_dict['amount']
-                        address2 = output_dict['address']
-                        block_height2 = output_dict['block_height']
-                        outputs.append(UTXO_OUTPUT(amount2, address2, block_height2))
-                    transactions.append(Transaction(inputs, outputs))
-
-                block_from_dict = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
-                if block_from_dict.merkle_root == merkle_root:
+                temp_block = self.d.block_from_dict(block_dict)
+                if temp_block:
                     # Construction successful, try to add
-                    added = self.add_block(block_from_dict)
+                    added = self.add_block(temp_block)
                     if added:
                         if self.is_mining:
                             # Logging
@@ -612,7 +649,7 @@ class Node:
                 else:
                     return Response("Block failed to reconstruct from dict.", status=406, mimetype='application/json')
 
-        @self.app.route('/block/<height>/')
+        @self.app.route('/block/<height>/', methods=['GET'])
         def get_block_by_height(height):
             raw_block_dict = self.blockchain.chain_db.get_raw_block(int(height))
             if raw_block_dict:

@@ -16,7 +16,7 @@ from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
 
 # Helpers
 def create_unmined_block(prev_id: id, height: int, reward: int, target: int):
-    mining_tx = MiningTransaction(height, reward, 0, Wallet().address)
+    mining_tx = MiningTransaction(height, reward, 0, Wallet().address, height + Formatter.MINING_DELAY)
     return Block(prev_id, target, 0, utc_to_seconds(), mining_tx, [])
 
 
@@ -51,8 +51,9 @@ def test_add_pop_block():
     reward = test_chain.mining_reward
     block_fees = 0
     address = w1.address
+    block_height = height + f.MINING_DELAY
 
-    mining_tx = MiningTransaction(height, reward, block_fees, address)
+    mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
 
     # Last block
     last_block = test_chain.last_block
@@ -75,7 +76,7 @@ def test_add_pop_block():
     ##Add User Transaction
 
     # Craft MiningTx again
-    mining_tx2 = MiningTransaction(height + 1, reward, block_fees, address)
+    mining_tx2 = MiningTransaction(height + 1, reward, block_fees, address, block_height + 1)
 
     # Craft Transaction
     new_address = w2.address

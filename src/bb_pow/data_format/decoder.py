@@ -333,3 +333,49 @@ class Decoder:
 
         # Return MiningTx, and UserTx list
         return mining_tx, transactions
+
+    def block_from_dict(self, block_dict: dict):
+        # Construct block
+        prev_id = block_dict['prev_id']
+        merkle_root = block_dict['merkle_root']
+        target = self.F.int_from_target(block_dict['target'])
+        nonce = block_dict['nonce']
+        timestamp = block_dict['timestamp']
+        mining_tx_dict = block_dict['mining_tx']
+        height = mining_tx_dict['height']
+        reward = mining_tx_dict['reward']
+        block_fees = mining_tx_dict['block_fees']
+        mining_utxo_dict = mining_tx_dict['mining_utxo']
+        amount = mining_utxo_dict['amount']
+        address = mining_utxo_dict['address']
+        block_height = mining_utxo_dict['block_height']
+        mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
+        tx_count = block_dict['tx_count']
+        transactions = []
+        for x in range(tx_count):
+            tx_dict = block_dict[f'tx_{x}']
+            input_count = tx_dict['input_count']
+            inputs = []
+            for y in range(input_count):
+                input_dict = tx_dict[f'input_{y}']
+                tx_id = input_dict['tx_id']
+                tx_index = input_dict['index']
+                signature = input_dict['signature']
+                inputs.append(UTXO_INPUT(tx_id, tx_index, signature))
+            output_count = tx_dict['output_count']
+            outputs = []
+            for z in range(output_count):
+                output_dict = tx_dict[f'output_{z}']
+                amount2 = output_dict['amount']
+                address2 = output_dict['address']
+                block_height2 = output_dict['block_height']
+                outputs.append(UTXO_OUTPUT(amount2, address2, block_height2))
+            transactions.append(Transaction(inputs, outputs))
+
+        temp_block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
+        if temp_block.merkle_root == merkle_root:
+            return temp_block
+        else:
+            # Logging
+            print('Block failed to reconstruct from dict.')
+            return None
