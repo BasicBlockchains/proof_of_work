@@ -119,7 +119,6 @@ class DataBase:
         if raw_block_tuple_list:
             (raw_block,) = raw_block_tuple_list[0]
             raw_block_dict.update({
-                "block": height,
                 "raw_block": raw_block
             })
         return raw_block_dict

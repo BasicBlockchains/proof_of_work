@@ -72,6 +72,11 @@ class Formatter():
     HEARTBEAT = 5  # TESTING #60
     GOSSIP_NUMBER = 5
 
+    # NODE FORMATTING
+    IP_CHARS = 8
+    PORT_CHARS = 4
+    NODE_CHARS = IP_CHARS + PORT_CHARS
+
     # Ease of use formatting
     def format_hex(self, hex_string: str, hex_length: int):
         if hex_string:
@@ -249,3 +254,19 @@ class Formatter():
             coefficient -= 1
 
         return self.target_from_parts(coefficient, exponent)
+
+    # Format Node
+    def node(self, node: tuple):
+        # Tuple values
+        ip, port = node
+
+        # Encode ip
+        formatted_ip = ''
+        octet_list = ip.split('.')
+        for octet in octet_list:
+            formatted_ip += format(int(octet), '02x')
+
+        # Encode port
+        formatted_port = format(port, f'0{self.PORT_CHARS}x')
+
+        return formatted_ip + formatted_port

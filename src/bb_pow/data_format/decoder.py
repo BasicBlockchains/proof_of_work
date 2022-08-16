@@ -36,17 +36,6 @@ class Decoder:
             return False
         return True
 
-    # # Decode target
-    # def int_from_target(self, encoded_target: str):
-    #     # Index
-    #     coeff_index = self.F.TARGET_COEFFICIENT_CHARS
-    #     exp_index = self.F.TARGET_EXPONENT_CHARS + coeff_index
-    #
-    #     coeff = int(encoded_target[:coeff_index], 16)
-    #     exp = int(encoded_target[coeff_index:exp_index], 16)
-    #
-    #     return coeff * pow(2, 8 * (exp - 3))
-
     ##CPK, Signature, Address
 
     def decode_cpk(self, cpk: str) -> tuple:
@@ -250,6 +239,25 @@ class Decoder:
 
         return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
 
+    def transaction_from_dict(self, tx_dict: dict):
+        input_count = tx_dict['input_count']
+        inputs = []
+        for y in range(input_count):
+            input_dict = tx_dict[f'input_{y}']
+            tx_id = input_dict['tx_id']
+            tx_index = input_dict['index']
+            signature = input_dict['signature']
+            inputs.append(UTXO_INPUT(tx_id, tx_index, signature))
+        output_count = tx_dict['output_count']
+        outputs = []
+        for z in range(output_count):
+            output_dict = tx_dict[f'output_{z}']
+            amount2 = output_dict['amount']
+            address2 = output_dict['address']
+            block_height2 = output_dict['block_height']
+            outputs.append(UTXO_OUTPUT(amount2, address2, block_height2))
+        return Transaction(inputs, outputs)
+
     # Block
     def raw_block(self, raw_block: str):
         # Type version
@@ -379,3 +387,17 @@ class Decoder:
             # Logging
             print('Block failed to reconstruct from dict.')
             return None
+
+    # Node
+    def raw_node(self, raw_node: str):
+        hex_ip = raw_node[:self.F.IP_CHARS]
+        port = raw_node[self.F.IP_CHARS:self.F.NODE_CHARS]
+
+        ip = ''
+        for x in range(0, 4):
+            temp_string = hex_ip[2 * x:2 * (x + 1)]
+            ip += str(int(temp_string, 16))
+            if x != 3:
+                ip += '.'
+
+        return (ip, port)

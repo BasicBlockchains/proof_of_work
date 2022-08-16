@@ -151,7 +151,6 @@ def test_block_header_methods():
             "timestamp": temp_block.timestamp
         }
         raw_block_dict = {
-            "block": z,
             "raw_block": temp_block.raw_block
         }
 
