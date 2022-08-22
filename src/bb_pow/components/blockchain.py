@@ -8,7 +8,7 @@ from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from ..components.wallet import Wallet
+from .wallet import Wallet
 from ..data_format.database import DataBase
 from ..data_format.decoder import Decoder
 from ..data_format.formatter import Formatter
