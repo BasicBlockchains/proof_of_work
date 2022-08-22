@@ -8,8 +8,8 @@ from pathlib import Path
 import pandas as pd
 from basicblockchains_ecc import elliptic_curve as EC
 
-from ..data_format.decoder import Decoder
-from ..data_format.formatter import Formatter
+from bb_pow.data_format.decoder import Decoder
+from bb_pow.data_format.formatter import Formatter
 
 
 class Wallet():
@@ -44,11 +44,15 @@ class Wallet():
         # If file exists, load seed
         if seed is None and Path(self.dir_path, self.file_name).exists():
             seed = self.load_wallet()
-        elif seed is None:
+
+        # If loading returns None, create seed
+        if seed is None:
             seed = self.get_seed()
 
         # Create seed phrase
         self.seed_phrase = self.get_seed_phrase(seed)
+
+        print(f'SEED PHRASE CREATED DURING INSTANTIATION: {self.seed_phrase}')
 
         # Save seed
         if save:
@@ -66,8 +70,10 @@ class Wallet():
         '''
         We save the necessary values to instantiate a wallet to a file.
         '''
+        print(f'SAVE WALLET SEED PHRASE: {self.seed_phrase}')
         with open(f'{dir_path}/{file_name}', 'w') as f:
-            seed_string = hex(self.recover_seed(self.seed_phrase)) + '\n'
+            seed_num = self.recover_seed(self.seed_phrase)
+            seed_string = hex(seed_num) + '\n'
             f.write(seed_string)
 
     def load_wallet(self):
@@ -80,12 +86,11 @@ class Wallet():
             # Read in wallet file
             with open(f'{self.dir_path}/{self.file_name}', 'r') as f:
                 seed_string = f.read()
+            if type(seed_string) == int:
+                return int(seed_string, 16)
 
-            return int(seed_string, 16)
-
-        else:
-            # Logging
-            return None
+        # Logging
+        return None
 
     # --- SEED METHODS --- #
 
@@ -129,7 +134,7 @@ class Wallet():
         # Load dictionary from file - save seed and return empty list if file not found
         try:
             # dir_path = Path(__file__).parent / "data/english_dictionary.txt"
-            df_dict = pd.read_csv('./data/english_dictionary.txt', header=None)
+            df_dict = pd.read_csv('../../../data/english_dictionary.txt', header=None)
         except FileNotFoundError:
             self.save_wallet(self.dir_path, self.file_name)
             return []
@@ -144,7 +149,7 @@ class Wallet():
     def recover_seed(seed_phrase: list, seed_bits=128, dir_path='./data/', dict_exp=DICTIONARY_EXPONENT):
         # Try to read file
         try:
-            df_dict = pd.read_csv(dir_path + 'english_dictionary.txt', header=None)
+            df_dict = pd.read_csv('../../../data/english_dictionary.txt', header=None)
         except FileNotFoundError:
             # Logging
             return None

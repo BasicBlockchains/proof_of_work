@@ -1,27 +1,25 @@
 '''
 The Node class
 '''
+import json
 import os
 import random
-import signal
-import threading
-import json
-from multiprocessing import Process, Queue
-from requests import get
-import atexit
 import socket
-from flask import Flask, jsonify, request, Response
+import threading
+from multiprocessing import Process, Queue
+
 import requests
-from ..components.miner import Miner
-from ..components.wallet import Wallet
-from ..data_format.decoder import Decoder
-from ..data_format.formatter import Formatter
-from ..data_format.timestamp import utc_to_seconds
-from ..data_structures.transactions import Transaction, MiningTransaction
-from ..components.blockchain import Blockchain
-from ..data_structures.block import Block
-from ..data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
-import werkzeug
+from requests import get
+
+from bb_pow.data_format.decoder import Decoder
+from bb_pow.data_format.formatter import Formatter
+from bb_pow.data_format.timestamp import utc_to_seconds
+from bb_pow.data_structures.block import Block
+from bb_pow.data_structures.transactions import Transaction, MiningTransaction
+from bb_pow.data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
+from blockchain import Blockchain
+from miner import Miner
+from wallet import Wallet
 
 
 class Node:

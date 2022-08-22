@@ -8,13 +8,13 @@ from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from ..components.wallet import Wallet
-from ..data_format.database import DataBase
-from ..data_format.decoder import Decoder
-from ..data_format.formatter import Formatter
-from ..data_structures.block import Block
-from ..data_structures.transactions import MiningTransaction
-from ..data_structures.utxo import UTXO_OUTPUT
+from wallet import Wallet
+from bb_pow.data_format.database import DataBase
+from bb_pow.data_format.decoder import Decoder
+from bb_pow.data_format.formatter import Formatter
+from bb_pow.data_structures.block import Block
+from bb_pow.data_structures.transactions import MiningTransaction
+from bb_pow.data_structures.utxo import UTXO_OUTPUT
 
 
 class Blockchain():
