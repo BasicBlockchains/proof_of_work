@@ -283,10 +283,6 @@ class Blockchain():
                                                 0xffffffffffffffff)
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
-        # Verify
-        # DISABLED FOR TESTING
-        # assert int(genesis_block.id, 16) < self.target
-
         return genesis_block
 
     # Fork methods

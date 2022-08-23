@@ -2,8 +2,8 @@
 REST API for the Blockchain
 '''
 
-from flask import Flask, jsonify, request, Response, json
-
+from flask import Flask, jsonify, request, Response, json, render_template
+import waitress
 from .node import Node
 
 
@@ -14,8 +14,8 @@ def create_app(node: Node):
 
     @app.route('/')
     def hello_world():
-        welcome_string = "Welcome to the BB_POW."
-        return jsonify(welcome_string)
+        welcome_string = "Welcome to the BB_POW!"
+        return welcome_string
 
     @app.route('/height/')
     def get_height():
@@ -184,4 +184,4 @@ def create_app(node: Node):
 
 def run_app(node: Node):
     app = create_app(node)
-    app.run(host='0.0.0.0', port=node.find_open_port())
+    waitress.serve(app, listen=f'0.0.0.0:{node.assigned_port}')
