@@ -1,7 +1,7 @@
 '''
 The Miner class
 '''
-from ..data_structures.block import Block
+from block import Block
 
 
 class Miner():

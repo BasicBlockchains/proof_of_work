@@ -6,10 +6,10 @@ from hashlib import sha256
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from ..data_format.formatter import Formatter
-from ..data_structures.block import Block
-from ..data_structures.transactions import Transaction, MiningTransaction
-from ..data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
+from block import Block
+from formatter import Formatter
+from transactions import Transaction, MiningTransaction
+from utxo import UTXO_INPUT, UTXO_OUTPUT
 
 
 class Decoder:

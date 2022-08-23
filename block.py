@@ -4,8 +4,8 @@ The Block class
 import json
 from hashlib import sha256
 
-from ..data_format.formatter import Formatter
-from ..data_structures.transactions import MiningTransaction
+from formatter import Formatter
+from transactions import MiningTransaction
 
 
 class Block():

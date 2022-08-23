@@ -9,8 +9,7 @@ import os
 from basicblockchains_ecc.elliptic_curve import secp256k1
 from pathlib import Path
 
-from src.bb_pow.components.wallet import Wallet
-from src.bb_pow.data_format.decoder import Decoder
+from .context import Wallet, Decoder
 
 
 def test_save_load_wallet():

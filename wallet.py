@@ -7,8 +7,8 @@ from pathlib import Path
 
 from basicblockchains_ecc import elliptic_curve as EC
 
-from ..data_format.decoder import Decoder
-from ..data_format.formatter import Formatter
+from decoder import Decoder
+from formatter import Formatter
 
 
 class Wallet():
@@ -113,4 +113,3 @@ class Wallet():
     # --- SIGN TRANSACTION --- #
     def sign_transaction(self, tx_id: str) -> str:
         return self.F.signature(self.private_key, tx_id)
-

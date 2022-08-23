@@ -8,13 +8,13 @@ from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from .wallet import Wallet
-from ..data_format.database import DataBase
-from ..data_format.decoder import Decoder
-from ..data_format.formatter import Formatter
-from ..data_structures.block import Block
-from ..data_structures.transactions import MiningTransaction
-from ..data_structures.utxo import UTXO_OUTPUT
+from block import Block
+from database import DataBase
+from decoder import Decoder
+from formatter import Formatter
+from transactions import MiningTransaction
+from utxo import UTXO_OUTPUT
+from wallet import Wallet
 
 
 class Blockchain():
@@ -27,7 +27,7 @@ class Blockchain():
     GENESIS_TIMESTAMP = 1660652734
 
     # Directory defaults
-    DIR_PATH = './data/'
+    DIR_PATH = 'src/data/'
     DB_FILE = 'chain.db'
 
     # Decoder and formatter

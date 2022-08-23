@@ -3,15 +3,8 @@ Testing the blockchain
 '''
 import os
 
-from src.bb_pow.data_structures.block import Block
-from src.bb_pow.components.blockchain import Blockchain
-from src.bb_pow.data_format.decoder import Decoder
-from src.bb_pow.data_format.formatter import Formatter
-from src.bb_pow.components.miner import Miner
-from src.bb_pow.data_format.timestamp import utc_to_seconds
-from src.bb_pow.data_structures.transactions import MiningTransaction, Transaction
-from src.bb_pow.components.wallet import Wallet
-from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
+from .context import Block, Blockchain, Decoder, Formatter, Miner, utc_to_seconds, MiningTransaction, Transaction, \
+    Wallet, UTXO_INPUT, UTXO_OUTPUT
 
 
 # Helpers

@@ -2,15 +2,8 @@
 Tests for the Node class
 '''
 import os
-import sqlite3
 
-from src.bb_pow.components.node import Node
-from src.bb_pow.components.wallet import Wallet
-from src.bb_pow.data_structures.block import Block
-from src.bb_pow.data_format.timestamp import utc_to_seconds
-from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
-from src.bb_pow.data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
-from src.bb_pow.components.miner import Miner
+from .context import Node, Wallet, Block, utc_to_seconds, Transaction, MiningTransaction, Miner, UTXO_INPUT, UTXO_OUTPUT
 
 
 def create_test_node_block(node: Node):

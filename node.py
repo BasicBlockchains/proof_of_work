@@ -1,6 +1,7 @@
 '''
 The Node class
 '''
+
 import json
 import os
 import random
@@ -11,15 +12,15 @@ from multiprocessing import Process, Queue
 import requests
 from requests import get
 
-from ..data_format.decoder import Decoder
-from ..data_format.formatter import Formatter
-from ..data_format.timestamp import utc_to_seconds
-from ..data_structures.block import Block
-from ..data_structures.transactions import Transaction, MiningTransaction
-from ..data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
-from .blockchain import Blockchain
-from .miner import Miner
-from .wallet import Wallet
+from block import Block
+from blockchain import Blockchain
+from decoder import Decoder
+from formatter import Formatter
+from miner import Miner
+from timestamp import utc_to_seconds
+from transactions import Transaction, MiningTransaction
+from utxo import UTXO_OUTPUT, UTXO_INPUT
+from wallet import Wallet
 
 
 class Node:

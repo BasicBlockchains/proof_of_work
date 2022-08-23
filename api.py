@@ -2,9 +2,10 @@
 REST API for the Blockchain
 '''
 
-from flask import Flask, jsonify, request, Response, json, render_template
 import waitress
-from .node import Node
+from flask import Flask, jsonify, request, Response, json
+
+from node import Node
 
 
 def create_app(node: Node):

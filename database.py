@@ -6,9 +6,10 @@ import sqlite3
 from contextlib import closing
 from os.path import join
 from pathlib import Path
-from ..data_format.formatter import Formatter
-from ..data_structures.block import Block
-from ..data_structures.utxo import UTXO_OUTPUT
+
+from block import Block
+from formatter import Formatter
+from utxo import UTXO_OUTPUT
 
 
 class DataBase:

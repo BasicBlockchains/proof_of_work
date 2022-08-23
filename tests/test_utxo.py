@@ -3,10 +3,8 @@ Tests for the UTXO class
 '''
 import secrets
 
-from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.components.wallet import Wallet
+from .context import UTXO_INPUT, UTXO_OUTPUT, Wallet, Decoder
 from .test_wallet import random_tx_id
-from src.bb_pow.data_format.decoder import Decoder
 
 
 def test_utxo():
