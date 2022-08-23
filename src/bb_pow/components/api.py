@@ -4,7 +4,7 @@ REST API for the Blockchain
 
 from flask import Flask, jsonify, request, Response, json
 
-from node import Node
+from .node import Node
 
 
 def create_app(node: Node):

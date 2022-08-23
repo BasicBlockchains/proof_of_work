@@ -5,27 +5,31 @@ import random
 import secrets
 import string
 from hashlib import sha256
-
+import os
 from basicblockchains_ecc.elliptic_curve import secp256k1
+from pathlib import Path
 
-from src.bb_pow.components.wallet import Wallet, recover_wallet
+from src.bb_pow.components.wallet import Wallet
 from src.bb_pow.data_format.decoder import Decoder
 
 
-def test_seed_recover():
-    '''
-    We verify that the seed_phrase recovers the same seed
-    '''
-    w = Wallet()
-    recovered_seed = w.recover_seed(w.seed_phrase)
-    w2 = Wallet(recovered_seed)
-    assert w.seed_phrase == w2.seed_phrase
+def test_save_load_wallet():
+    current_path = os.getcwd()
+    if '/tests' in current_path:
+        dir_path = current_path + '/data/test_wallet/'
+    else:
+        dir_path = './tests/data/test_wallet/'
 
+    w = Wallet(dir_path=dir_path)  # Will automatically save
+    w2 = Wallet(dir_path=dir_path)  # Will load wallet saved in same dir
+    assert w.private_key == w2.private_key
 
-def test_wallet_recovery():
-    w = Wallet()
-    calc_wallet = recover_wallet(w.seed_phrase)
-    assert w.seed_phrase == calc_wallet.seed_phrase
+    # Delete wallets
+    wallet_file = os.path.join(dir_path, 'wallet.dat')
+    os.remove(wallet_file)
+
+    # Verify
+    assert not Path(wallet_file).exists()
 
 
 def test_wallet_signature():
