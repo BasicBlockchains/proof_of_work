@@ -7,6 +7,7 @@ import os
 import random
 import socket
 import threading
+import time
 from multiprocessing import Process, Queue
 
 import requests
@@ -83,12 +84,8 @@ class Node:
         self.node_list = []
         self.node_list.append(self.node)
 
-        # # REST API
-        # self.app_running = False
-        # self.app = Flask(__name__)
-        # self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
-        # self.app.config['JSON_SORT_KEYS'] = False
-        # self.start_api()
+        # Create connected flag for network
+        self.is_connected = False
 
     # --- PROPERTIES --- #
     @property
@@ -375,6 +372,23 @@ class Node:
             self.add_block(block)
 
     # --- NETWORK --- #
+    def ping_node(self, node: tuple) -> bool:
+        '''
+        Ping endpoint for 200 response
+        '''
+        ip, port = node
+        url = f'http://{ip}:{port}/ping'
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        start_time = time.time()
+        try:
+            r = requests.get(url, headers=headers)
+        except ConnectionRefusedError:
+            # Logging
+            print(f'Error connecting to {node}.')
+            return False
+
+        return r.status_code == 200
+
     def connect_to_node(self, node: tuple) -> bool:
         ip, port = node
         url = f'http://{ip}:{port}/node_list'
@@ -390,6 +404,10 @@ class Node:
                 # Logging
                 print(f'Genesis Block malformed in {node}. Not adding to node list.')
                 return False
+        elif r.status_code == 200:
+            # Logging
+            print(f'Already connected to {node}')
+            return True
         # Logging
         print(f'Error connecting to {node}. Status code: {r.status_code}')
         return False
@@ -402,6 +420,10 @@ class Node:
         r = requests.get(url, headers=headers)
         list_of_nodes = r.json()
 
+        # If we get a node list, we've successfully connected
+        if list_of_nodes:
+            self.is_connected = True
+
         # Connect to each node in node_list
         for list_tuple in list_of_nodes:
             ip, port = list_tuple
@@ -410,6 +432,7 @@ class Node:
                 if connected:
                     # Logging
                     print(f'Successfully connected to {(ip, port)}')
+
                 else:
                     # Logging
                     print(f'Error connecting to {(ip, port)}')
@@ -442,6 +465,9 @@ class Node:
                 # Logging
                 print(f'Error connecting to {node} for disconnect. Status code: {r.status_code}')
             self.node_list.remove(node)
+
+        # No longer connected
+        self.is_connected = False
 
     def catchup_to_network(self):
         node_list_index = self.node_list.copy()
