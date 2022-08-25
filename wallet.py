@@ -319,13 +319,17 @@ class Wallet():
                         (self.utxos['tx_id'] == tx_id) & (self.utxos['tx_index'] == tx_index)]
                     if not utxo_index.empty:
                         self.utxos = self.utxos.drop(index=utxo_index).reset_index(drop=True)
-                # Add output utxos
+                # Add output utxos if not already added
                 for utxo_output in tx.outputs:
                     if utxo_output.address == self.address:
                         new_row = pd.DataFrame(
                             [[tx.id, tx.outputs.index(utxo_output), utxo_output.amount, utxo_output.block_height]],
                             columns=self.COLUMNS)
-                        if self.utxos.empty:
-                            self.utxos = new_row
-                        else:
-                            self.utxos = pd.concat([self.utxos, new_row], ignore_index=True)
+                        exists_index = self.utxos.index[
+                            (self.utxos['tx_id'] == tx.id) & (self.utxos['tx_index'] == tx.outputs.index(utxo_output))
+                            ]
+                        if exists_index.empty:
+                            if self.utxos.empty:
+                                self.utxos = new_row
+                            else:
+                                self.utxos = pd.concat([self.utxos, new_row], ignore_index=True)

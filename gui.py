@@ -126,17 +126,17 @@ def create_window(theme=DEFAULT_THEME):
     # --- Mining Tab --- #
 
     mining_info_labels = [
-        [sg.Text('Block Target:')],
-        [sg.Text('Mining Reward:')],
-        [sg.Text('Mine Amount Left:')]
+        [sg.Text('Block Target:', justification='right', auto_size_text=False, size=(18, 1))],
+        [sg.Text('Mining Reward:', justification='right', auto_size_text=False, size=(18, 1))],
+        [sg.Text('Mine Amount Left:', justification='right', auto_size_text=False, size=(18, 1))]
     ]
     mining_info_values = [
         [sg.InputText(key='-miner_target-', disabled=True, use_readonly_for_disable=True, size=(24, 1),
-                      justification='center')],
+                      justification='left', border_width=0)],
         [sg.InputText(key='-miner_reward-', disabled=True, use_readonly_for_disable=True, size=(24, 1),
-                      justification='center')],
+                      justification='left', border_width=0)],
         [sg.InputText(key='-total_mining_amount-', disabled=True, use_readonly_for_disable=True, size=(24, 1),
-                      justification='center')]
+                      justification='left', border_width=0)]
 
     ]
     mining_tx_headers = ['Transaction ID']
@@ -191,10 +191,7 @@ def create_window(theme=DEFAULT_THEME):
             sg.Push(),
             sg.Column(mining_info_labels),
             sg.Column(mining_info_values),
-            sg.Push(),
-            sg.Button('START MINER', auto_size_button=False, size=(12, 2), key='-start_miner-', button_color='#00AA00'),
-            sg.Button('STOP MINER', auto_size_button=False, size=(12, 2), key='-stop_miner-', button_color='#FF0000',
-                      disabled=True),
+
             sg.Push()
         ],
         [sg.HorizontalSeparator(color='#000000')],
@@ -285,6 +282,10 @@ def create_window(theme=DEFAULT_THEME):
             sg.Image('./images/red_circle_small.png', key='-network_icon-'),
             sg.Text('MINING:', justification='right', auto_size_text=False, size=(12, 1)),
             sg.Image('./images/red_circle_small.png', key='-mining_icon-'),
+            sg.Push(),
+            sg.Button('START MINER', auto_size_button=False, size=(12, 2), key='-start_miner-', button_color='#00AA00'),
+            sg.Button('STOP MINER', auto_size_button=False, size=(12, 2), key='-stop_miner-', button_color='#FF0000',
+                      disabled=True),
             sg.Push()
         ],
         [
@@ -426,6 +427,7 @@ def run_node_gui():
             # Also update wallet
             node.wallet.get_latest_height(node.node)
             node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
+            node.wallet.update_utxos_from_pending_transactions()
 
         # Prev_id
         if prev_id != node.last_block.id:
@@ -506,8 +508,9 @@ def run_node_gui():
         if event == 'Paste':
             window_key = window.FindElementWithFocus().Key
             if window_key not in [
-                '-webserver-', '-node_ip-', '-node_port-',
-                '-wallet_address-', '-wallet_available-', '-wallet_locked-', '-wallet_balance-'
+                '-webserver-', '-node_ip-', '-node_port-', '-node_list_table-',
+                '-wallet_address-', '-wallet_available-', '-wallet_locked-', '-wallet_balance-', '-utxo_table-'
+
             ]:
                 cb = Tk()
                 copy_text = cb.clipboard_get()
@@ -547,13 +550,12 @@ def run_node_gui():
         if target != f.target_from_int(node.target):
             target = f.target_from_int(node.target)
             window['-miner_target-'].update(target)
-        if reward != node.mining_reward // pow(10, 9):
-            reward = node.mining_reward // pow(10, 9)
+        if reward != node.mining_reward:
+            reward = node.mining_reward
             window['-miner_reward-'].update(str(reward))
         if total_mine_amount != node.total_mining_amount:
             total_mine_amount = node.total_mining_amount
-            float_mine_amount = format(total_mine_amount / pow(10, 9), '.9f')
-            window['-total_mining_amount-'].update(float_mine_amount)
+            window['-total_mining_amount-'].update(str(total_mine_amount))
         if validated_tx_list != node.validated_transactions:
             validated_tx_list = node.validated_transactions.copy()
             temp_list = []

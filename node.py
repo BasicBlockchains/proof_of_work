@@ -147,7 +147,9 @@ class Node:
                     self.gossip_protocol_raw_block(next_block)
                 else:
                     # Fail to add block, we stop mining
-                    self.is_mining = False
+                    # self.is_mining = False
+                    # Logging
+                    print(f'Block mined but failed to be added. Likely fork. Current forks: {self.blockchain.forks}')
                 # Logging
                 print(f'Block mined by node. Height: {self.height}, Added: {added}')
 
@@ -157,6 +159,18 @@ class Node:
 
     def stop_miner(self):
         if self.is_mining:
+            # Put block transactions back in validated txs
+            block_tx_index = self.block_transactions.copy()
+            for tx in block_tx_index:
+                # Add back consumed utxos
+                for input in tx.inputs:
+                    input_tuple = (input.tx_id, input.index)
+                    if input_tuple in self.consumed_utxos:
+                        self.consumed_utxos.remove(input_tuple)
+                # Revalidate tx
+                self.add_transaction(tx)
+                self.block_transactions.remove(tx)
+
             if self.mining_process.is_alive():
                 self.mining_process.terminate()
             self.is_mining = False
