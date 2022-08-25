@@ -7,7 +7,7 @@ TODO: During loading, account for file existing which doesn't contain correct ge
 from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
-
+import json
 from block import Block
 from database import DataBase
 from decoder import Decoder
@@ -23,8 +23,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 156139
-    GENESIS_TIMESTAMP = 1660652734
+    GENESIS_NONCE = 209934
+    GENESIS_TIMESTAMP = 1661454734
 
     # Directory defaults
     DIR_PATH = 'src/data/'
@@ -164,7 +164,7 @@ class Blockchain():
 
         return True
 
-    def add_block(self, block: Block, loading=False):
+    def add_block(self, block: Block, loading=False) -> bool:
         valid_block = False
 
         # Account for genesis
@@ -205,7 +205,7 @@ class Blockchain():
             self.total_mining_amount -= block.mining_tx.reward
 
             # Update reward
-            if (self.height % self.f.REWARD_REDUCTION == 0 and self.height > 0) or \
+            if (self.height % self.f.HALVING_NUMBER == 0 and self.height > 0) or \
                     self.mining_reward > self.total_mining_amount:
                 self.update_reward()
 
@@ -279,7 +279,7 @@ class Blockchain():
         return True
 
     def create_genesis_block(self) -> Block:
-        genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0, save=False).address,
+        genesis_transaction = MiningTransaction(0, self.total_mining_amount // 2, 0, Wallet(seed=0, save=False).address,
                                                 0xffffffffffffffff)
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
@@ -292,7 +292,7 @@ class Blockchain():
             block.mining_tx.height: block
         })
 
-    def handle_fork(self, block: Block):
+    def handle_fork(self, block: Block) -> bool:
         # Look for block with height = block.height -1
         forks_list = self.forks.copy()
         candidate_fork = None
@@ -337,11 +337,12 @@ class Blockchain():
 
     # Updates
     def update_reward(self):
+
         # Account for near empty mine
         if self.mining_reward > self.total_mining_amount:
             self.mining_reward = self.total_mining_amount
         # Otherwise divide by 2 up to a max of 10 times
-        elif self.mining_reward > self.f.MINIMUM_REWARD:
+        else:
             # Logging
             print(f'Height is {self.height}. Halving available reward.')
             self.mining_reward //= 2
