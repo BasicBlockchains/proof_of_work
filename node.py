@@ -161,15 +161,19 @@ class Node:
         if self.is_mining:
             # Put block transactions back in validated txs
             block_tx_index = self.block_transactions.copy()
+            self.block_transactions = []
+            # print(f'BLOCK TRANSACTIONS BEFORE LOOP: {self.block_transactions}')
             for tx in block_tx_index:
-                # Add back consumed utxos
-                for input in tx.inputs:
-                    input_tuple = (input.tx_id, input.index)
-                    if input_tuple in self.consumed_utxos:
-                        self.consumed_utxos.remove(input_tuple)
-                # Revalidate tx
-                self.add_transaction(tx)
-                self.block_transactions.remove(tx)
+                in_chain = tx.id in self.last_block.tx_ids
+
+                if not in_chain:
+                    # Add back consumed utxos
+                    for input in tx.inputs:
+                        input_tuple = (input.tx_id, input.index)
+                        if input_tuple in self.consumed_utxos:
+                            self.consumed_utxos.remove(input_tuple)
+                    # Revalidate tx
+                    self.add_transaction(tx)
 
             if self.mining_process.is_alive():
                 self.mining_process.terminate()
@@ -256,6 +260,7 @@ class Node:
         existing_tx = self.blockchain.get_tx_by_id(transaction.id)
         if existing_tx:
             # Logging
+            print(f'EXISTING TX RETURNED FROM GET_TX_BY_ID: {existing_tx}')
             print('Transaction already in chain.')
             return False
 

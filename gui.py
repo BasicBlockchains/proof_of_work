@@ -218,15 +218,22 @@ def create_window(theme=DEFAULT_THEME):
     ]
 
     send_column = [
-        [sg.Text('Send to:', justification='right', auto_size_text=False, size=(10, 1)),
+        [sg.Text('Send to:', justification='right', auto_size_text=False, size=(12, 1)),
          sg.InputText(size=(40, 1), justification='right', key='-wallet_sendto-',
                       right_click_menu=right_click_menu[0])],
-        [sg.Text('Amount:', justification='right', auto_size_text=False, size=(10, 1)),
+        [sg.Text('Amount:', justification='right', auto_size_text=False, size=(12, 1)),
          sg.InputText(size=(40, 1), justification='right', key='-wallet_amount-',
                       right_click_menu=right_click_menu[0])],
-        [sg.Text('Fees:', justification='right', auto_size_text=False, size=(10, 1)),
-         sg.InputText(size=(40, 1), justification='right', key='-wallet_fees-', right_click_menu=right_click_menu[0])]
+        [sg.Text('Fees:', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText(size=(40, 1), justification='right', key='-wallet_fees-', right_click_menu=right_click_menu[0])],
+        [sg.Text('Block Height:', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText(size=(40, 1), justification='right', key='-wallet_block_height-',
+                      right_click_menu=right_click_menu[0])]
 
+    ]
+    button_column = [
+        [sg.Button('Send Funds', key='-wallet_send_funds-', size=(20, 3), button_color='#00AA00'), ],
+        [sg.Button('Cancel', key='-wallet_cancel-', size=(20, 1), button_color='#FF0000'), ]
     ]
 
     wallet_utxo_table_headers = ['tx_id', 'tx_index', 'amount', 'block_height']
@@ -242,10 +249,10 @@ def create_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.Column(funds_column), sg.Column(send_column),
+            sg.Column(funds_column), sg.Column(send_column), sg.Column(button_column),
             sg.Push()
         ],
-        [sg.Push(), sg.Button('Send Funds', key='-wallet_send_funds-'), sg.Push()],
+        # [sg.Push(), sg.Button('Send Funds', key='-wallet_send_funds-'), sg.Push()],
         [sg.HorizontalSeparator(color='#000000')],
         [
             sg.Table(values=[], headings=wallet_utxo_table_headers, auto_size_columns=False,
@@ -365,8 +372,8 @@ def run_node_gui():
     ping_list = []
     contact_dict = {}
     target = ''
-    reward = 0
-    total_mine_amount = 0
+    reward = -1
+    total_mine_amount = -1
     validated_tx_list = None
     block_tx_list = None
     orphaned_tx_list = None
@@ -607,6 +614,7 @@ def run_node_gui():
             sendto_address = values['-wallet_sendto-']
             string_amount = values['-wallet_amount-']
             string_fees = values['-wallet_fees-']
+            string_block_height = values['-wallet_block_height-']
 
             # Verify numeric values
             if string_amount.isnumeric() and string_fees.isnumeric():

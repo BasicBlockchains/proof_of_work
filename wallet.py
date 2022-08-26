@@ -159,7 +159,7 @@ class Wallet():
         return self.F.signature(self.private_key, tx_id)
 
     # --- CREATE TRANSACTION  --- #
-    def create_transaction(self, address: str, amount: int, fees=0):
+    def create_transaction(self, address: str, amount: int, fees=0, block_height=0):
         '''
         We gather the available UTXOs and create an output UTXO with the given address and amount and a return UTXO
         for our own wallet
@@ -200,7 +200,7 @@ class Wallet():
             print('TX Created with more than 256 Inputs. Rejecting transaction.')
             return None
 
-        utxo_output = UTXO_OUTPUT(amount=amount, address=address)
+        utxo_output = UTXO_OUTPUT(amount=amount, address=address, block_height=block_height)
         outputs = [utxo_output]
         rebate = utxo_amount - (amount + fees)
         if rebate > 0:

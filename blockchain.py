@@ -23,8 +23,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 209934
-    GENESIS_TIMESTAMP = 1661454734
+    GENESIS_NONCE = 172225
+    GENESIS_TIMESTAMP = 1661513992
 
     # Directory defaults
     DIR_PATH = 'src/data/'
@@ -172,7 +172,8 @@ class Blockchain():
             valid_block = True
         elif loading:
             valid_block = True
-        # Create fork if adding block at same height - don't fork same block if gossiped back
+        # Create fork if adding block withing FORK_HEIGHT of current height - don't fork same block if gossiped back
+        # elif self.last_block.mining_tx.height + self.f.FORK_HEIGHT <= block.mining_tx.height <= self.last_block.mining_tx.height and block.id != self.last_block.id:
         elif block.mining_tx.height == self.last_block.mining_tx.height and block.id != self.last_block.id:
             self.create_fork(block)
             return False
@@ -338,10 +339,17 @@ class Blockchain():
     # Updates
     def update_reward(self):
 
+        # Calc interest if mining_amount is zero
+        if self.total_mining_amount == 0:
+            # Find all utxos with block_height >= current_height + HALVING_NUMBER
+            next_height = self.height + self.f.HALVING_NUMBER
+            next_amount = self.chain_db.get_total_amount_greater_than_block_height(next_height)
+            print(f'TOTAL AMOUNT WITH BLOCK HEIGHT GREATER THAN {next_height}: {next_amount}')
+
         # Account for near empty mine
         if self.mining_reward > self.total_mining_amount:
             self.mining_reward = self.total_mining_amount
-        # Otherwise divide by 2 up to a max of 10 times
+        # Otherwise divide by 2
         else:
             # Logging
             print(f'Height is {self.height}. Halving available reward.')
@@ -410,6 +418,8 @@ class Blockchain():
         tx = None
         temp_block = self.find_block_by_tx_id(tx_id)
         if temp_block:
+            # TESTING
+            print(f'TEMP BLOCK IN GET_TX_BY_ID: {temp_block}')
             # Check for mining tx
             if temp_block.mining_tx.id == tx_id:
                 tx = temp_block.mining_tx
