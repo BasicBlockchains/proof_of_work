@@ -7,7 +7,6 @@ import os
 import random
 import socket
 import threading
-import time
 from multiprocessing import Process, Queue
 
 import requests

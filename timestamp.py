@@ -1,14 +1,8 @@
 '''
 Methods to translate current time into seconds from EPOCH
 '''
-'''
-IMPORTS
-'''
-import datetime
 
-'''
-METHODS
-'''
+import datetime
 
 
 def utc_to_seconds():

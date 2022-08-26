@@ -7,7 +7,7 @@ TODO: During loading, account for file existing which doesn't contain correct ge
 from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
-import json
+
 from block import Block
 from database import DataBase
 from decoder import Decoder
@@ -183,7 +183,6 @@ class Blockchain():
         elif loading:
             valid_block = True
         # Create fork if adding block withing FORK_HEIGHT of current height - don't fork same block if gossiped back
-        # elif self.last_block.mining_tx.height + self.f.FORK_HEIGHT <= block.mining_tx.height <= self.last_block.mining_tx.height and block.id != self.last_block.id:
         elif block.mining_tx.height == self.last_block.mining_tx.height and block.id != self.last_block.id:
             self.create_fork(block)
             return False
@@ -354,7 +353,6 @@ class Blockchain():
             # Find all utxos with block_height >= current_height + HALVING_NUMBER
             next_height = self.height + self.f.HALVING_NUMBER
             next_amount = self.chain_db.get_total_amount_greater_than_block_height(next_height)
-            # print(f'TOTAL AMOUNT WITH BLOCK HEIGHT GREATER THAN OR EQUAL TO {next_height}: {next_amount}')
 
         # Account for near empty mine
         if self.mining_reward > self.total_mining_amount:
