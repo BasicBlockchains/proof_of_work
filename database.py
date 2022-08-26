@@ -64,7 +64,7 @@ class DataBase:
 
         # Table 1
         c.execute("""CREATE TABLE block_headers (
-                    id text,           
+                    id text,
                     previous_id text,
                     merkle_root text,
                     target text,

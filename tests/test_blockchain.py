@@ -24,7 +24,6 @@ def test_add_pop_block():
 
     # Formatter/Decoder
     f = Formatter()
-    d = Decoder()
 
     # Modify formatted exponent for testing
     f.STARTING_TARGET_EXPONENT = 0x1f
@@ -117,7 +116,6 @@ def test_fork():
 
     # Formatter/Decoder
     f = Formatter()
-    d = Decoder()
 
     # Modify formatted exponent for testing
     f.STARTING_TARGET_EXPONENT = 0x1f
@@ -129,10 +127,6 @@ def test_fork():
 
     # Create miner
     miner = Miner()
-
-    # Create Wallets
-    w1 = Wallet()
-    w2 = Wallet()
 
     # Create first block
     unmined_block1 = create_unmined_block(test_chain.last_block.id, 1, test_chain.mining_reward,

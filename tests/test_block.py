@@ -97,11 +97,11 @@ def test_merkle_root():
     layer0_1 = result_dict1[2]
 
     assert layer2_1[2] == tx_ids[1]
-    assert layer2_1['is_left'] == False
+    assert not layer2_1['is_left']
     assert layer1_1[1] == hash_cc
-    assert layer1_1['is_left'] == False
+    assert not layer1_1['is_left']
     assert layer0_1[0] == test_block.merkle_root
-    assert layer0_1['root_verified'] == True
+    assert layer0_1['root_verified']
 
     # 2nd tx_id
     layer2_2 = result_dict2[0]
@@ -109,11 +109,11 @@ def test_merkle_root():
     layer0_2 = result_dict2[2]
 
     assert layer2_2[2] == tx_ids[0]
-    assert layer2_2['is_left'] == True
+    assert layer2_2['is_left']
     assert layer1_2[1] == hash_cc
-    assert layer1_2['is_left'] == False
+    assert not layer1_2['is_left']
     assert layer0_2[0] == test_block.merkle_root
-    assert layer0_2['root_verified'] == True
+    assert layer0_2['root_verified']
 
     # 3rd tx_id
     layer2_3 = result_dict3[0]
@@ -121,17 +121,16 @@ def test_merkle_root():
     layer0_3 = result_dict3[2]
 
     assert layer2_3[2] == tx_ids[2]
-    assert layer2_3['is_left'] == False
+    assert not layer2_3['is_left']
     assert layer1_3[1] == hash_ab
-    assert layer1_3['is_left'] == True
+    assert layer1_3['is_left']
     assert layer0_3[0] == test_block.merkle_root
-    assert layer0_3['root_verified'] == True
+    assert layer0_3['root_verified']
 
 
 def test_block():
     # Decoder and Formatter
     d = Decoder()
-    f = Formatter()
 
     # Get header values
     prev_id = random_tx_id()
