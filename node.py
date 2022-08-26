@@ -300,7 +300,6 @@ class Node:
                 print(f'Unable to find utxo with id {tx_id} and index {tx_index}')
                 orphan = True
 
-
             # Validate the referenced output utxo
             else:
                 # Get values
@@ -398,7 +397,6 @@ class Node:
         ip, port = node
         url = f'http://{ip}:{port}/ping'
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        start_time = time.time()
         try:
             r = requests.get(url, headers=headers)
         except ConnectionRefusedError:
@@ -586,8 +584,8 @@ class Node:
             return True
         else:
             # Logging
-            print(
-                f'Did not receive 200 code from {node} for block at height {block.mining_tx.height}. Status code: {r.status_code}')
+            print(f'Did not receive 200 code from {node} for block at height {block.mining_tx.height}. '
+                  f'Status code: {r.status_code}')
             return False
 
     def send_raw_block_to_node(self, raw_block: str, node: tuple):
@@ -599,8 +597,8 @@ class Node:
             return True
         else:
             # Logging
-            print(
-                f'Did not receive 200 code from {node} for raw_block with id {self.d.raw_block(raw_block).id}. Status code: {r.status_code}')
+            print(f'Did not receive 200 code from {node} for raw_block with id {self.d.raw_block(raw_block).id}. '
+                  f'Status code: {r.status_code}')
             return False
 
     def request_indexed_block(self, block_index: int, node: tuple):

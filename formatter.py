@@ -129,7 +129,7 @@ class Formatter():
         return sum([self.BASE58_LIST.index(base58_string[x:x + 1]) * pow(58, len(base58_string) - x - 1) for x in
                     range(0, len(base58_string))])
 
-    ##CPk, Address, Signature
+    # CPk, Address, Signature
 
     def cpk(self, public_key: tuple):
         (x, y) = public_key

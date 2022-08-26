@@ -64,11 +64,11 @@ class DataBase:
 
         # Table 1
         c.execute("""CREATE TABLE block_headers (
-                    id text,                      
-                    previous_id text, 
-                    merkle_root text, 
-                    target text, 
-                    nonce text, 
+                    id text,              
+                    previous_id text,
+                    merkle_root text,
+                    target text,
+                    nonce text,
                     timestamp text
                     )""")
         conn.commit()
@@ -211,7 +211,7 @@ class DataBase:
         raw_block_data_tuple = (height + 1,)
         self.query_db(raw_block_query, raw_block_data_tuple)
 
-    ###---UTXO POOL---###
+    ### --- UTXO POOL ---###
 
     # GET METHODS
 

@@ -631,7 +631,7 @@ def run_node_gui():
                     # Logging
                     print(f'Insufficient balance. Available funds: {node.wallet.spendable}.\n')
                 elif fees <= 0:
-                    print(f'Cannot have zero fee amount.\n')
+                    print('Cannot have zero fee amount.\n')
                 else:
                     new_tx = node.wallet.create_transaction(sendto_address, amount, fees, block_height)
                     # print(new_tx)

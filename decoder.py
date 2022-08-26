@@ -36,7 +36,7 @@ class Decoder:
             return False
         return True
 
-    ##CPK, Signature, Address
+    # CPK, Signature, Address
 
     def decode_cpk(self, cpk: str) -> tuple:
         '''
@@ -358,6 +358,10 @@ class Decoder:
         address = mining_utxo_dict['address']
         block_height = mining_utxo_dict['block_height']
         mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
+        if mining_tx.mining_utxo.amount != amount:
+            # Logging
+            print('Block failed to reconstruct MiningTransaction')
+            return None
         tx_count = block_dict['tx_count']
         transactions = []
         for x in range(tx_count):

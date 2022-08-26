@@ -113,6 +113,16 @@ class Blockchain():
             print('Block failed validation. Block total incorrect')
             return False
 
+        # Check timestamp compared to previous
+        if block.timestamp > self.last_block.timestamp + pow(self.f.HEARTBEAT,
+                                                             2) and self.last_block.mining_tx.height > 0:
+            # Logging
+            print('Block failed validation. Block time too far ahead.')
+
+        if block.timestamp < self.last_block.timestamp:
+            # Logging
+            print('Block failed validation. Block time too early.')
+
         # Check each tx
         fees = 0
         for tx in block.transactions:
