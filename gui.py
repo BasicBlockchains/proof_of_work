@@ -620,6 +620,7 @@ def run_node_gui():
             if string_amount.isnumeric() and string_fees.isnumeric():
                 amount = int(string_amount)
                 fees = int(string_fees)
+                block_height = int(string_block_height)
                 print(f'Amount: {amount}')
                 print(f'Fees: {fees}')
 
@@ -632,7 +633,7 @@ def run_node_gui():
                 elif fees <= 0:
                     print(f'Cannot have zero fee amount.\n')
                 else:
-                    new_tx = node.wallet.create_transaction(sendto_address, amount, fees)
+                    new_tx = node.wallet.create_transaction(sendto_address, amount, fees, block_height)
                     # print(new_tx)
                     if new_tx:
                         tx_sent = node.send_tx_to_node(new_tx, node.node)
@@ -645,9 +646,16 @@ def run_node_gui():
                     window['-wallet_sendto-'].update('')
                     window['-wallet_amount-'].update('')
                     window['-wallet_fees-'].update('')
+                    window['-wallet_block_height-'].update('')
             else:
                 # Logging
                 print('Enter a valid amount and/or fees.')
+
+        if event == '-wallet_cancel-':
+            window['-wallet_sendto-'].update('')
+            window['-wallet_amount-'].update('')
+            window['-wallet_fees-'].update('')
+            window['-wallet_block_height-'].update('')
 
         # Testing
         if event == 'About BB POW':

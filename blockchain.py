@@ -344,7 +344,7 @@ class Blockchain():
             # Find all utxos with block_height >= current_height + HALVING_NUMBER
             next_height = self.height + self.f.HALVING_NUMBER
             next_amount = self.chain_db.get_total_amount_greater_than_block_height(next_height)
-            print(f'TOTAL AMOUNT WITH BLOCK HEIGHT GREATER THAN {next_height}: {next_amount}')
+            # print(f'TOTAL AMOUNT WITH BLOCK HEIGHT GREATER THAN OR EQUAL TO {next_height}: {next_amount}')
 
         # Account for near empty mine
         if self.mining_reward > self.total_mining_amount:

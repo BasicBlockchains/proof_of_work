@@ -256,13 +256,15 @@ class DataBase:
         return utxo_dict
 
     def get_total_amount_greater_than_block_height(self, block_height: int):
-        query = """SELECT amount from utxo_pool WHERE block_height >= ? and length(block_height) > ?"""
-        query_tuple = (hex(block_height), len(hex(block_height)))
-        list_of_utxo_tuples = self.query_db(query, query_tuple)
+        query = """SELECT amount, block_height from utxo_pool WHERE length(block_height) >= ?"""
+        list_of_utxo_tuples = self.query_db(query, (len(hex(block_height)),))
+        # TESTING
+        print(f'GET TOTAL AMOUNT CALL. LIST OF TUPLES: {list_of_utxo_tuples}')
         total_amount = 0
         for amount_tuple in list_of_utxo_tuples:
-            (hex_amount,) = amount_tuple
-            total_amount += int(hex_amount, 16)
+            (hex_amount, hex_block_height) = amount_tuple
+            if int(hex_block_height, 16) >= block_height:
+                total_amount += int(hex_amount, 16)
         return total_amount
 
     def get_utxo(self, tx_id: str, tx_index: int) -> dict:
