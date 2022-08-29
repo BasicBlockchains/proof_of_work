@@ -26,7 +26,7 @@ def create_window(theme=DEFAULT_THEME):
 
     # -- Right Click Menu --- #
     right_click_menu = [
-        ['Right', ['Select', 'Copy', '---', 'Paste', 'Clear']]
+        ['Right', ['Clear', 'Copy', 'Paste']]
     ]
 
     # --- Main Menu --- #
@@ -44,7 +44,7 @@ def create_window(theme=DEFAULT_THEME):
            ]
           ]
          ],
-        ['&Help', ['Abo&ut BB POW', '&Contact']]
+        ['&Help', ['Abo&ut BB POW', 'Version', '&Contact']]
     ]
 
     # --- Status Tab --- #
@@ -100,10 +100,8 @@ def create_window(theme=DEFAULT_THEME):
         [sg.HorizontalSeparator(pad=5, color='#000000')],
 
     ]
-
     node_table_headings = ['IP ADDRESS', 'PORT', 'PING (ms)', 'LAST CONTACT']
     node_table_column_widths = [len(node_heading) + 2 for node_heading in node_table_headings]
-
     node_table_column = [
         [
             sg.Push(),
@@ -116,7 +114,6 @@ def create_window(theme=DEFAULT_THEME):
          sg.Button('CONNECT', button_color='#00AA00', size=(10, 2), tooltip='Connect to network', key='-connect-'),
          sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-'), sg.Push()],
     ]
-
     node_tab_layout = [
         [sg.Column(node_column, vertical_alignment='center', pad=50, expand_y=True),
          sg.Column(node_table_column, expand_x=True, expand_y=True)
@@ -185,7 +182,6 @@ def create_window(theme=DEFAULT_THEME):
             sg.Push()
         ]
     ]
-
     mining_tab_layout = [
         [
             sg.Push(),
@@ -216,7 +212,6 @@ def create_window(theme=DEFAULT_THEME):
                       key='-wallet_balance-', right_click_menu=right_click_menu[0])],
 
     ]
-
     send_column = [
         [sg.Text('Send to:', justification='right', auto_size_text=False, size=(12, 1)),
          sg.InputText(size=(40, 1), justification='right', key='-wallet_sendto-',
@@ -235,10 +230,8 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Button('Send Funds', key='-wallet_send_funds-', size=(20, 3), button_color='#00AA00'), ],
         [sg.Button('Cancel', key='-wallet_cancel-', size=(20, 1), button_color='#FF0000'), ]
     ]
-
     wallet_utxo_table_headers = ['tx_id', 'tx_index', 'amount', 'block_height']
     wallet_utxo_column_widths = [len(header) + 2 for header in wallet_utxo_table_headers]
-
     wallet_tab_layout = [
         [
             sg.Push(),
@@ -362,6 +355,17 @@ def run_node_gui():
     # Bind Mouse Clicks
     window.bind("<Button-1>", "-left_click-")
     window.bind("<Button-3>", "-right_click-")
+
+    # GUI keys which allow paste function
+    needs_paste_keys = [
+        '-selected_ip',
+        '-selected_port',
+        '-wallet_sendto-',
+        '-wallet_amount-',
+        '-wallet_fees-',
+        '-wallet_block_height-',
+
+    ]
 
     # Set variables for loop
     height = -1
@@ -496,35 +500,29 @@ def run_node_gui():
             window['-selected_ip-'].update('')
             window['-selected_port-'].update('')
 
-        # Right Click Menu
-        # TODO: Make lists of windows that shouldn't be pasted over
-        if event in ['Select', 'Copy']:
+        if event == 'Copy':
             window_key = window.FindElementWithFocus().Key
-            selected_text = None
+            copy_text = None
             try:
-                selected_text = window[window_key].Widget.selection_get()
+                copy_text = window[window_key].Widget.selection_get()
             except _tkinter.TclError:
                 pass
-            if selected_text:
+            if copy_text:
                 cb = Tk()
                 cb.clipboard_clear()
-                cb.clipboard_append(selected_text)
+                cb.clipboard_append(copy_text)
                 cb.update()
                 cb.destroy()
 
         if event == 'Paste':
             window_key = window.FindElementWithFocus().Key
-            if window_key not in [
-                '-webserver-', '-node_ip-', '-node_port-', '-node_list_table-',
-                '-wallet_address-', '-wallet_available-', '-wallet_locked-', '-wallet_balance-', '-utxo_table-'
-
-            ]:
+            if window_key in needs_paste_keys:
                 cb = Tk()
-                copy_text = cb.clipboard_get()
+                paste_text = cb.clipboard_get()
                 cb.update()
                 cb.destroy()
                 try:
-                    window[window_key].update(copy_text)
+                    window[window_key].update(paste_text)
                 except Exception as e:
                     print(f'Encountered exception when copying: {e}')
 
