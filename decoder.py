@@ -235,9 +235,14 @@ class Decoder:
 
         # Mining UTXO
         mining_utxo = self.raw_utxo_output(raw_tx[index3:])
-        address = mining_utxo.address
+        try:
+            address = mining_utxo.address
+            return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
+        except AttributeError:
+            # Logging
+            print(f'Mining utxo failed to return raw_utxo_output from {raw_tx[index3:]}')
 
-        return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
+        return None
 
     def transaction_from_dict(self, tx_dict: dict):
         input_count = tx_dict['input_count']

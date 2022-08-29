@@ -609,9 +609,15 @@ class Node:
         except ConnectionRefusedError:
             # Logging
             print(f'Error connecting to {node}.')
-            return 0
+            return None
 
-        block_dict = r.json()
+        try:
+            block_dict = r.json()
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            print(f'Unable to decode request for index {block_index} from {node}')
+            return None
+
         return self.d.block_from_dict(block_dict)
 
     def gossip_protocol_tx(self, tx: Transaction):

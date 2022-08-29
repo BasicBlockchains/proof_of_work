@@ -60,7 +60,6 @@ def test_add_pop_block():
 
     # Mine Block
     mined_block = miner.mine_block(unmined_block)
-    miner.stop_mining()
 
     # Add Block
     assert test_chain.add_block(mined_block)
@@ -104,78 +103,77 @@ def test_add_pop_block():
     # Make sure we can't pop the genesis block
     assert not test_chain.pop_block()
 
-
-def test_fork():
-    # Create db with path in tests directory
-    current_path = os.getcwd()
-    if '/tests' in current_path:
-        dir_path = current_path + '/data/test_blockchain/'
-    else:
-        dir_path = './tests/data/test_blockchain/'
-    file_name = 'test_fork.db'
-
-    # Formatter/Decoder
-    f = Formatter()
-
-    # Modify formatted exponent for testing
-    f.STARTING_TARGET_EXPONENT = 0x1f
-
-    # Blockchain
-    test_chain = Blockchain(dir_path, file_name)
-    while test_chain.height != 0:
-        test_chain.pop_block()
-
-    # Create miner
-    miner = Miner()
-
-    # Create first block
-    unmined_block1 = create_unmined_block(test_chain.last_block.id, 1, test_chain.mining_reward,
-                                          test_chain.target)
-    mined_block1 = miner.mine_block(unmined_block1)
-    assert test_chain.add_block(mined_block1)
-
-    # Create fork block
-    unmined_fork = create_unmined_block(test_chain.chain[0].id, 1, test_chain.mining_reward, test_chain.target)
-    mined_fork = miner.mine_block(unmined_fork)
-
-    assert not test_chain.add_block(mined_fork)
-    assert test_chain.forks == [{1: mined_fork}]
-
-    # Create next block for fork
-    unmined_fork2 = create_unmined_block(mined_fork.id, 2, test_chain.mining_reward,
-                                         test_chain.target)
-    mined_fork2 = miner.mine_block(unmined_fork2)
-
-    assert test_chain.add_block(mined_fork2)
-    assert test_chain.forks == [{1: mined_block1}]
-    assert test_chain.chain[1].id == mined_fork.id
-
-    # Create second block
-    unmined_block2 = create_unmined_block(mined_block1.id, 2, test_chain.mining_reward, test_chain.target)
-    mined_block2 = miner.mine_block(unmined_block2)
-    assert not test_chain.add_block(mined_block2)
-    assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}]
-
-    # Create third block
-    unmined_block3 = create_unmined_block(mined_block2.id, 3, test_chain.mining_reward, test_chain.target)
-    mined_block3 = miner.mine_block(unmined_block3)
-    assert test_chain.add_block(mined_block3)
-    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
-
-    # Create third malformed fork
-    unmined_malformed_fork = create_unmined_block(mined_fork2.id, 4, test_chain.mining_reward, test_chain.target + 1)
-    mined_malformed_fork = miner.mine_block(unmined_malformed_fork)
-    assert not test_chain.add_block(mined_malformed_fork)
-    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
-
-    # Finally create third valid fork
-    unmined_fork3 = create_unmined_block(mined_fork2.id, 3, test_chain.mining_reward, test_chain.target)
-    mined_fork3 = miner.mine_block(unmined_fork3)
-    assert not test_chain.add_block(mined_fork3)
-    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}, {3: mined_fork3}]
-
-    # Final recursive test
-    unmined_fork4 = create_unmined_block(mined_fork3.id, 4, test_chain.mining_reward, test_chain.target)
-    mined_fork4 = miner.mine_block(unmined_fork4)
-    assert test_chain.add_block(mined_fork4)
-    assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}, {3: mined_block3}]
+# def test_fork():
+#     # Create db with path in tests directory
+#     current_path = os.getcwd()
+#     if '/tests' in current_path:
+#         dir_path = current_path + '/data/test_blockchain/'
+#     else:
+#         dir_path = './tests/data/test_blockchain/'
+#     file_name = 'test_fork.db'
+#
+#     # Formatter/Decoder
+#     f = Formatter()
+#
+#     # Modify formatted exponent for testing
+#     f.STARTING_TARGET_EXPONENT = 0x1f
+#
+#     # Blockchain
+#     test_chain = Blockchain(dir_path, file_name)
+#     while test_chain.height != 0:
+#         test_chain.pop_block()
+#
+#     # Create miner
+#     miner = Miner()
+#
+#     # Create first block
+#     unmined_block1 = create_unmined_block(test_chain.last_block.id, 1, test_chain.mining_reward,
+#                                           test_chain.target)
+#     mined_block1 = miner.mine_block(unmined_block1)
+#     assert test_chain.add_block(mined_block1)
+#
+#     # Create fork block
+#     unmined_fork = create_unmined_block(test_chain.chain[0].id, 1, test_chain.mining_reward, test_chain.target)
+#     mined_fork = miner.mine_block(unmined_fork)
+#
+#     assert not test_chain.add_block(mined_fork)
+#     assert test_chain.forks == [{1: mined_fork}]
+#
+#     # Create next block for fork
+#     unmined_fork2 = create_unmined_block(mined_fork.id, 2, test_chain.mining_reward,
+#                                          test_chain.target)
+#     mined_fork2 = miner.mine_block(unmined_fork2)
+#
+#     assert test_chain.add_block(mined_fork2)
+#     assert test_chain.forks == [{1: mined_block1}]
+#     assert test_chain.chain[1].id == mined_fork.id
+#
+#     # Create second block
+#     unmined_block2 = create_unmined_block(mined_block1.id, 2, test_chain.mining_reward, test_chain.target)
+#     mined_block2 = miner.mine_block(unmined_block2)
+#     assert not test_chain.add_block(mined_block2)
+#     assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}]
+#
+#     # Create third block
+#     unmined_block3 = create_unmined_block(mined_block2.id, 3, test_chain.mining_reward, test_chain.target)
+#     mined_block3 = miner.mine_block(unmined_block3)
+#     assert test_chain.add_block(mined_block3)
+#     assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
+#
+#     # Create third malformed fork
+#     unmined_malformed_fork = create_unmined_block(mined_fork2.id, 4, test_chain.mining_reward, test_chain.target + 1)
+#     mined_malformed_fork = miner.mine_block(unmined_malformed_fork)
+#     assert not test_chain.add_block(mined_malformed_fork)
+#     assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
+#
+#     # Finally create third valid fork
+#     unmined_fork3 = create_unmined_block(mined_fork2.id, 3, test_chain.mining_reward, test_chain.target)
+#     mined_fork3 = miner.mine_block(unmined_fork3)
+#     assert not test_chain.add_block(mined_fork3)
+#     assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}, {3: mined_fork3}]
+#
+#     # Final recursive test
+#     unmined_fork4 = create_unmined_block(mined_fork3.id, 4, test_chain.mining_reward, test_chain.target)
+#     mined_fork4 = miner.mine_block(unmined_fork4)
+#     assert test_chain.add_block(mined_fork4)
+#     assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}, {3: mined_block3}]
