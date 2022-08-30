@@ -177,16 +177,18 @@ class Blockchain():
         return True
 
     def add_block(self, block: Block, loading=False) -> bool:
-        valid_block = False
 
         # Account for genesis
         if self.chain == []:
             valid_block = True
+        # Account for loading from file
         elif loading:
             valid_block = True
-        # Create fork if adding block withing FORK_HEIGHT of current height - don't fork same block if gossiped back
-        elif min(self.last_block.mining_tx.height - self.f.FORK_HEIGHT,
-                 1) <= block.mining_tx.height <= self.last_block.mining_tx.height and block.id != self.last_block.id:
+        # Account for same block being gossiped back
+        elif block.id == self.last_block.id:
+            return False
+        # Account for fork block
+        elif block.mining_tx.height == self.height and block.prev_id == self.last_block.prev_id:
             self.create_fork(block)
             return False
         else:

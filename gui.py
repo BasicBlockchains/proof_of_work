@@ -318,6 +318,8 @@ def run_node_gui():
     f = Formatter()
     d = Decoder()
 
+    # Check that port isn't in use
+
     # Run app with waitress
     app_thread = threading.Thread(target=run_app, daemon=True, args=(node,))
     app_thread.start()
@@ -716,7 +718,10 @@ def run_node_gui():
             if string_amount.isnumeric() and string_fees.isnumeric():
                 amount = int(string_amount)
                 fees = int(string_fees)
-                block_height = int(string_block_height)
+                if string_block_height.isnumeric():
+                    block_height = int(string_block_height)
+                else:
+                    block_height = 0
                 print(f'Amount: {amount}')
                 print(f'Fees: {fees}')
 
@@ -732,7 +737,7 @@ def run_node_gui():
                     new_tx = node.wallet.create_transaction(sendto_address, amount, fees, block_height)
                     # print(new_tx)
                     if new_tx:
-                        tx_sent = node.send_tx_to_node(new_tx, node.node)
+                        tx_sent = node.send_tx_to_node(new_tx, node.node)  # Triggers gossip protocol
                         # Logging
                         print(f'Transaction with id {new_tx.id} sent to network. Received: {tx_sent}.')
                         node.wallet.update_utxos_from_pending_transactions()

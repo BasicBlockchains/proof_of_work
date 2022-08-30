@@ -5,6 +5,7 @@ The Node class
 import json
 import os
 import random
+import secrets
 import socket
 import threading
 from multiprocessing import Process, Queue
@@ -558,46 +559,27 @@ class Node:
             print(r.status_code)
             return False
 
-    def send_tx_to_node(self, new_tx: Transaction, node: tuple) -> bool:
+    def send_tx_to_node(self, new_tx: Transaction, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/transaction'
         data = {'raw_tx': new_tx.raw_tx}
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         r = requests.post(url, data=json.dumps(data), headers=headers)
-        if r.status_code in [201, 202]:
-            # Logging
-            print(f'New tx sent to {node}')
-            return True
-        else:
-            # Logging
-            print(f'Error sending tx to {node}. Status: {r.status_code}')
-            return False
+        return r.status_code
 
-    def send_block_to_node(self, block: Block, node: tuple) -> bool:
+    def send_block_to_node(self, block: Block, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/block'
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         r = requests.post(url, data=json.dumps(block.to_json), headers=headers)
-        if r.status_code == 200:
-            return True
-        else:
-            # Logging
-            print(f'Did not receive 200 code from {node} for block at height {block.mining_tx.height}. '
-                  f'Status code: {r.status_code}')
-            return False
+        return r.status_code
 
-    def send_raw_block_to_node(self, raw_block: str, node: tuple):
+    def send_raw_block_to_node(self, raw_block: str, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/raw_block'
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         r = requests.post(url, data=raw_block, headers=headers)
-        if r.status_code == 200:
-            return True
-        else:
-            # Logging
-            print(f'Did not receive 200 code from {node} for raw_block with id {self.d.raw_block(raw_block).id}. '
-                  f'Status code: {r.status_code}')
-            return False
+        return r.status_code
 
     def request_indexed_block(self, block_index: int, node: tuple):
         ip, port = node
@@ -620,31 +602,46 @@ class Node:
         return self.d.block_from_dict(block_dict)
 
     def gossip_protocol_tx(self, tx: Transaction):
-        gossip_list = self.get_gossip_nodes()
-        for node in gossip_list:
-            self.send_tx_to_node(tx, node)
+        node_list_index = self.node_list.copy()
+        node_list_index.remove(self.node)
+        gossip_count = 0
+        while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
+            list_length = len(node_list_index)
+            gossip_node = node_list_index.pop(secrets.randbelow(list_length))
+            # Logging
+            print(f'Sending tx with id {tx.id} to {gossip_node}')
+            status_code = self.send_tx_to_node(tx, gossip_node)
+            if status_code == 200:
+                print(f'Received 200 code from {gossip_node} for tx {tx.id}.')
+                gossip_count += 1
 
     def gossip_protocol_block(self, block: Block):
-        gossip_list = self.get_gossip_nodes()
-        for node in gossip_list:
-            node_height = self.request_height(node)
-            if node_height < block.mining_tx.height:
-                self.send_block_to_node(block, node)
-            elif node_height == block.mining_tx.height:
-                node_block = self.request_indexed_block(block.mining_tx.height, node)
-                if node_block.id != block.id:
-                    self.send_block_to_node(block, node)
+        node_list_index = self.node_list.copy()
+        node_list_index.remove(self.node)
+        gossip_count = 0
+        while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
+            list_length = len(node_list_index)
+            gossip_node = node_list_index.pop(secrets.randbelow(list_length))
+            # Logging
+            print(f'Sending block with id {block.id} to {gossip_node}')
+            status_code = self.send_block_to_node(block, gossip_node)
+            if status_code == 200:
+                print(f'Received 200 code from {gossip_node} for block {block.id}')
+                gossip_count += 1
 
     def gossip_protocol_raw_block(self, block: Block):
-        gossip_list = self.get_gossip_nodes()
-        for node in gossip_list:
-            node_height = self.request_height(node)
-            if node_height < block.mining_tx.height:
-                self.send_raw_block_to_node(block.raw_block, node)
-            elif node_height == block.mining_tx.height:
-                node_block = self.request_indexed_block(block.mining_tx.height, node)
-                if node_block.id != block.id:
-                    self.send_raw_block_to_node(block.raw_block, node)
+        node_list_index = self.node_list.copy()
+        node_list_index.remove(self.node)
+        gossip_count = 0
+        while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
+            list_length = len(node_list_index)
+            gossip_node = node_list_index.pop(secrets.randbelow(list_length))
+            # Logging
+            print(f'Sending raw block with id {block.id} to {gossip_node}')
+            status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
+            if status_code == 200:
+                print(f'Received 200 code from {gossip_node} for block {block.id}')
+                gossip_count += 1
 
     def get_gossip_nodes(self):
         # Get gossip nodes
