@@ -38,6 +38,9 @@ def test_add_transaction():
     # Create Node
     n = Node(dir_path, file_name)
 
+    # Set connected flag
+    n.is_connected = True
+
     # CHANGE MINING DELAY
     n.blockchain.f.MINING_DELAY = 0
 
@@ -45,6 +48,7 @@ def test_add_transaction():
     next_block = create_test_node_block(n)
     m = Miner()
     mined_next_block = m.mine_block(next_block)
+    m.is_mining = False
     assert n.add_block(mined_next_block)
 
     # UTXO_INPUT

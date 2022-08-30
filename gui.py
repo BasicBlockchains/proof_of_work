@@ -2,16 +2,21 @@
 Main File for GUI
 '''
 import _tkinter
+import os.path
 import threading
 import time
+from pathlib import Path
+from tkinter import Tk
 
 import PySimpleGUI as sg
-from tkinter import Tk
+
 from api import run_app
+from blockchain import Blockchain
+from decoder import Decoder
+from formatter import Formatter
 from node import Node
 from timestamp import utc_to_seconds, seconds_to_utc
-from formatter import Formatter
-from decoder import Decoder
+from wallet import Wallet
 
 # --- CONSTANTS --- #
 DEFAULT_THEME = 'SystemDefault'
@@ -32,7 +37,7 @@ def create_window(theme=DEFAULT_THEME):
     # --- Main Menu --- #
     menu_layout = [
         ['&File',
-         ['&Open Blockchain', 'Open &Wallet', '---', '&Save Blockchain', 'Save Blockchain &As', '---', 'E&xit']],
+         ['&Open Blockchain', 'Open &Wallet', '---', '&Save Blockchain', 'Save Wallet', '---', 'E&xit']],
         ['&Endpoints',
          ['height', 'node_list', 'transaction', 'block',
           ['<height>', 'ids', 'headers',
@@ -406,6 +411,100 @@ def run_node_gui():
         if event == '-tab_group-' and values[event] == '-wallet_tab-':
             window['-wallet_address-'].Widget.select_clear()
 
+        ### --- SAVE/LOAD --- ###
+        # Load Blockchain
+        if event == 'Open Blockchain':
+            file_path = sg.popup_get_file('Load Blockchain', no_window=True,
+                                          default_extension='.db',
+                                          initial_folder=f'{node.dir_path}',
+                                          file_types=(('Database Files', '*.db'), ('All Files', '*.*')))
+            if file_path:
+                dir_path, file_name = os.path.split(file_path)
+                if '.db' in file_name:
+                    try:
+                        node.blockchain = Blockchain(dir_path, file_name)
+                        node.dir_path = dir_path
+                        node.db_file = file_name
+                    except Exception as e:
+                        # Logging
+                        print(f'Failed to load Blockchain. Error: {e}')
+                else:
+                    # Logging
+                    print(f'Select a database file')
+
+        # Load Wallet
+        if event == 'Open Wallet':
+            file_path = sg.popup_get_file('Load Wallet', no_window=True,
+                                          default_extension='.dat',
+                                          initial_folder=f'{node.dir_path}',
+                                          file_types=(('Wallet Files', '*.dat'), ('All Files', '*.*')))
+            if file_path:
+                dir_path, file_name = os.path.split(file_path)
+                if '.dat' in file_name:
+                    try:
+                        node.wallet = Wallet(dir_path=dir_path, file_name=file_name)
+                        window['-wallet_address-'].update(node.wallet.address)
+                        # Update node wallet
+                        node.wallet.get_latest_height(node.node)
+                        node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
+                    except Exception as e:
+                        # Logging
+                        print(f'Unable to load wallet. Error: {e}')
+                else:
+                    # Logging
+                    print(f'Select a wallet file')
+
+        # Save Blockchain
+        if event == 'Save Blockchain':
+            file_path = sg.popup_get_file('Save Blockchain', no_window=True, save_as=True,
+                                          default_extension='.db',
+                                          initial_folder=f'{node.dir_path}',
+                                          default_path='chain.db',
+                                          file_types=(('Database Files', '*.db'), ('All Files', '*.*')))
+            if file_path:
+                dir_path, file_name = os.path.split(file_path)
+                if file_name.endswith('.db'):
+                    try:
+                        db = node.blockchain.chain_db
+
+                        # Delete file if it already exists - will overwrite
+                        Path(dir_path, file_name).unlink(missing_ok=True)
+
+                        new_chain = Blockchain(dir_path, file_name)
+                        for x in range(1, node.height + 1):
+                            new_chain.add_block(d.raw_block(
+                                db.get_raw_block(x)['raw_block']
+                            ))
+                        node.blockchain = new_chain
+                        node.dir_path = dir_path
+                        node.db_file = file_name
+                    except Exception as e:
+                        # Logging
+                        print(f'Failed to load Blockchain. Error: {e}')
+                else:
+                    # Logging
+                    print(f'Database file must have .db extension.')
+
+        # Save Wallet
+        if event == 'Save Wallet':
+            file_path = sg.popup_get_file('Save Wallet', no_window=True, save_as=True,
+                                          default_extension='.dat',
+                                          initial_folder=f'{node.wallet.dir_path}',
+                                          default_path='wallet.dat',
+                                          file_types=(('Wallet Files', '*.dat'), ('All Files', '*.*')))
+            if file_path:
+                dir_path, file_name = os.path.split(file_path)
+                if file_name.endswith('.dat'):
+                    wallet_seed = node.wallet.load_wallet(node.dir_path, node.wallet_file)
+                    new_wallet = Wallet(seed=wallet_seed, dir_path=dir_path, file_name=file_name)
+                    node.wallet = new_wallet
+                    # Update Wallet
+                    node.wallet.get_latest_height(node.node)
+                    node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
+                else:
+                    # Logging
+                    print(f'Wallet file must have .dat extension.')
+
         ### --- INFO BAR --- ###
         # Mining Icon
         if mining != node.is_mining:
@@ -548,10 +647,10 @@ def run_node_gui():
         # Stop/Start Miner
         if event == '-start_miner-':
             node.start_miner()
-
         if event == '-stop_miner-':
             node.stop_miner()
 
+        # Miner fields
         if target != f.target_from_int(node.target):
             target = f.target_from_int(node.target)
             window['-miner_target-'].update(target)
@@ -606,7 +705,6 @@ def run_node_gui():
             window['-wallet_amount-'].Widget.focus_force()
         if event == '-wallet_amount-' + '_Enter':
             window['-wallet_fees-'].Widget.focus_force()
-
         if event in ['-wallet_send_funds-', '-wallet_fees' + '_Enter']:
             # Get Values
             sendto_address = values['-wallet_sendto-']
@@ -648,7 +746,6 @@ def run_node_gui():
             else:
                 # Logging
                 print('Enter a valid amount and/or fees.')
-
         if event == '-wallet_cancel-':
             window['-wallet_sendto-'].update('')
             window['-wallet_amount-'].update('')
@@ -663,8 +760,7 @@ def run_node_gui():
     # Cleanup
     if node.is_mining:
         node.stop_miner()
-    if node.is_connected:
-        node.disconnect_from_network()
+    node.disconnect_from_network()
     window.close()
 
 

@@ -62,6 +62,9 @@ class Blockchain():
         # Create fork list to index forked blocks
         self.forks = []
 
+        # Create load_count variable for loading chain
+        self.load_count = -1
+
         # Create genesis block - if db is new, then loading = False
         self.add_block(self.create_genesis_block(), loading=not new_db)
 
@@ -182,7 +185,6 @@ class Blockchain():
         elif loading:
             valid_block = True
         # Create fork if adding block withing FORK_HEIGHT of current height - don't fork same block if gossiped back
-        # elif self.last_block.mining_tx.height == block.mining_tx.height and block.id != self.last_block.id:
         elif min(self.last_block.mining_tx.height - self.f.FORK_HEIGHT,
                  1) <= block.mining_tx.height <= self.last_block.mining_tx.height and block.id != self.last_block.id:
             self.create_fork(block)
@@ -220,6 +222,13 @@ class Blockchain():
             self.total_mining_amount -= block.mining_tx.reward
 
             # Update reward
+            # When loading
+            if loading:
+                self.load_count += 1
+                if self.load_count % self.f.HALVING_NUMBER == 0:
+                    self.update_reward()
+
+            # When running
             if self.height % self.f.HALVING_NUMBER == 0 or self.mining_reward > self.total_mining_amount:
                 self.update_reward()
 
