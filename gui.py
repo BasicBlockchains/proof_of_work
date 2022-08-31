@@ -133,11 +133,11 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Text('Mine Amount Left:', justification='right', auto_size_text=False, size=(18, 1))]
     ]
     mining_info_values = [
-        [sg.InputText(key='-miner_target-', disabled=True, use_readonly_for_disable=True, size=(24, 1),
+        [sg.InputText(key='-miner_target-', disabled=True, use_readonly_for_disable=True, size=(64, 1),
                       justification='left', border_width=0)],
-        [sg.InputText(key='-miner_reward-', disabled=True, use_readonly_for_disable=True, size=(24, 1),
+        [sg.InputText(key='-miner_reward-', disabled=True, use_readonly_for_disable=True, size=(64, 1),
                       justification='left', border_width=0)],
-        [sg.InputText(key='-total_mining_amount-', disabled=True, use_readonly_for_disable=True, size=(24, 1),
+        [sg.InputText(key='-total_mining_amount-', disabled=True, use_readonly_for_disable=True, size=(64, 1),
                       justification='left', border_width=0)]
 
     ]
@@ -187,12 +187,16 @@ def create_window(theme=DEFAULT_THEME):
             sg.Push()
         ]
     ]
+    # Metadata for buttons used for tracking button presses
+    # Metadata for target = currently_encoded and currently_hex
+    # Metadata for bb2b = currently_bbs, currently_basic
     mining_tab_layout = [
         [
             sg.Push(),
             sg.Column(mining_info_labels),
             sg.Column(mining_info_values),
-
+            sg.Button("Hex Target", size=(10, 3), key='-target_button-', metadata='currently_encoded'),
+            sg.Button("BBs to Basic", size=(10, 3), key='-bb2b_button-', metadata='currently_bbs'),
             sg.Push()
         ],
         [sg.HorizontalSeparator(color='#000000')],
@@ -207,13 +211,13 @@ def create_window(theme=DEFAULT_THEME):
 
     funds_column = [
         [sg.Text('Available:', justification='right', auto_size_text=False, size=(10, 1)),
-         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(16, 1),
+         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(20, 1),
                       key='-wallet_available-', right_click_menu=right_click_menu[0])],
         [sg.Text('Locked:', justification='right', auto_size_text=False, size=(10, 1)),
-         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(16, 1),
+         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(20, 1),
                       key='-wallet_locked-', right_click_menu=right_click_menu[0])],
         [sg.Text('Balance:', justification='right', auto_size_text=False, size=(10, 1)),
-         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(16, 1),
+         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(20, 1),
                       key='-wallet_balance-', right_click_menu=right_click_menu[0])],
 
     ]
@@ -318,14 +322,12 @@ def run_node_gui():
     f = Formatter()
     d = Decoder()
 
-    # Check that port isn't in use
-
     # Run app with waitress
     app_thread = threading.Thread(target=run_app, daemon=True, args=(node,))
     app_thread.start()
 
     # Connect to network
-    node.connect_to_network(node.LEGACY_NODE)
+    node.connect_to_network()
 
     # Update node wallet
     node.wallet.get_latest_height(node.node)
@@ -520,14 +522,6 @@ def run_node_gui():
                 window['-start_miner-'].update(disabled=False)
                 window['-stop_miner-'].update(disabled=True)
 
-        # Connected Icon
-        if connected != node.is_connected:
-            connected = node.is_connected
-            if connected:
-                window['-network_icon-'].update('./images/green_circle_small.png')
-            else:
-                window['-network_icon-'].update('./images/red_circle_small.png')
-
         # If Server fails
         if not app_thread.is_alive():
             window['-server_icon-'].update('./images/red_circle_small.png')
@@ -547,26 +541,54 @@ def run_node_gui():
             window['-prev_id-'].update(prev_id)
 
         ### --- NODE TAB --- ###
-        # Connect/Disconnect
+        # Connect
         if event == '-connect-' and not connected:
-            node.connect_to_network(node.LEGACY_NODE)
+            # Get ip and port values
+            temp_ip = values['-selected_ip-']
+            temp_port = values['-selected_port-']
 
+            # Connect to given node or default to legacy node
+            if temp_ip and temp_port and temp_port.isnumeric():
+                node.connect_to_network(node=(temp_ip, int(temp_port)))
+            else:
+                node.connect_to_network()
+                
+        # Disconnect
         if event == '-disconnect-' and connected:
             node.disconnect_from_network()
             window['-node_list_table-'].update(values=[])
+            ping_list = []
+
+        # Connected Icon
+        if connected != node.is_connected:
+            connected = node.is_connected
+            if connected:
+                window['-network_icon-'].update('./images/green_circle_small.png')
+            else:
+                window['-network_icon-'].update('./images/red_circle_small.png')
 
         # Node List Table
         if node_list != node.node_list:
-            new_nodes = [n for n in node.node_list if n not in node_list]
-            for n in new_nodes:
-                start_time = time.time()
-                pinged = node.ping_node(n)
-                if pinged:
-                    ping_time = int((time.time() - start_time) * 1000)
-                    contact_dict.update({n: utc_to_seconds()})
-                    ping_list.append(n + (str(ping_time), seconds_to_utc(contact_dict[n])))
+            # Remove Stale Pings
+            ping_list_index = ping_list.copy()
+            for t in ping_list_index:
+                t_ip, t_port, _, _ = t
+                if (t_ip, t_port) not in node.node_list:
+                    ping_list.remove(t)
+
+            # Ping new nodes if connected
+            if connected:
+                new_nodes = [n for n in node.node_list if n not in node_list]
+                for n in new_nodes:
+                    start_time = time.time()
+                    pinged = node.ping_node(n)
+                    if pinged:
+                        ping_time = int((time.time() - start_time) * 1000)
+                        contact_dict.update({n: utc_to_seconds()})
+                        ping_list.append(n + (str(ping_time), seconds_to_utc(contact_dict[n])))
+
             node_list = node.node_list.copy()
-            window['-node_list_table-'].update(ping_list)
+            window['-node_list_table-'].update(values=ping_list)
 
         if event == '-node_list_table-' or event == '-node_list_table-' + '_Enter':
             try:
@@ -580,7 +602,7 @@ def run_node_gui():
         if event == '-ping-':
             ip = values['-selected_ip-']
             port = values['-selected_port-']
-            if ip and port:
+            if ip and port and port.isnumeric():
                 port = int(port)
                 try:
                     pt = [pt for pt in ping_list if pt[0] == ip and pt[1] == port][0]
@@ -652,16 +674,43 @@ def run_node_gui():
         if event == '-stop_miner-':
             node.stop_miner()
 
-        # Miner fields
-        if target != f.target_from_int(node.target):
+        # Miner values
+        if event == '-target_button-':
+            if window['-target_button-'].metadata == 'currently_encoded':
+                window['-target_button-'].update("Encode Target")
+                window['-target_button-'].metadata = 'currently_hex'
+            else:
+                window['-target_button-'].update("Hex Target")
+                window['-target_button-'].metadata = 'currently_encoded'
+        if event == '-bb2b_button-':
+            if window['-bb2b_button-'].metadata == 'currently_bbs':
+                window['-bb2b_button-'].update("Basic to BBs")
+                window['-bb2b_button-'].metadata = 'currently_basic'
+            else:
+                window['-bb2b_button-'].update("BBs to Basic")
+                window['-bb2b_button-'].metadata = 'currently_bbs'
+
+        if target != f.target_from_int(node.target) and window['-target_button-'].metadata == 'currently_encoded':
             target = f.target_from_int(node.target)
             window['-miner_target-'].update(target)
-        if reward != node.mining_reward:
+        if target != hex(node.target) and window['-target_button-'].metadata == 'currently_hex':
+            target = hex(node.target)
+            window['-miner_target-'].update(target)
+        if reward != node.mining_reward and window['-bb2b_button-'].metadata == 'currently_bbs':
             reward = node.mining_reward
-            window['-miner_reward-'].update(str(reward))
-        if total_mine_amount != node.total_mining_amount:
+            window['-miner_reward-'].update(str(reward) + " BBs")
+        if reward != node.mining_reward // f.BASIC_TO_BBS and window['-bb2b_button-'].metadata == 'currently_basic':
+            reward = node.mining_reward // f.BASIC_TO_BBS
+            window['-miner_reward-'].update(str(reward) + " BasiCoins")
+        if total_mine_amount != node.total_mining_amount and window['-bb2b_button-'].metadata == 'currently_bbs':
             total_mine_amount = node.total_mining_amount
-            window['-total_mining_amount-'].update(str(total_mine_amount))
+            window['-total_mining_amount-'].update(str(total_mine_amount) + " BBs")
+        if total_mine_amount != node.total_mining_amount // f.BASIC_TO_BBS and window[
+            '-bb2b_button-'].metadata == 'currently_basic':
+            total_mine_amount = node.total_mining_amount // f.BASIC_TO_BBS
+            window['-total_mining_amount-'].update(str(total_mine_amount) + " BasiCoins")
+
+        # TX tables
         if validated_tx_list != node.validated_transactions:
             validated_tx_list = node.validated_transactions.copy()
             temp_list = []

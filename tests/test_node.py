@@ -78,8 +78,8 @@ def test_add_transaction():
     orphan_tx = Transaction(inputs=[orphan_utxo_input], outputs=[orphan_utxo_output1, orphan_utxo_output2])
 
     # Add Transactions
-    assert n.add_transaction(new_tx)
-    assert n.add_transaction(orphan_tx)
+    assert n.add_transaction(new_tx, gossip=False)
+    assert n.add_transaction(orphan_tx, gossip=False)
     assert n.validated_transactions[0].raw_tx == new_tx.raw_tx
     assert n.orphaned_transactions[0].raw_tx == orphan_tx.raw_tx
 

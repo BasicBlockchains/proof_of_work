@@ -82,7 +82,6 @@ class Node:
 
         # Create Node list
         self.node_list = []
-        self.node_list.append(self.node)
 
         # Create connected flag for network
         self.is_connected = False
@@ -428,38 +427,53 @@ class Node:
         print(f'Error connecting to {node}. Status code: {r.status_code}')
         return False
 
-    def connect_to_network(self, node: tuple):
-        # Get node list
+    def connect_to_network(self, node=LEGACY_NODE):
+        # Start with empty list_of_nodes
+        list_of_nodes = None
+
+        # Append Legacy node
+        self.node_list.append(self.node)
+
+        # Get node list from LEGACY_NODE
         ip, port = node
         url = f'http://{ip}:{port}/node_list'
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.get(url, headers=headers)
-        list_of_nodes = r.json()
+        try:
+            r = requests.get(url, headers=headers)
+            list_of_nodes = r.json()
+        except requests.exceptions.ConnectionError:
+            # Logging
+            print(f'Connect to network through {node} failed. If not catastrophic error, try a different address.\n'
+                  f'Catastrophic error: {node == self.LEGACY_NODE}')
 
         # If we get a node list, we've successfully connected
         if list_of_nodes:
             self.is_connected = True
 
-        # Connect to each node in node_list
-        for list_tuple in list_of_nodes:
-            ip, port = list_tuple
-            if (ip, port) != self.node:
-                connected = self.connect_to_node((ip, port))
-                if connected:
-                    # Logging
-                    print(f'Successfully connected to {(ip, port)}')
+        # If connected
+        if self.is_connected:
+            # Connect to each node in node_list
+            for list_tuple in list_of_nodes:
+                ip, port = list_tuple
+                if (ip, port) != self.node:
+                    connected = self.connect_to_node((ip, port))
+                    if connected:
+                        # Logging
+                        print(f'Successfully connected to {(ip, port)}')
 
-                else:
-                    # Logging
-                    print(f'Error connecting to {(ip, port)}')
+                    else:
+                        # Logging
+                        print(f'Error connecting to {(ip, port)}')
 
-        # Catch up to network
-        self.catchup_to_network()
+            # Download the blocks
+            self.catchup_to_network()
 
-        # Get validated txs
-        gossip_nodes = self.get_gossip_nodes()
-        for g_node in gossip_nodes:
-            self.request_validated_txs(g_node)
+            # Get validated txs
+            gossip_nodes = self.get_gossip_nodes()
+            for g_node in gossip_nodes:
+                self.request_validated_txs(g_node)
+        else:
+            self.node_list = []
 
     def disconnect_from_network(self):
         # Remove own node first

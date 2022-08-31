@@ -23,7 +23,7 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 1027186  # Tuned to production values in Formatter
+    GENESIS_NONCE = 731041  # Tuned to production values in Formatter
     GENESIS_TIMESTAMP = 1664631000  # October 1st, 9:30 AM EST // 1:30 PM UTC
 
     # Directory defaults
@@ -188,7 +188,7 @@ class Blockchain():
         elif block.id == self.last_block.id:
             return False
         # Account for fork block
-        elif block.mining_tx.height == self.height and block.prev_id == self.last_block.prev_id:
+        elif block.mining_tx.height == self.height:
             self.create_fork(block)
             return False
         else:
@@ -304,8 +304,8 @@ class Blockchain():
         return True
 
     def create_genesis_block(self) -> Block:
-        genesis_transaction = MiningTransaction(0, self.f.HALVING_NUMBER, 0, Wallet(seed=0, save=False).address,
-                                                0xffffffffffffffff)
+        genesis_transaction = MiningTransaction(0, self.f.HALVING_NUMBER * self.f.BASIC_TO_BBS, 0,
+                                                Wallet(seed=0, save=False).address, 0xffffffffffffffff)
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
         return genesis_block
@@ -323,7 +323,7 @@ class Blockchain():
 
     def handle_fork(self, block: Block) -> bool:
         # Logging
-        print(f'Fork being handled. Height: {block.mining_tx.height}, Block  id: {block.id}')
+        print(f'Fork being handled. Height: {block.height}, Block  id: {block.id}')
 
         # Look for block with height = block.height -1
         forks_list = self.forks.copy()
