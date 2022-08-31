@@ -117,6 +117,10 @@ class Block():
     def tx_ids(self):
         return [self.mining_tx.id] + [tx.id for tx in self.transactions]
 
+    @property
+    def height(self):
+        return self.mining_tx.height
+
 
 # --- Merkle Root Calculations ---#
 
