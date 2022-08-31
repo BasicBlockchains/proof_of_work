@@ -49,7 +49,7 @@ def test_add_transaction():
     m = Miner()
     mined_next_block = m.mine_block(next_block)
     m.is_mining = False
-    assert n.add_block(mined_next_block)
+    assert n.add_block(mined_next_block, gossip=False)
 
     # UTXO_INPUT
     tx_id = n.last_block.mining_tx.id
@@ -86,7 +86,7 @@ def test_add_transaction():
     # Mine next Block
     current_height = n.height
     start_time = utc_to_seconds()
-    n.start_miner()
+    n.start_miner(gossip=False)
     while n.height < current_height + 1:
         pass
     print(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}', end='\r\n')

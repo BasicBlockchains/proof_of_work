@@ -108,7 +108,7 @@ class Node:
         return self.blockchain.total_mining_amount
 
     # --- MINER --- #
-    def start_miner(self):
+    def start_miner(self, gossip=True):
         '''
         Turn on mining thread
         set is_mining to True
@@ -118,13 +118,13 @@ class Node:
         if not self.is_mining and self.is_connected:
             # Logging
             self.is_mining = True
-            self.mining_thread = threading.Thread(target=self.mining_monitor)
+            self.mining_thread = threading.Thread(target=self.mining_monitor, args=(gossip,))
             self.mining_thread.start()
         else:
             # Logging
             print('Miner already running.')
 
-    def mining_monitor(self):
+    def mining_monitor(self, gossip: bool):
         while self.is_mining and self.is_connected:
             unmined_block = self.create_next_block()
             self.mining_process = Process(target=self.mine_block, args=(unmined_block,))
@@ -142,12 +142,10 @@ class Node:
                     if not self.is_mining:
                         mining = False
             if next_block:
-                added = self.add_block(next_block)
-                if added:
+                added = self.add_block(next_block, gossip)
+                if added and gossip:
                     self.gossip_protocol_raw_block(next_block)
                 else:
-                    # Fail to add block, we stop mining
-                    # self.is_mining = False
                     # Logging
                     print(f'Block mined but failed to be added. Likely fork. Current forks: {self.blockchain.forks}')
                 # Logging
@@ -230,7 +228,7 @@ class Node:
         return max(0, total_input_amount - total_output_amount)
 
     # --- ADD BLOCK --- #
-    def add_block(self, block: Block) -> bool:
+    def add_block(self, block: Block, gossip=True) -> bool:
         added = self.blockchain.add_block(block)
         if added:
             # Remove validated transactions
@@ -245,10 +243,12 @@ class Node:
                             self.consumed_utxos.remove(input_tuple)
 
             # Check if orphaned transactions are now valid
-            self.check_for_tx_parents()
+            self.check_for_tx_parents(gossip)
 
             # Check if orphaned blocks are now valid
             self.check_for_block_parents()
+        elif block.height > self.height:
+            self.orphaned_blocks.append(block)
         return added
 
     # --- ADD TRANSACTION --- #
@@ -369,7 +369,7 @@ class Node:
 
     # --- ORPHANS --- #
 
-    def check_for_tx_parents(self):
+    def check_for_tx_parents(self, gossip=True):
         '''
         After a Block is saved, we iterate over all orphaned transactions to see if their parent UTXOs were saved.
         However, when validating a transaction, we check if it's raw_tx is already in the validated_transactions and
@@ -379,13 +379,13 @@ class Node:
         orphan_index = self.orphaned_transactions.copy()
         for x in range(0, len(orphan_index)):
             tx = self.orphaned_transactions.pop(0)
-            self.add_transaction(tx)
+            self.add_transaction(tx, gossip)
 
-    def check_for_block_parents(self):
+    def check_for_block_parents(self, gossip=True):
         orphan_index = self.orphaned_blocks.copy()
         for x in range(0, len(orphan_index)):
             block = self.orphaned_blocks.pop(0)
-            self.add_block(block)
+            self.add_block(block, gossip)
 
     # --- NETWORK --- #
     def ping_node(self, node: tuple) -> bool:

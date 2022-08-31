@@ -188,7 +188,7 @@ class Blockchain():
         elif block.id == self.last_block.id:
             return False
         # Account for fork block
-        elif block.mining_tx.height == self.height:
+        elif max(1, self.height - self.f.HEARTBEAT) <= block.height <= self.height:
             self.create_fork(block)
             return False
         else:
