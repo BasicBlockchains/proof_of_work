@@ -2,15 +2,8 @@
 Tests for the Node class
 '''
 import os
-import sqlite3
 
-from src.bb_pow.components.node import Node
-from src.bb_pow.components.wallet import Wallet
-from src.bb_pow.data_structures.block import Block
-from src.bb_pow.data_format.timestamp import utc_to_seconds
-from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
-from src.bb_pow.data_structures.utxo import UTXO_OUTPUT, UTXO_INPUT
-from src.bb_pow.components.miner import Miner
+from .context import Node, Wallet, Block, utc_to_seconds, Transaction, MiningTransaction, Miner, UTXO_INPUT, UTXO_OUTPUT
 
 
 def create_test_node_block(node: Node):
@@ -45,6 +38,9 @@ def test_add_transaction():
     # Create Node
     n = Node(dir_path, file_name)
 
+    # Set connected flag
+    n.is_connected = True
+
     # CHANGE MINING DELAY
     n.blockchain.f.MINING_DELAY = 0
 
@@ -52,7 +48,8 @@ def test_add_transaction():
     next_block = create_test_node_block(n)
     m = Miner()
     mined_next_block = m.mine_block(next_block)
-    assert n.add_block(mined_next_block)
+    m.is_mining = False
+    assert n.add_block(mined_next_block, gossip=False)
 
     # UTXO_INPUT
     tx_id = n.last_block.mining_tx.id
@@ -81,15 +78,15 @@ def test_add_transaction():
     orphan_tx = Transaction(inputs=[orphan_utxo_input], outputs=[orphan_utxo_output1, orphan_utxo_output2])
 
     # Add Transactions
-    assert n.add_transaction(new_tx)
-    assert n.add_transaction(orphan_tx)
+    assert n.add_transaction(new_tx, gossip=False)
+    assert n.add_transaction(orphan_tx, gossip=False)
     assert n.validated_transactions[0].raw_tx == new_tx.raw_tx
     assert n.orphaned_transactions[0].raw_tx == orphan_tx.raw_tx
 
     # Mine next Block
     current_height = n.height
     start_time = utc_to_seconds()
-    n.start_miner()
+    n.start_miner(gossip=False)
     while n.height < current_height + 1:
         pass
     print(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}', end='\r\n')

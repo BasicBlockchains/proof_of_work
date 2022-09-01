@@ -4,15 +4,8 @@ We test the Block class and related functions
 import secrets
 from hashlib import sha256
 
-from src.bb_pow.data_structures.block import Block, calc_merkle_root, merkle_proof
-from src.bb_pow.data_format.timestamp import utc_to_seconds
-from src.bb_pow.data_structures.transactions import Transaction, MiningTransaction
-from src.bb_pow.data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
-from src.bb_pow.components.wallet import Wallet
-
-from src.bb_pow.data_format.decoder import Decoder
-from src.bb_pow.data_format.formatter import Formatter
-
+from .context import Block, calc_merkle_root, merkle_proof, utc_to_seconds, UTXO_OUTPUT, UTXO_INPUT, Transaction, \
+    MiningTransaction, Wallet, Decoder, Formatter
 from .test_wallet import random_tx_id
 
 
@@ -104,11 +97,11 @@ def test_merkle_root():
     layer0_1 = result_dict1[2]
 
     assert layer2_1[2] == tx_ids[1]
-    assert layer2_1['is_left'] == False
+    assert not layer2_1['is_left']
     assert layer1_1[1] == hash_cc
-    assert layer1_1['is_left'] == False
+    assert not layer1_1['is_left']
     assert layer0_1[0] == test_block.merkle_root
-    assert layer0_1['root_verified'] == True
+    assert layer0_1['root_verified']
 
     # 2nd tx_id
     layer2_2 = result_dict2[0]
@@ -116,11 +109,11 @@ def test_merkle_root():
     layer0_2 = result_dict2[2]
 
     assert layer2_2[2] == tx_ids[0]
-    assert layer2_2['is_left'] == True
+    assert layer2_2['is_left']
     assert layer1_2[1] == hash_cc
-    assert layer1_2['is_left'] == False
+    assert not layer1_2['is_left']
     assert layer0_2[0] == test_block.merkle_root
-    assert layer0_2['root_verified'] == True
+    assert layer0_2['root_verified']
 
     # 3rd tx_id
     layer2_3 = result_dict3[0]
@@ -128,17 +121,16 @@ def test_merkle_root():
     layer0_3 = result_dict3[2]
 
     assert layer2_3[2] == tx_ids[2]
-    assert layer2_3['is_left'] == False
+    assert not layer2_3['is_left']
     assert layer1_3[1] == hash_ab
-    assert layer1_3['is_left'] == True
+    assert layer1_3['is_left']
     assert layer0_3[0] == test_block.merkle_root
-    assert layer0_3['root_verified'] == True
+    assert layer0_3['root_verified']
 
 
 def test_block():
     # Decoder and Formatter
     d = Decoder()
-    f = Formatter()
 
     # Get header values
     prev_id = random_tx_id()

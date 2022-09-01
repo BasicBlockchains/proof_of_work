@@ -6,9 +6,10 @@ import sqlite3
 from contextlib import closing
 from os.path import join
 from pathlib import Path
-from ..data_format.formatter import Formatter
-from ..data_structures.block import Block
-from ..data_structures.utxo import UTXO_OUTPUT
+
+from block import Block
+from formatter import Formatter
+from utxo import UTXO_OUTPUT
 
 
 class DataBase:
@@ -63,11 +64,11 @@ class DataBase:
 
         # Table 1
         c.execute("""CREATE TABLE block_headers (
-                    id text,                      
-                    previous_id text, 
-                    merkle_root text, 
-                    target text, 
-                    nonce text, 
+                    id text,
+                    previous_id text,
+                    merkle_root text,
+                    target text,
+                    nonce text,
                     timestamp text
                     )""")
         conn.commit()
@@ -210,7 +211,7 @@ class DataBase:
         raw_block_data_tuple = (height + 1,)
         self.query_db(raw_block_query, raw_block_data_tuple)
 
-    ###---UTXO POOL---###
+    ### --- UTXO POOL ---###
 
     # GET METHODS
 
@@ -253,6 +254,18 @@ class DataBase:
 
         # Return dict - json serializable
         return utxo_dict
+
+    def get_total_amount_greater_than_block_height(self, block_height: int):
+        query = """SELECT amount, block_height from utxo_pool WHERE length(block_height) >= ?"""
+        list_of_utxo_tuples = self.query_db(query, (len(hex(block_height)),))
+        # TESTING
+        print(f'GET TOTAL AMOUNT CALL. LIST OF TUPLES: {list_of_utxo_tuples}')
+        total_amount = 0
+        for amount_tuple in list_of_utxo_tuples:
+            (hex_amount, hex_block_height) = amount_tuple
+            if int(hex_block_height, 16) >= block_height:
+                total_amount += int(hex_amount, 16)
+        return total_amount
 
     def get_utxo(self, tx_id: str, tx_index: int) -> dict:
         query = """SELECT * FROM utxo_pool WHERE tx_id = ? AND tx_index = ?"""

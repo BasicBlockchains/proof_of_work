@@ -49,7 +49,7 @@ class Formatter():
 
     # TRANSACTION FORMATTING
     COUNT_CHARS = 2
-    REWARD_CHARS = 10
+    REWARD_CHARS = 11
 
     # BLOCK FORMATTING
     NONCE_CHARS = 16
@@ -61,16 +61,23 @@ class Formatter():
     HEADER_CHARS = TYPE_CHARS + VERSION_CHARS + 2 * HASH_CHARS + TARGET_CHARS + NONCE_CHARS + TIMESTAMP_CHARS
 
     # BLOCKCHAIN FORMATTING
-    TOTAL_MINING_AMOUNT = pow(2, 64) - 1
+    # TARGET
     STARTING_TARGET_COEFFICIENT = 0x1fffff
     STARTING_TARGET_EXPONENT = 0x1e
-    STARTING_REWARD = pow(2, 10) * pow(10, 9)  # 1,024,000,000,000
-    REWARD_REDUCTION = 15  # TESTING #0x80520  # 525,600
-    MINIMUM_REWARD = pow(10, 9)
+
+    # MINE AMOUNT/REWARD
+    BASIC_TO_BBS = pow(10, 9)
+    STARTING_REWARD_EXPONENT = 13  # 14 and under
+    STARTING_REWARD = pow(2, STARTING_REWARD_EXPONENT) * BASIC_TO_BBS
+    HALVING_NUMBER = 525600  # 1 year in minutes
+    TOTAL_MINING_AMOUNT = HALVING_NUMBER * pow(2, STARTING_REWARD_EXPONENT + 1) * BASIC_TO_BBS
+
+    # CONFIG
+    HEARTBEAT = 60
+    MINING_DELAY = HEARTBEAT * HEARTBEAT
     MAXIMUM_BIT_SIZE = 0x3e80  # 2Kb
-    MINING_DELAY = 5  # TESTING #100
-    HEARTBEAT = 5  # TESTING #60
     GOSSIP_NUMBER = 5
+    FORK_HEIGHT = 3
 
     # NODE FORMATTING
     IP_CHARS = 8
@@ -123,7 +130,7 @@ class Formatter():
         return sum([self.BASE58_LIST.index(base58_string[x:x + 1]) * pow(58, len(base58_string) - x - 1) for x in
                     range(0, len(base58_string))])
 
-    ##CPk, Address, Signature
+    # CPk, Address, Signature
 
     def cpk(self, public_key: tuple):
         (x, y) = public_key

@@ -2,9 +2,10 @@
 REST API for the Blockchain
 '''
 
-from flask import Flask, jsonify, request, Response, json, render_template
 import waitress
-from .node import Node
+from flask import Flask, jsonify, request, Response, json
+from timestamp import utc_timestamp
+from node import Node
 
 
 def create_app(node: Node):
@@ -15,7 +16,12 @@ def create_app(node: Node):
     @app.route('/')
     def hello_world():
         welcome_string = "Welcome to the BB_POW!"
+        # TODO: Add index.html with list of endpoints, links, etc..
         return welcome_string
+
+    @app.route('/ping/')
+    def ping():
+        return Response(f'{utc_timestamp()}', status=200, mimetype='application/json')
 
     @app.route('/height/')
     def get_height():
@@ -33,7 +39,10 @@ def create_app(node: Node):
                 port = new_node_dict['port']
                 if (ip, port) not in node.node_list:
                     node.node_list.append((ip, port))
-                return Response("New node received", status=200, mimetype='application/json')
+                    node.ping_node((ip, port))
+                    return Response("New node received", status=200, mimetype='application/json')
+                elif (ip, port) in node.node_list:
+                    return Response("Post successful, node already in list", status=202, mimetype='application/json')
             except KeyError:
                 return Response("Submitted node malformed.", status=400, mimetype='application/json')
 
@@ -64,14 +73,18 @@ def create_app(node: Node):
             return validated_tx_dict
 
         elif request.method == 'POST':
-            tx_dict = request.get_json()
-            raw_tx = tx_dict['raw_tx']
-            tx = node.d.raw_transaction(raw_tx)
-            added = node.add_transaction(tx)
-            if added:
-                return Response("Tx received and validated or orphaned.", status=201, mimetype='application/json')
-            else:
-                return Response("Tx Received but not validated or orphaned.", status=202,
+            try:
+                tx_dict = request.get_json()
+                raw_tx = tx_dict['raw_tx']
+                tx = node.d.raw_transaction(raw_tx)
+                added = node.add_transaction(tx)
+                if added:
+                    return Response("Tx received and validated or orphaned.", status=200, mimetype='application/json')
+                else:
+                    return Response("Tx Received but not validated or orphaned.", status=202,
+                                    mimetype='application/json')
+            except Exception as e:
+                return Response(f'Exception encountered handling post request. Error {e}', status=400,
                                 mimetype='application/json')
 
     @app.route('/block/', methods=['GET', 'POST'])
@@ -82,25 +95,30 @@ def create_app(node: Node):
 
         # Add new block at this endpoint
         if request.method == 'POST':
-            block_dict = json.loads(request.get_json())
-            temp_block = node.d.block_from_dict(block_dict)
-            if temp_block:
-                # Construction successful, try to add
-                added = node.add_block(temp_block)
-                if added:
-                    node.gossip_protocol_block(temp_block)
-                    if node.is_mining:
-                        # Logging
-                        print('Restarting Miner after receiving new block.')
-                        node.stop_miner()
-                        node.start_miner()
-                    return Response("Block received and added successfully", status=200,
-                                    mimetype='application/json')
+            try:
+                block_dict = json.loads(request.get_json())
+                temp_block = node.d.block_from_dict(block_dict)
+                if temp_block:
+                    # Construction successful, try to add
+                    added = node.add_block(temp_block)
+                    if added:
+                        node.gossip_protocol_block(temp_block)
+                        if node.is_mining:
+                            # Logging
+                            print('Restarting Miner after receiving new block.')
+                            node.stop_miner()
+                            node.start_miner()
+                        return Response("Block received and added successfully", status=200,
+                                        mimetype='application/json')
+                    else:
+                        return Response("Block received but not added. Could be forked or orphan.", status=202,
+                                        mimetype='application/json')
                 else:
-                    return Response("Block received but not added. Could be forked or orphan.", status=202,
-                                    mimetype='application/json')
-            else:
-                return Response("Block failed to reconstruct from dict.", status=406, mimetype='application/json')
+                    return Response("Block failed to reconstruct from dict.", status=406, mimetype='application/json')
+            except Exception as e:
+                # Logging
+                print(f'Post request failed with exception {e}')
+                return Response(f'Post request failed with exception {e}', status=404, mimetype='application/json')
 
     @app.route('/block/<height>/', methods=['GET'])
     def get_block_by_height(height):
@@ -130,6 +148,9 @@ def create_app(node: Node):
 
     @app.route('/raw_block/', methods=['GET', 'POST'])
     def get_last_block_raw():
+        # Logging
+        print(f'{request.method} to {request.url} for raw_block')
+
         # Return last block at this endpoint
         if request.method == 'GET':
             return jsonify(node.blockchain.chain_db.get_raw_block(node.height))
@@ -178,6 +199,40 @@ def create_app(node: Node):
     def get_utxo(tx_id, index):
         utxo_dict = node.blockchain.chain_db.get_utxo(tx_id, index)
         return utxo_dict
+
+    @app.route('/address/')
+    def address_display():
+        info_string = 'Get all utxos by address at /address/<address>'
+        return jsonify(info_string)
+
+    @app.route('/address/<address>')
+    def get_utxo_by_address(address: str):
+        utxo_dict = node.blockchain.chain_db.get_utxos_by_address(address)
+        return jsonify(utxo_dict)
+
+    @app.route('/tx_id/')
+    def tx_display():
+        info_string = 'Confirm if a tx is in the chain at /tx_id/<tx_id>'
+        return jsonify(info_string)
+
+    @app.route('/tx_id/<tx_id>')
+    def confirm_tx(tx_id: str):
+        block = node.blockchain.find_block_by_tx_id(tx_id)
+        tx_dict = {
+            "tx_id": tx_id
+        }
+        if block:
+            tx_dict.update({
+                "in_chain": True,
+                "in_block": block.id,
+                "block_height": block.mining_tx.height
+            })
+        else:
+            tx_dict.update({
+                "in_chain": False
+            })
+
+        return jsonify(tx_dict)
 
     return app
 

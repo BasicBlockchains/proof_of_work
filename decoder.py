@@ -6,10 +6,10 @@ from hashlib import sha256
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from ..data_format.formatter import Formatter
-from ..data_structures.block import Block
-from ..data_structures.transactions import Transaction, MiningTransaction
-from ..data_structures.utxo import UTXO_INPUT, UTXO_OUTPUT
+from block import Block
+from formatter import Formatter
+from transactions import Transaction, MiningTransaction
+from utxo import UTXO_INPUT, UTXO_OUTPUT
 
 
 class Decoder:
@@ -36,7 +36,7 @@ class Decoder:
             return False
         return True
 
-    ##CPK, Signature, Address
+    # CPK, Signature, Address
 
     def decode_cpk(self, cpk: str) -> tuple:
         '''
@@ -235,9 +235,14 @@ class Decoder:
 
         # Mining UTXO
         mining_utxo = self.raw_utxo_output(raw_tx[index3:])
-        address = mining_utxo.address
+        try:
+            address = mining_utxo.address
+            return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
+        except AttributeError:
+            # Logging
+            print(f'Mining utxo failed to return raw_utxo_output from {raw_tx[index3:]}')
 
-        return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
+        return None
 
     def transaction_from_dict(self, tx_dict: dict):
         input_count = tx_dict['input_count']
@@ -358,6 +363,10 @@ class Decoder:
         address = mining_utxo_dict['address']
         block_height = mining_utxo_dict['block_height']
         mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
+        if mining_tx.mining_utxo.amount != amount:
+            # Logging
+            print('Block failed to reconstruct MiningTransaction')
+            return None
         tx_count = block_dict['tx_count']
         transactions = []
         for x in range(tx_count):

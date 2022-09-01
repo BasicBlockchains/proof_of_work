@@ -1,17 +1,14 @@
 '''
 Tests for the database class
 '''
-import secrets
-
-from src.bb_pow.data_format.database import DataBase
-from src.bb_pow.data_structures.block import Block
+import json
 import os
+import secrets
 from pathlib import Path
+
+from .context import DataBase, Block, Wallet, Formatter
 from .test_block import get_random_transaction, get_random_utxo_output, get_random_mining_tx, get_random_target
 from .test_wallet import random_tx_id
-from src.bb_pow.components.wallet import Wallet
-import json
-from src.bb_pow.data_format.formatter import Formatter
 
 
 def test_utxo_methods():

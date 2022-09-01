@@ -4,8 +4,8 @@ The Block class
 import json
 from hashlib import sha256
 
-from ..data_format.formatter import Formatter
-from ..data_structures.transactions import MiningTransaction
+from formatter import Formatter
+from transactions import MiningTransaction
 
 
 class Block():
@@ -116,6 +116,10 @@ class Block():
     @property
     def tx_ids(self):
         return [self.mining_tx.id] + [tx.id for tx in self.transactions]
+
+    @property
+    def height(self):
+        return self.mining_tx.height
 
 
 # --- Merkle Root Calculations ---#

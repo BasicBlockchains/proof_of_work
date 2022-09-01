@@ -3,9 +3,8 @@ Tests for formatter and decoder
 '''
 import random
 import secrets
-from src.bb_pow.components.wallet import Wallet
-from src.bb_pow.data_format.decoder import Decoder
-from src.bb_pow.data_format.formatter import Formatter
+
+from .context import Wallet, Decoder, Formatter
 from .test_wallet import random_tx_id
 
 

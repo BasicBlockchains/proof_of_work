@@ -8,13 +8,13 @@ from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from .wallet import Wallet
-from ..data_format.database import DataBase
-from ..data_format.decoder import Decoder
-from ..data_format.formatter import Formatter
-from ..data_structures.block import Block
-from ..data_structures.transactions import MiningTransaction
-from ..data_structures.utxo import UTXO_OUTPUT
+from block import Block
+from database import DataBase
+from decoder import Decoder
+from formatter import Formatter
+from transactions import MiningTransaction
+from utxo import UTXO_OUTPUT
+from wallet import Wallet
 
 
 class Blockchain():
@@ -23,11 +23,11 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 156139
-    GENESIS_TIMESTAMP = 1660652734
+    GENESIS_NONCE = 731041  # Tuned to production values in Formatter
+    GENESIS_TIMESTAMP = 1664631000  # October 1st, 9:30 AM EST // 1:30 PM UTC
 
     # Directory defaults
-    DIR_PATH = './data/'
+    DIR_PATH = 'src/data/'
     DB_FILE = 'chain.db'
 
     # Decoder and formatter
@@ -52,7 +52,7 @@ class Blockchain():
 
         # Mining values
         self.total_mining_amount = self.f.TOTAL_MINING_AMOUNT
-        self.mining_reward = self.f.STARTING_REWARD
+        self.mining_reward = 0
         self.target = self.f.target_from_parts(self.f.STARTING_TARGET_COEFFICIENT, self.f.STARTING_TARGET_EXPONENT)
         self.heartbeat = self.f.HEARTBEAT
 
@@ -61,6 +61,9 @@ class Blockchain():
 
         # Create fork list to index forked blocks
         self.forks = []
+
+        # Create load_count variable for loading chain
+        self.load_count = -1
 
         # Create genesis block - if db is new, then loading = False
         self.add_block(self.create_genesis_block(), loading=not new_db)
@@ -113,6 +116,13 @@ class Blockchain():
             print('Block failed validation. Block total incorrect')
             return False
 
+        # TODO: Enable in production
+        # # Make sure timestamp is increasing
+        # if block.timestamp <= self.last_block.timestamp:
+        #     # Logging
+        #     print('Block failed validation. Block time too early.')
+        #     return False
+
         # Check each tx
         fees = 0
         for tx in block.transactions:
@@ -160,20 +170,25 @@ class Blockchain():
         if fees != block.mining_tx.block_fees:
             # Logging
             print('Block failed validation. Block fees incorrect')
+            # print(f'Fees: {fees}')
+            # print(f'Block mining tx fees: {block.mining_tx.block_fees}')
             return False
 
         return True
 
-    def add_block(self, block: Block, loading=False):
-        valid_block = False
+    def add_block(self, block: Block, loading=False) -> bool:
 
         # Account for genesis
         if self.chain == []:
             valid_block = True
+        # Account for loading from file
         elif loading:
             valid_block = True
-        # Create fork if adding block at same height - don't fork same block if gossiped back
-        elif block.mining_tx.height == self.last_block.mining_tx.height and block.id != self.last_block.id:
+        # Account for same block being gossiped back
+        elif block.id == self.last_block.id:
+            return False
+        # Account for fork block
+        elif max(1, self.height - self.f.HEARTBEAT) <= block.height <= self.height:
             self.create_fork(block)
             return False
         else:
@@ -197,6 +212,10 @@ class Blockchain():
 
                 # Save block the chain_db
                 self.chain_db.post_block(block)
+                # TESTING
+                # print(f'Trying to post block: {block}')
+                # print(f'RAW BLOCK: {block.raw_block}')
+                # print(f'Decode raw block: {self.d.raw_block(block.raw_block)}')
 
             # Save block to mem_chain
             self.chain.append(block)
@@ -205,8 +224,14 @@ class Blockchain():
             self.total_mining_amount -= block.mining_tx.reward
 
             # Update reward
-            if (self.height % self.f.REWARD_REDUCTION == 0 and self.height > 0) or \
-                    self.mining_reward > self.total_mining_amount:
+            # When loading
+            if loading:
+                self.load_count += 1
+                if self.load_count % self.f.HALVING_NUMBER == 0:
+                    self.update_reward()
+
+            # When running
+            if self.height % self.f.HALVING_NUMBER == 0 or self.mining_reward > self.total_mining_amount:
                 self.update_reward()
 
             # Update target
@@ -279,8 +304,8 @@ class Blockchain():
         return True
 
     def create_genesis_block(self) -> Block:
-        genesis_transaction = MiningTransaction(0, self.mining_reward, 0, Wallet(seed=0, save=False).address,
-                                                0xffffffffffffffff)
+        genesis_transaction = MiningTransaction(0, self.f.HALVING_NUMBER * self.f.BASIC_TO_BBS, 0,
+                                                Wallet(seed=0, save=False).address, 0xffffffffffffffff)
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
         return genesis_block
@@ -291,8 +316,15 @@ class Blockchain():
         self.forks.append({
             block.mining_tx.height: block
         })
+        # Logging
+        print(f'FORK CREATED\n '
+              f'HEIGHT: {block.mining_tx.height}\n'
+              f'BLOCK ID: {block.id}')
 
-    def handle_fork(self, block: Block):
+    def handle_fork(self, block: Block) -> bool:
+        # Logging
+        print(f'Fork being handled. Height: {block.height}, Block  id: {block.id}')
+
         # Look for block with height = block.height -1
         forks_list = self.forks.copy()
         candidate_fork = None
@@ -316,6 +348,8 @@ class Blockchain():
                 # Add the popped block to forks and remove the other one
                 self.forks.remove({candidate_fork.mining_tx.height: candidate_fork})
                 self.create_fork(popped_block)
+                # Logging
+                print(f'Fork handled. Height: {block.mining_tx.height}, Block  id: {block.id}')
                 return True
             # Fail to add block, return to popped block
             else:
@@ -337,14 +371,25 @@ class Blockchain():
 
     # Updates
     def update_reward(self):
+        # Genesis
+        if self.mining_reward == 0:
+            self.mining_reward = self.f.STARTING_REWARD
         # Account for near empty mine
-        if self.mining_reward > self.total_mining_amount:
+        elif self.mining_reward > self.total_mining_amount:
             self.mining_reward = self.total_mining_amount
-        # Otherwise divide by 2 up to a max of 10 times
-        elif self.mining_reward > self.f.MINIMUM_REWARD:
+        # Otherwise divide by 2
+        else:
             # Logging
             print(f'Height is {self.height}. Halving available reward.')
             self.mining_reward //= 2
+
+        # Calc interest if mining_amount is zero
+        if self.total_mining_amount == 0:
+            # Find all utxos with block_height >= current_height + HALVING_NUMBER
+            next_height = self.height + self.f.HALVING_NUMBER
+            next_amount = self.chain_db.get_total_amount_greater_than_block_height(next_height)
+            self.total_mining_amount = next_amount  # int(next_amount / 100)
+            self.mining_reward = int(self.total_mining_amount // self.f.HALVING_NUMBER)
 
     def update_target(self):
 
@@ -409,6 +454,8 @@ class Blockchain():
         tx = None
         temp_block = self.find_block_by_tx_id(tx_id)
         if temp_block:
+            # TESTING
+            # print(f'TEMP BLOCK IN GET_TX_BY_ID: {temp_block}')
             # Check for mining tx
             if temp_block.mining_tx.id == tx_id:
                 tx = temp_block.mining_tx
