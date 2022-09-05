@@ -46,6 +46,12 @@ class Node:
     PORT_RANGE = 1000
 
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, seed=None, logger=None):
+        # Loggging
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel('DEBUG')
 
         # Set path and filename variables
         self.assigned_port = self.find_open_port()
@@ -116,14 +122,20 @@ class Node:
         Mining conducted from the monitor
         Must be connected to network in order to mine
         '''
-        if not self.is_mining and self.is_connected:
-            # Logging
-            self.is_mining = True
-            self.mining_thread = threading.Thread(target=self.mining_monitor, args=(gossip,))
-            self.mining_thread.start()
+        # Check for network connection
+        if self.is_connected:
+            if not self.is_mining:
+                self.is_mining = True
+                self.mining_thread = threading.Thread(target=self.mining_monitor, args=(gossip,))
+                self.logger.info('Starting mining thread.')
+                self.mining_thread.start()
+
+            else:
+                # Logging
+                self.logger.info('Miner already running.')
         else:
             # Logging
-            print('Miner already running.')
+            self.logger.error('Must be connected to network to start miner.')
 
     def mining_monitor(self, gossip: bool):
         while self.is_mining and self.is_connected:
@@ -148,9 +160,10 @@ class Node:
                     self.gossip_protocol_raw_block(next_block)
                 else:
                     # Logging
-                    print(f'Block mined but failed to be added. Likely fork. Current forks: {self.blockchain.forks}')
+                    self.logger.warning(
+                        f'Block mined but failed to be added. Likely fork. Current forks: {self.blockchain.forks}')
                 # Logging
-                print(f'Block mined by node. Height: {self.height}, Added: {added}')
+                self.logger.info(f'Block mined by node. Height: {self.height}, Added: {added}')
 
     def mine_block(self, unmined_block: Block):
         mined_block = self.miner.mine_block(unmined_block)
@@ -219,7 +232,8 @@ class Node:
                     total_input_amount += temp_tx.outputs[tx_index].amount
                 else:
                     # Logging
-                    print(f'Unable to find referenced utxo in chain or utxo pool. tx_id: {tx_id}, index: {tx_index}')
+                    self.logger.error(
+                        f'Unable to find referenced utxo in chain or utxo pool. tx_id: {tx_id}, index: {tx_index}')
 
         # Iterate over all outputs
         for utxo_output in tx.outputs:
@@ -259,22 +273,21 @@ class Node:
         existing_tx = self.blockchain.get_tx_by_id(transaction.id)
         if existing_tx:
             # Logging
-            print(f'EXISTING TX RETURNED FROM GET_TX_BY_ID: {existing_tx}')
-            print('Transaction already in chain.')
+            self.logger.warning('Transaction already in chain.')
             return False
 
         # Iterate over validated transactions to make sure transaction not there
         for vt in self.validated_transactions:
             if vt.raw_tx == transaction.raw_tx:
                 # Logging
-                print('Transaction already in validated tx pools.')
+                self.logger.warning('Transaction already in validated tx pools.')
                 return False
 
         # Make sure orphaned transaction was removed from orphaned_transactions list
         for ot in self.orphaned_transactions:
             if ot.raw_tx == transaction.raw_tx:
                 # Logging
-                print('Transaction already in orphaned tx pools.')
+                self.logger.warning('Transaction already in orphaned tx pools.')
                 return False
 
         # Set orphaned transaction Flag
@@ -296,7 +309,7 @@ class Node:
             # If values are empty lists mark for orphan
             if amount_dict == {} or address_dict == {} or block_height_dict == {}:
                 # Logging
-                print(f'Unable to find utxo with id {tx_id} and index {tx_index}')
+                self.logger.warning(f'Unable to find utxo with id {tx_id} and index {tx_index}. Orphan transaction.')
                 orphan = True
 
             # Validate the referenced output utxo
@@ -309,20 +322,20 @@ class Node:
                 # Validate the block_height
                 if block_height > self.height:
                     # Logging
-                    print(f'Block height error. UTXO not available until block {block_height}')
+                    self.logger.error(f'Block height error. UTXO not available until block {block_height}')
                     return False
 
                 # Validate the address from compressed public key
                 cpk, (r, s) = self.d.decode_signature(i.signature)
                 if not self.f.address(cpk) == address:
                     # Logging
-                    print(f'CPK/Address error. Address: {address}, CPK Address: {self.f.address(cpk)}')
+                    self.logger.error(f'CPK/Address error. Address: {address}, CPK Address: {self.f.address(cpk)}')
                     return False
 
                 # Validate the signature
                 if not self.d.verify_signature(i.signature, tx_id):
                     # Logging
-                    print('Signature error')
+                    self.logger.error('Signature error')
                     return False
 
                 # Check input not already scheduled for consumption
@@ -331,7 +344,7 @@ class Node:
                     self.consumed_utxos.append(input_tuple)
                 else:
                     # Logging
-                    print('Utxo already consumed by this node')
+                    self.logger.error('Utxo already consumed by this node')
                     return False
 
                 # Increase total_input_amount
@@ -347,7 +360,7 @@ class Node:
             # Verify the total output amount
             if total_output_amount > total_input_amount:
                 # Logging
-                print('Input/Output amount error in tx')
+                self.logger.error('Input/Output amount error in tx')
                 # Unconsume the input tuple in consumed
                 for i in transaction.inputs:
                     tx_tuple = (i.tx_id, i.output_index)
@@ -400,7 +413,7 @@ class Node:
             r = requests.get(url, headers=headers)
         except ConnectionRefusedError:
             # Logging
-            print(f'Error connecting to {node}.')
+            self.logger.error(f'Error connecting to {node}.')
             return False
 
         return r.status_code == 200
@@ -418,14 +431,14 @@ class Node:
                 return True
             else:
                 # Logging
-                print(f'Genesis Block malformed in {node}. Not adding to node list.')
+                self.logger.critical(f'Genesis Block malformed in {node}. Not adding to node list.')
                 return False
         elif r.status_code == 200:
             # Logging
-            print(f'Already connected to {node}')
+            self.logger.warning(f'Already connected to {node}')
             return True
         # Logging
-        print(f'Error connecting to {node}. Status code: {r.status_code}')
+        self.logger.error(f'Error connecting to {node}. Status code: {r.status_code}')
         return False
 
     def connect_to_network(self, node=LEGACY_NODE):
@@ -444,8 +457,9 @@ class Node:
             list_of_nodes = r.json()
         except requests.exceptions.ConnectionError:
             # Logging
-            print(f'Connect to network through {node} failed. If not catastrophic error, try a different address.\n'
-                  f'Catastrophic error: {node == self.LEGACY_NODE}')
+            self.logger.error(
+                f'Connect to network through {node} failed. If not catastrophic error, try a different address.\n'
+                f'Catastrophic error: {node == self.LEGACY_NODE}')
 
         # If we get a node list, we've successfully connected
         if list_of_nodes:
@@ -460,11 +474,11 @@ class Node:
                     connected = self.connect_to_node((ip, port))
                     if connected:
                         # Logging
-                        print(f'Successfully connected to {(ip, port)}')
+                        self.logger.info(f'Successfully connected to {(ip, port)}')
 
                     else:
                         # Logging
-                        print(f'Error connecting to {(ip, port)}')
+                        self.logger.warning(f'Error connecting to {(ip, port)}')
 
             # Download the blocks
             self.catchup_to_network()
@@ -482,7 +496,7 @@ class Node:
             self.node_list.remove(self.node)
         except ValueError:
             # Logging
-            print(f'{self.node} already removed from node list. Potential error.')
+            self.logger.warning(f'{self.node} already removed from node list.')
 
         # Connect to remaining nodes and delete address
         node_index = self.node_list.copy()
@@ -494,7 +508,7 @@ class Node:
             r = requests.delete(url, data=json.dumps(data), headers=headers)
             if r.status_code != 200:
                 # Logging
-                print(f'Error connecting to {node} for disconnect. Status code: {r.status_code}')
+                self.logger.error(f'Error connecting to {node} for disconnect. Status code: {r.status_code}')
             self.node_list.remove(node)
 
         # No longer connected
@@ -512,10 +526,10 @@ class Node:
                 added = self.add_block(next_block)
                 if added:
                     # Logging
-                    print(f'Successfully added block at height {self.height} from node {random_node}.')
+                    self.logger.info(f'Successfully added block at height {self.height} from node {random_node}.')
                 else:
                     # Logging
-                    print(f'Failed to add block at {self.height + 1} from node {random_node}.')
+                    self.logger.critical(f'Failed to add block at {self.height + 1} from node {random_node}.')
 
     def request_height(self, node: tuple) -> int:
         ip, port = node
@@ -525,7 +539,7 @@ class Node:
             r = requests.get(url, headers=headers)
         except ConnectionRefusedError:
             # Logging
-            print(f'Error connecting to {node}.')
+            self.logger.error(f'Error connecting to {node}.')
             return 0
         return r.json()['height']
 
@@ -537,7 +551,7 @@ class Node:
             r = requests.get(url, headers=headers)
         except ConnectionRefusedError:
             # Logging
-            print(f'Error connecting to {node}.')
+            self.logger.error(f'Error connecting to {node}.')
             return 0
         validated_tx_dict = r.json()
         tx_num = validated_tx_dict['validated_txs']
@@ -547,10 +561,10 @@ class Node:
             tx_added = self.add_transaction(tx, gossip=False)
             if tx_added:
                 # Logging
-                print(f'Successfully validated tx with id {tx.id} obtained from {node}')
+                self.logger.info(f'Successfully validated tx with id {tx.id} obtained from {node}')
             else:
                 # Logging
-                print(f'Error validating tx with id {tx.id} obtained from {node}')
+                self.logger.error(f'Error validating tx with id {tx.id} obtained from {node}')
 
     def check_genesis(self, node: tuple) -> bool:
         '''
@@ -571,7 +585,7 @@ class Node:
                 return False
         else:
             # Logging
-            print(r.status_code)
+            self.logger.error(f'Received status code {r.status_code} from  {node}')
             return False
 
     def send_tx_to_node(self, new_tx: Transaction, node: tuple) -> int:
@@ -604,14 +618,14 @@ class Node:
             r = requests.get(url, headers=headers)
         except ConnectionRefusedError:
             # Logging
-            print(f'Error connecting to {node}.')
+            self.logger.error(f'Error connecting to {node}.')
             return None
 
         try:
             block_dict = r.json()
         except requests.exceptions.JSONDecodeError:
             # Logging
-            print(f'Unable to decode request for index {block_index} from {node}')
+            self.logger.critical(f'Unable to decode request for index {block_index} from {node}')
             return None
 
         return self.d.block_from_dict(block_dict)
@@ -624,10 +638,11 @@ class Node:
             list_length = len(node_list_index)
             gossip_node = node_list_index.pop(secrets.randbelow(list_length))
             # Logging
-            print(f'Sending tx with id {tx.id} to {gossip_node}')
+            self.logger.info(f'Sending tx with id {tx.id} to {gossip_node}')
             status_code = self.send_tx_to_node(tx, gossip_node)
             if status_code == 200:
-                print(f'Received 200 code from {gossip_node} for tx {tx.id}.')
+                # Logging
+                self.logger.info(f'Received 200 code from {gossip_node} for tx {tx.id}.')
                 gossip_count += 1
 
     def gossip_protocol_block(self, block: Block):
@@ -638,10 +653,11 @@ class Node:
             list_length = len(node_list_index)
             gossip_node = node_list_index.pop(secrets.randbelow(list_length))
             # Logging
-            print(f'Sending block with id {block.id} to {gossip_node}')
+            self.logger.info(f'Sending block with id {block.id} to {gossip_node}')
             status_code = self.send_block_to_node(block, gossip_node)
             if status_code == 200:
-                print(f'Received 200 code from {gossip_node} for block {block.id}')
+                # Logging
+                self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
                 gossip_count += 1
 
     def gossip_protocol_raw_block(self, block: Block):
@@ -652,10 +668,10 @@ class Node:
             list_length = len(node_list_index)
             gossip_node = node_list_index.pop(secrets.randbelow(list_length))
             # Logging
-            print(f'Sending raw block with id {block.id} to {gossip_node}')
+            self.logger.info(f'Sending raw block with id {block.id} to {gossip_node}')
             status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
             if status_code == 200:
-                print(f'Received 200 code from {gossip_node} for block {block.id}')
+                self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
                 gossip_count += 1
 
     def get_gossip_nodes(self):
@@ -680,6 +696,7 @@ class Node:
                 port_found = True
             except OSError:
                 # Logging
+                self.logger.warning(f'Port {temp_port} occupied.')
                 temp_port += 1
         if not port_found:
             return 0
