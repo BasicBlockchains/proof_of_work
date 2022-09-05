@@ -5,7 +5,7 @@ from block import Block
 
 
 class Miner():
-    def __init__(self):
+    def __init__(self, logger=None):
         self.is_mining = False
 
     def mine_block(self, block: Block):

@@ -44,7 +44,7 @@ class Node:
     LEGACY_NODE = (LEGACY_IP, DEFAULT_PORT)
     PORT_RANGE = 1000
 
-    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, seed=None):
+    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, seed=None, logger=None):
 
         # Set path and filename variables
         self.assigned_port = self.find_open_port()

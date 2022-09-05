@@ -42,7 +42,7 @@ class Wallet():
     F = Formatter()
     D = Decoder()
 
-    def __init__(self, seed=None, seed_bits=128, dir_path=DIR_PATH, file_name=FILE_NAME, save=True):
+    def __init__(self, seed=None, seed_bits=128, dir_path=DIR_PATH, file_name=FILE_NAME, save=True, logger=None):
         # Use secp256k1 curve as standard
         self.curve = EC.secp256k1()
 

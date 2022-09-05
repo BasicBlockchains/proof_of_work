@@ -34,7 +34,7 @@ class Blockchain():
     d = Decoder()
     f = Formatter()
 
-    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE):
+    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None):
         # Curve for cryptography
         self.curve = secp256k1()
 
