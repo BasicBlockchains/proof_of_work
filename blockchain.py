@@ -5,7 +5,7 @@ TODO: During loading, account for file existing which doesn't contain correct ge
 '''
 
 from pathlib import Path
-
+import logging
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
 from block import Block

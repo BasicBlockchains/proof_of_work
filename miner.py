@@ -2,6 +2,7 @@
 The Miner class
 '''
 from block import Block
+import logging
 
 
 class Miner():

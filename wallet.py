@@ -7,6 +7,7 @@ from hashlib import sha512
 from pathlib import Path
 
 import pandas as pd
+import logging
 from basicblockchains_ecc import elliptic_curve as EC
 
 from decoder import Decoder
