@@ -35,6 +35,13 @@ class Blockchain():
     f = Formatter()
 
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None):
+        # Loggging
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel('DEBUG')
+
         # Curve for cryptography
         self.curve = secp256k1()
 
@@ -85,42 +92,39 @@ class Blockchain():
         # Check previous id
         if block.prev_id != self.last_block.id:
             # Logging
-            print('Block failed validation. Block.prev_id != last_block.id')
+            self.logger.error('Block failed validation. Block.prev_id != last_block.id')
             return False
 
         # Check target
         if int(block.id, 16) > self.target:
             # Logging
-            print('Block failed validation. Block id bigger than target')
+            self.logger.error('Block failed validation. Block id bigger than target')
             return False
 
         # Check Mining Tx height
         if block.mining_tx.height != self.last_block.mining_tx.height + 1:
             # Logging
-            print('Block failed validation. Mining_tx height incorrect')
+            self.logger.error('Block failed validation. Mining_tx height incorrect')
             return False
 
         # Check Mining UTXO block_height
         if block.mining_tx.mining_utxo.block_height < self.last_block.mining_tx.height + 1 + self.f.MINING_DELAY:
             # Logging
-            print('Block failed validation. Mining tx block height incorrect')
-            # print(f'Block height in block: {block.mining_tx.mining_utxo.block_height}')
-            # print(f'Last block mining tx height + 1: {self.last_block.mining_tx.height + 1}')
-            # print(f'Mining delay: {self.f.MINING_DELAY}')
+            self.logger.error('Block failed validation. Mining tx block height incorrect')
             return False
 
         # Check fees + reward = amount in mining_utxo
         block_total = block.mining_tx.block_fees + block.mining_tx.reward
         if block_total != block.mining_tx.mining_utxo.amount:
             # Logging
-            print('Block failed validation. Block total incorrect')
+            self.logger.error('Block failed validation. Block total incorrect')
             return False
 
         # TODO: Enable in production
         # # Make sure timestamp is increasing
         # if block.timestamp <= self.last_block.timestamp:
         #     # Logging
-        #     print('Block failed validation. Block time too early.')
+        #     self.logger.error('Block failed validation. Block time too early.')
         #     return False
 
         # Check each tx
@@ -139,6 +143,8 @@ class Blockchain():
                 utxo_dict = self.chain_db.get_utxo(tx_id, index)
                 if not utxo_dict:
                     # Logging
+                    self.logger.error(
+                        f'Utxo output with tx_id {tx_id} and index {index} does not exist in the database.')
                     return False
 
                 # Verify address
@@ -146,11 +152,14 @@ class Blockchain():
                 temp_address = self.f.address(cpk)
                 if temp_address != utxo_address:
                     # Logging
+                    self.logger.error(
+                        f'Address in utxo {utxo_address} does not match address generated from signature: {temp_address}')
                     return False
 
                 # Verify signature
                 if not self.curve.verify_signature(ecdsa_tuple, tx_id, self.curve.decompress_point(cpk)):
                     # Logging
+                    self.logger.error('Decoded signature fails to verify against cryptographic curve.')
                     return False
 
                 # Update amount
@@ -162,6 +171,8 @@ class Blockchain():
             # Check input_amount < output_amount
             if input_amount < output_amount:
                 # Logging
+                self.logger.error(
+                    f'Input amount in transactions {input_amount}; greater than output amount in transactions {output_amount}')
                 return False
 
             fees += input_amount - output_amount
@@ -169,9 +180,8 @@ class Blockchain():
         # Verify fees in block_transactions agrees with MiningTx
         if fees != block.mining_tx.block_fees:
             # Logging
-            print('Block failed validation. Block fees incorrect')
-            # print(f'Fees: {fees}')
-            # print(f'Block mining tx fees: {block.mining_tx.block_fees}')
+            self.logger.error(
+                f'Block failed validation. Block fees incorrect. Calculated fees{fees}; mining tx fees {block.mining_tx.block_fees}')
             return False
 
         return True
@@ -317,13 +327,11 @@ class Blockchain():
             block.mining_tx.height: block
         })
         # Logging
-        print(f'FORK CREATED\n '
-              f'HEIGHT: {block.mining_tx.height}\n'
-              f'BLOCK ID: {block.id}')
+        self.logger.info(f'Fork created at height {block.height} for block with id {block.id}')
 
     def handle_fork(self, block: Block) -> bool:
         # Logging
-        print(f'Fork being handled. Height: {block.height}, Block  id: {block.id}')
+        self.logger.info(f'Fork being handled. Height: {block.height}, Block  id: {block.id}')
 
         # Look for block with height = block.height -1
         forks_list = self.forks.copy()
@@ -349,7 +357,7 @@ class Blockchain():
                 self.forks.remove({candidate_fork.mining_tx.height: candidate_fork})
                 self.create_fork(popped_block)
                 # Logging
-                print(f'Fork handled. Height: {block.mining_tx.height}, Block  id: {block.id}')
+                self.logger.info(f'Fork handled. Height: {block.mining_tx.height}, Block  id: {block.id}')
                 return True
             # Fail to add block, return to popped block
             else:
@@ -380,7 +388,7 @@ class Blockchain():
         # Otherwise divide by 2
         else:
             # Logging
-            print(f'Height is {self.height}. Halving available reward.')
+            self.logger.info(f'Height is {self.height}. Halving available reward.')
             self.mining_reward //= 2
 
         # Calc interest if mining_amount is zero
@@ -416,11 +424,11 @@ class Blockchain():
         # Adjust either up or down
         if elapsed_time - desired_time > 0:  # Took longer than expected, lower target
             # Logging
-            print(f'Updating target. Adjusting target down by {adjust_factor}')
+            self.logger.info(f'Updating target. Adjusting target down by {adjust_factor}')
             self.target = self.f.adjust_target_down(self.target, adjust_factor)
         elif elapsed_time - desired_time < 0:  # Took shorter than expected, raise target
             # Logging
-            print(f'Updating target. Adjusting target up by {adjust_factor}')
+            self.logger.info(f'Updating target. Adjusting target up by {adjust_factor}')
             self.target = self.f.adjust_target_up(self.target, adjust_factor)
 
     def update_memchain(self):
@@ -476,5 +484,5 @@ class Blockchain():
                     temp_height += 1
                 else:
                     # Logging
-                    print('Error loading blocks from chain_db')
+                    self.logger.error('Error loading blocks from chain_db')
                     temp_height = self.height
