@@ -21,7 +21,7 @@ class Formatter():
     TX_TYPE = 0x21
     MINING_TX_TYPE = 0x22
     BLOCK_TYPE = 0x31
-    BLOCK_HEADER_TYPE = 0x32
+    HEADER_TYPE = 0x32
     BLOCK_TX_TYPE = 0x33
     ADDRESS_TYPE = 0x41
     SIGNATURE_TYPE = 0x51

@@ -44,7 +44,7 @@ class Block():
         f = Formatter()
 
         # Type/version
-        type = format(f.BLOCK_HEADER_TYPE, f'0{f.TYPE_CHARS}x')
+        type = format(f.HEADER_TYPE, f'0{f.TYPE_CHARS}x')
         version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
 
         # Format headers
