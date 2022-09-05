@@ -152,8 +152,9 @@ def test_block():
                    transactions=transactions)
     raw_block = block1.raw_block
     raw_header = block1.raw_header
+    # TESTING
     raw_block_transactions = block1.raw_transactions
-    header_dict = d.raw_block_header(raw_header)
+    header = d.raw_block_header(raw_header)
     temp_mining_tx, temp_transactions = d.raw_block_transactions(raw_block_transactions)
     block2 = d.raw_block(raw_block)
 
@@ -168,8 +169,8 @@ def test_block():
         assert transactions[y].raw_tx == temp_transactions[y].raw_tx
 
     # Verify dict values
-    assert header_dict['prev_id'] == prev_id
-    assert header_dict['merkle_root'] == block1.merkle_root
-    assert header_dict['nonce'] == nonce
-    assert header_dict['target'] == target
-    assert header_dict['timestamp'] == timestamp
+    assert header.prev_id == prev_id
+    assert header.merkle_root == block1.merkle_root
+    assert header.nonce == nonce
+    assert header.target == target
+    assert header.timestamp == timestamp

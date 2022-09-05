@@ -6,6 +6,7 @@ from hashlib import sha256
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
+from headers import Header
 from block import Block
 from formatter import Formatter
 from transactions import Transaction, MiningTransaction
@@ -272,19 +273,12 @@ class Decoder:
             return None
 
         # Headers
-        header_dict = self.raw_block_header(raw_block[self.v_index:self.v_index + self.F.HEADER_CHARS])
+        header = self.raw_block_header(raw_block[self.v_index:self.v_index + self.F.HEADER_CHARS])
         mining_tx, transactions = self.raw_block_transactions(raw_block[self.v_index + self.F.HEADER_CHARS:])
 
-        # Get header values
-        prev_id = header_dict['prev_id']
-        merkle_root = header_dict['merkle_root']
-        target = header_dict['target']
-        nonce = header_dict['nonce']
-        timestamp = header_dict['timestamp']
-
         # Get block and verify merkle root
-        block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
-        if block.merkle_root != merkle_root:
+        block = Block(header.prev_id, header.target, header.nonce, header.timestamp, mining_tx, transactions)
+        if block.merkle_root != header.merkle_root:
             # Logging
             print('Merkle root error when recreating block from raw')
             return None
@@ -292,7 +286,7 @@ class Decoder:
 
     def raw_block_header(self, raw_header: str):
         # Type version
-        if not self.verify_type_version(self.F.BLOCK_HEADER_TYPE, self.F.VERSION, raw_header):
+        if not self.verify_type_version(self.F.HEADER_TYPE, self.F.VERSION, raw_header):
             # Logging
             print('Type/Version error in raw block headers')
             return None
@@ -312,14 +306,8 @@ class Decoder:
         nonce = int(raw_header[index3:index4], 16)
         timestamp = int(raw_header[index4:index5], 16)
 
-        # Return dict
-        return {
-            "prev_id": prev_id,
-            "merkle_root": merkle_root,
-            "target": target,
-            "nonce": nonce,
-            "timestamp": timestamp
-        }
+        # Return header
+        return Header(prev_id, merkle_root, target, nonce, timestamp)
 
     def raw_block_transactions(self, raw_txs: str):
         # Type version
