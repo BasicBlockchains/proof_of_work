@@ -96,8 +96,8 @@ def test_add_transaction():
     n.start_miner(gossip=False)
     while n.height < current_height + 1:
         pass
-    n.logger.info(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}', end='\r\n')
     n.stop_miner()
+    n.logger.info(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}')
 
     # Check mining is off
     assert not n.is_mining
