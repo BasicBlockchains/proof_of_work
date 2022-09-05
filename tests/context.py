@@ -14,3 +14,4 @@ from utxo import UTXO_INPUT, UTXO_OUTPUT
 from formatter import Formatter
 from transactions import Transaction, MiningTransaction
 from node import Node
+from headers import Header

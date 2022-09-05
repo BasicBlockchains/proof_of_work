@@ -5,7 +5,8 @@ import json
 from hashlib import sha256
 
 from formatter import Formatter
-from transactions import MiningTransaction
+from transactions import MiningTransaction, Transaction
+from headers import Header
 
 
 class Block():
@@ -22,12 +23,6 @@ class Block():
 
     def __init__(self, prev_id: str, target: int, nonce: int, timestamp: int, mining_tx: MiningTransaction,
                  transactions: list):
-        # Block headers
-        self.prev_id = prev_id
-        self.target = target
-        self.nonce = nonce
-        self.timestamp = timestamp
-
         # Block Transactions
         self.mining_tx = mining_tx
         self.transactions = transactions
@@ -35,27 +30,31 @@ class Block():
         # Calculate merkle root
         self.merkle_root = calc_merkle_root(self.tx_ids)
 
+        # Headers
+        self.header = Header(prev_id, self.merkle_root, target, nonce, timestamp)
+
     def __repr__(self):
         return self.to_json
 
     @property
+    def prev_id(self):
+        return self.header.prev_id
+
+    @property
+    def target(self):
+        return self.header.target
+
+    @property
+    def nonce(self):
+        return self.header.nonce
+
+    @property
+    def timestamp(self):
+        return self.header.timestamp
+
+    @property
     def raw_header(self):
-        # Setup formatter
-        f = Formatter()
-
-        # Type/version
-        type = format(f.HEADER_TYPE, f'0{f.TYPE_CHARS}x')
-        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
-
-        # Format headers
-        prev_id = f.format_hex(self.prev_id, f.HASH_CHARS)
-        merkle_root = f.format_hex(self.merkle_root, f.HASH_CHARS)
-        target = f.target_from_int(self.target)
-        nonce = format(self.nonce, f'0{f.NONCE_CHARS}x')
-        timestamp = format(self.timestamp, f'0{f.TIMESTAMP_CHARS}x')
-
-        # Raw = type + version + prev_hash + merkle_root + target + nonce + timestamp
-        return type + version + prev_id + merkle_root + target + nonce + timestamp
+        return self.header.raw_header
 
     @property
     def raw_transactions(self):
@@ -98,19 +97,21 @@ class Block():
         # Setup formatter
         f = Formatter()
 
-        block_dict = {
-            "prev_id": self.prev_id,
-            "merkle_root": self.merkle_root,
-            "target": f.target_from_int(self.target),
-            "nonce": self.nonce,
-            "timestamp": self.timestamp,
+        # Transactions
+        tx_dict = {
             "mining_tx": json.loads(self.mining_tx.to_json),
             "tx_count": len(self.transactions)
         }
         for t in self.transactions:
-            block_dict.update({
+            tx_dict.update({
                 f'tx_{self.transactions.index(t)}': json.loads(t.to_json)
             })
+
+        # Block
+        block_dict = {
+            "header": json.loads(self.header.to_json),
+            "transactions": tx_dict
+        }
         return json.dumps(block_dict)
 
     @property
