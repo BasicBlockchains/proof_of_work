@@ -3,7 +3,8 @@ Tests for the Node class
 '''
 import os
 
-from .context import Node, Wallet, Block, utc_to_seconds, Transaction, MiningTransaction, Miner, UTXO_INPUT, UTXO_OUTPUT
+from .context import Node, Wallet, Block, utc_to_seconds, Transaction, MiningTransaction, Miner, UTXO_INPUT, \
+    UTXO_OUTPUT, Formatter
 
 
 def create_test_node_block(node: Node):
@@ -35,6 +36,9 @@ def test_add_transaction():
         dir_path = './tests/data/test_node/'
     file_name = 'test_add_transaction.db'
 
+    # Formatter
+    f = Formatter()
+
     # Create Node
     n = Node(dir_path, file_name)
 
@@ -43,6 +47,9 @@ def test_add_transaction():
 
     # CHANGE MINING DELAY
     n.blockchain.f.MINING_DELAY = 0
+
+    # CHANGE blockchain target
+    n.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x1f)
 
     # Mine necessary Block
     next_block = create_test_node_block(n)
@@ -89,7 +96,7 @@ def test_add_transaction():
     n.start_miner(gossip=False)
     while n.height < current_height + 1:
         pass
-    print(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}', end='\r\n')
+    n.logger.info(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}', end='\r\n')
     n.stop_miner()
 
     # Check mining is off

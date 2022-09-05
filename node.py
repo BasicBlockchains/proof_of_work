@@ -62,10 +62,10 @@ class Node:
         self.wallet_file = wallet_file
 
         # Create Blockchain object
-        self.blockchain = Blockchain(self.dir_path, self.db_file)
+        self.blockchain = Blockchain(self.dir_path, self.db_file, logger=self.logger)
 
         # Create Miner object
-        self.miner = Miner()
+        self.miner = Miner(logger=self.logger)
 
         # Create Block queue for miner
         self.block_queue = Queue()
@@ -74,7 +74,7 @@ class Node:
         self.is_mining = False
 
         # Create Wallet object
-        self.wallet = Wallet(seed, dir_path=self.dir_path, file_name=self.wallet_file)
+        self.wallet = Wallet(seed, dir_path=self.dir_path, file_name=self.wallet_file, logger=self.logger)
 
         # Create transaction lists
         self.validated_transactions = []

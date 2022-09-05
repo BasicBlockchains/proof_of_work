@@ -222,10 +222,6 @@ class Blockchain():
 
                 # Save block the chain_db
                 self.chain_db.post_block(block)
-                # TESTING
-                # print(f'Trying to post block: {block}')
-                # print(f'RAW BLOCK: {block.raw_block}')
-                # print(f'Decode raw block: {self.d.raw_block(block.raw_block)}')
 
             # Save block to mem_chain
             self.chain.append(block)
@@ -462,8 +458,6 @@ class Blockchain():
         tx = None
         temp_block = self.find_block_by_tx_id(tx_id)
         if temp_block:
-            # TESTING
-            # print(f'TEMP BLOCK IN GET_TX_BY_ID: {temp_block}')
             # Check for mining tx
             if temp_block.mining_tx.id == tx_id:
                 tx = temp_block.mining_tx

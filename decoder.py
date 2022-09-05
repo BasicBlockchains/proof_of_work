@@ -5,6 +5,7 @@ import json
 from hashlib import sha256
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
+import logging
 
 from headers import Header
 from block import Block
@@ -18,6 +19,14 @@ class Decoder:
     t_index = F.TYPE_CHARS
     v_index = t_index + F.VERSION_CHARS
 
+    def __init__(self, logger=None):
+        # Loggging
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel('DEBUG')
+
     # Verify type version
     def verify_type_version(self, data_type: int, data_version: int, raw_data: str) -> bool:
         # Type and version
@@ -30,10 +39,7 @@ class Decoder:
             assert data_version in self.F.ACCEPTED_VERSIONS
         except AssertionError:
             # Logging
-            print('Type/version error when decoding raw data.')
-            print(f'Type: {type}, data_type: {data_type}')
-            print(f'Version: {version}, data_version: {data_version}')
-            print(f'Raw Data: {raw_data}')
+            self.logger.error(f'Type/version error when decoding raw data. Type: {type}, data_type: {data_type}')
             return False
         return True
 
@@ -54,7 +60,7 @@ class Decoder:
             assert curve.is_x_on_curve(x)
         except AssertionError:
             # Logging
-            print('x not on curve')
+            self.logger.error('x not on curve')
             return (None,)
 
         # Get y
@@ -68,7 +74,7 @@ class Decoder:
             assert curve.is_point_on_curve((x, y))
         except AssertionError:
             # Logging
-            print('Point not on curve')
+            self.logger.error('Point not on curve')
             return (None,)
         # Return point
         return (x, y)
@@ -77,7 +83,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.SIGNATURE_TYPE, self.F.VERSION, signature):
             # Logging
-            print('Type/Version error in raw utxo_input')
+            self.logger.error('Type/Version error in raw utxo_input')
             return None
 
         # Indexing
@@ -121,7 +127,7 @@ class Decoder:
             assert version in self.F.ACCEPTED_VERSIONS
         except AssertionError:
             # Logging
-            print('Address has incorrect type and/or version')
+            self.logger.error('Address has incorrect type and/or version')
             return False
 
         # Indexing
@@ -152,7 +158,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.UTXO_INPUT_TYPE, self.F.VERSION, raw_utxo):
             # Logging
-            print('Type/Version error in raw utxo_input')
+            self.logger.error('Type/Version error in raw utxo_input')
             return None
 
         # tx_id, tx_index, signature
@@ -171,7 +177,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.UTXO_OUTPUT_TYPE, self.F.VERSION, raw_utxo):
             # Logging
-            print('Type/Version error in raw utxo_output')
+            self.logger.error('Type/Version error in raw utxo_output')
             return None
 
         # tx_id, tx_index, signature
@@ -191,7 +197,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.TX_TYPE, self.F.VERSION, raw_tx):
             # Logging
-            print('Type/Version error in raw transaction')
+            self.logger.error('Type/Version error in raw transaction')
             return None
 
         temp_index = self.v_index + self.F.COUNT_CHARS
@@ -220,7 +226,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.MINING_TX_TYPE, self.F.VERSION, raw_tx):
             # Logging
-            print('Type/Version error in raw mininig transaction')
+            self.logger.error('Type/Version error in raw mininig transaction')
             return None
 
         # Indexing
@@ -241,7 +247,7 @@ class Decoder:
             return MiningTransaction(height, reward, block_fees, address, mining_utxo.block_height)
         except AttributeError:
             # Logging
-            print(f'Mining utxo failed to return raw_utxo_output from {raw_tx[index3:]}')
+            self.logger.error(f'Mining utxo failed to return raw_utxo_output from {raw_tx[index3:]}')
 
         return None
 
@@ -269,7 +275,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.BLOCK_TYPE, self.F.VERSION, raw_block):
             # Logging
-            print('Type/Version error in raw block')
+            self.logger.error('Type/Version error in raw block')
             return None
 
         # Headers
@@ -280,7 +286,7 @@ class Decoder:
         block = Block(header.prev_id, header.target, header.nonce, header.timestamp, mining_tx, transactions)
         if block.merkle_root != header.merkle_root:
             # Logging
-            print('Merkle root error when recreating block from raw')
+            self.logger.error('Merkle root error when recreating block from raw')
             return None
         return block
 
@@ -288,7 +294,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.HEADER_TYPE, self.F.VERSION, raw_header):
             # Logging
-            print('Type/Version error in raw block headers')
+            self.logger.error('Type/Version error in raw block headers')
             return None
 
         # Indexing
@@ -313,7 +319,7 @@ class Decoder:
         # Type version
         if not self.verify_type_version(self.F.BLOCK_TX_TYPE, self.F.VERSION, raw_txs):
             # Logging
-            print('Type/Version error in raw block transactions')
+            self.logger.error('Type/Version error in raw block transactions')
             return None
 
             # Get mining_tx
@@ -353,7 +359,7 @@ class Decoder:
         mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
         if mining_tx.mining_utxo.amount != amount:
             # Logging
-            print('Block failed to reconstruct MiningTransaction')
+            self.logger.error('Block failed to reconstruct MiningTransaction')
             return None
         tx_count = block_dict['tx_count']
         transactions = []
@@ -382,7 +388,7 @@ class Decoder:
             return temp_block
         else:
             # Logging
-            print('Block failed to reconstruct from dict.')
+            self.logger.error('Block failed to reconstruct from dict.')
             return None
 
     # Node
