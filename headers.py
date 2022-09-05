@@ -5,6 +5,7 @@ import json
 
 from timestamp import utc_to_seconds
 from formatter import Formatter
+from hashlib import sha256
 
 
 class Header:
@@ -15,6 +16,9 @@ class Header:
         self.nonce = nonce
         self.timestamp = timestamp
         self.merkle_root = merkle_root
+
+    def __repr__(self):
+        return self.to_json
 
     @property
     def raw_header(self):
@@ -48,3 +52,7 @@ class Header:
             "timestamp": self.timestamp
         }
         return json.dumps(header_dict)
+
+    @property
+    def id(self):
+        return sha256(self.raw_header.encode()).hexdigest()
