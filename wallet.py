@@ -7,6 +7,7 @@ from hashlib import sha512
 from pathlib import Path
 
 import pandas as pd
+import logging
 from basicblockchains_ecc import elliptic_curve as EC
 
 from decoder import Decoder
@@ -42,7 +43,16 @@ class Wallet():
     F = Formatter()
     D = Decoder()
 
-    def __init__(self, seed=None, seed_bits=128, dir_path=DIR_PATH, file_name=FILE_NAME, save=True):
+    def __init__(self, seed=None, seed_bits=128, dir_path=DIR_PATH, file_name=FILE_NAME, save=True, logger=None):
+        # Loggging
+        if logger:
+            self.logger = logger.getChild(__name__)
+        else:
+            self.logger = logging.getLogger('Wallet')
+            self.logger.setLevel('DEBUG')
+            self.logger.addHandler(logging.StreamHandler())
+        self.logger.debug(f'Logger instantiated in blockchain with name: {self.logger.name}')
+
         # Use secp256k1 curve as standard
         self.curve = EC.secp256k1()
 
@@ -128,6 +138,7 @@ class Wallet():
                 return int(seed_string, 16)
 
         # Logging
+        self.logger.warning(f'Wallet file {file_name} not found at {dir_path}')
         return None
 
     # --- SEED METHODS --- #
@@ -167,7 +178,7 @@ class Wallet():
         # Verify amount - return None if not enough money
         if amount + fees > self.spendable:
             # Logging
-            print('Insufficient funds')
+            self.logger.warning('Insufficient funds')
             return None
 
         # Copy utxos
@@ -197,7 +208,7 @@ class Wallet():
 
         if row == 256:
             # Logging
-            print('TX Created with more than 256 Inputs. Rejecting transaction.')
+            self.logger.error('TX Created with more than 256 Inputs. Rejecting transaction.')
             return None
 
         utxo_output = UTXO_OUTPUT(amount=amount, address=address, block_height=block_height)
@@ -222,11 +233,11 @@ class Wallet():
         r = requests.post(url, data=json.dumps(data), headers=headers)
         if r.status_code in [201, 202]:
             # Logging
-            print(f'New tx sent to {node}')
+            self.logger.info(f'New tx sent to {node}')
             return True
         else:
             # Logging
-            print(f'Error sending tx to {node}. Status: {r.status_code}')
+            self.logger.error(f'Error sending tx to {node}. Status: {r.status_code}')
             return False
 
     def get_node_list(self, node=LEGACY_NODE) -> bool:
@@ -244,7 +255,7 @@ class Wallet():
             return True
         else:
             # Logging
-            print(f'Unable to get node list from {node}')
+            self.logger.warning(f'Unable to get node list from {node}')
             return False
 
     def get_utxos_from_node(self, node=LEGACY_NODE):
@@ -257,7 +268,7 @@ class Wallet():
             return utxo_dict
         except ConnectionRefusedError:
             # Logging
-            print(f'Unable to connect to {node}. Update node list.')
+            self.logger.warning(f'Unable to connect to {node}. Update node list.')
             return {}
 
     def get_latest_height(self, node=LEGACY_NODE):
@@ -270,7 +281,7 @@ class Wallet():
             self.height = height_dict['height']
         except ConnectionRefusedError:
             # Logging
-            print(f'Unable to connect to {node}. Update node list.')
+            self.logger.warning(f'Unable to connect to {node}. Update node list.')
             return {}
 
     def confirm_tx_by_id(self, tx_id: str) -> bool:
@@ -299,7 +310,7 @@ class Wallet():
             self.utxos = temp_df
         except KeyError:
             # Logging
-            print(f'No utxo_count value found in utxo dict: {utxos}')
+            self.logger.error(f'No utxo_count value found in utxo dict: {utxos}')
 
     def update_utxos_from_pending_transactions(self):
 

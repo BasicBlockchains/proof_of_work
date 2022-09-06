@@ -3,21 +3,35 @@ We test the Block class and related functions
 '''
 import secrets
 from hashlib import sha256
-
+from basicblockchains_ecc.elliptic_curve import secp256k1
 from .context import Block, calc_merkle_root, merkle_proof, utc_to_seconds, UTXO_OUTPUT, UTXO_INPUT, Transaction, \
     MiningTransaction, Wallet, Decoder, Formatter
 from .test_wallet import random_tx_id
 
 
 # ---Helpers---#
+def get_random_address():
+    f = Formatter()
+    curve = secp256k1()
+    private_key = secrets.randbits(256)
+    public_key = curve.scalar_multiplication(private_key, curve.generator)
+    cpk = f.cpk(public_key)
+    return f.address(cpk)
+
+
+def get_random_signature(tx_id: str):
+    f = Formatter()
+    private_key = secrets.randbits(256)
+    return f.signature(private_key, tx_id)
+
+
 def get_random_utxo_input():
     # Id and index
     tx_id = random_tx_id()
     index = secrets.randbits(4)
-    wallet = Wallet()
 
     # Signature
-    signature = wallet.sign_transaction(tx_id)
+    signature = get_random_signature(tx_id)
 
     # UTXO
     return UTXO_INPUT(tx_id, index, signature)
@@ -28,7 +42,7 @@ def get_random_utxo_output():
 
     # Random values
     amount = secrets.randbits(64)
-    address = Wallet().address
+    address = get_random_address()
     height = secrets.randbits(64)
 
     # UTXO
@@ -53,13 +67,13 @@ def get_random_transaction():
 def get_random_mining_tx():
     # Formatter/Decoder
     f = Formatter()
-    w = Wallet()
+    address = get_random_address()
     height = secrets.randbits(64)
     reward = secrets.randbits(40)
     block_fees = secrets.randbits(64)
     block_height = secrets.randbits(64)
 
-    return MiningTransaction(height, reward, block_fees, w.address, block_height)
+    return MiningTransaction(height, reward, block_fees, address, block_height)
 
 
 def get_random_target():

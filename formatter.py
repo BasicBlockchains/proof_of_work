@@ -84,6 +84,10 @@ class Formatter():
     PORT_CHARS = 4
     NODE_CHARS = IP_CHARS + PORT_CHARS
 
+    # LOG FORMATTING
+    LOGGING_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+
     # Ease of use formatting
     def format_hex(self, hex_string: str, hex_length: int):
         if hex_string:

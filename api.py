@@ -105,7 +105,7 @@ def create_app(node: Node):
                         node.gossip_protocol_block(temp_block)
                         if node.is_mining:
                             # Logging
-                            print('Restarting Miner after receiving new block.')
+                            node.logger.info('Restarting Miner after receiving new block.')
                             node.stop_miner()
                             node.start_miner()
                         return Response("Block received and added successfully", status=200,
@@ -117,7 +117,7 @@ def create_app(node: Node):
                     return Response("Block failed to reconstruct from dict.", status=406, mimetype='application/json')
             except Exception as e:
                 # Logging
-                print(f'Post request failed with exception {e}')
+                node.logger.error(f'Post request failed with exception {e}')
                 return Response(f'Post request failed with exception {e}', status=404, mimetype='application/json')
 
     @app.route('/block/<height>/', methods=['GET'])
@@ -148,9 +148,6 @@ def create_app(node: Node):
 
     @app.route('/raw_block/', methods=['GET', 'POST'])
     def get_last_block_raw():
-        # Logging
-        print(f'{request.method} to {request.url} for raw_block')
-
         # Return last block at this endpoint
         if request.method == 'GET':
             return jsonify(node.blockchain.chain_db.get_raw_block(node.height))
@@ -166,7 +163,7 @@ def create_app(node: Node):
                     node.gossip_protocol_raw_block(temp_block)
                     if node.is_mining:
                         # Logging
-                        print('Restarting Miner after receiving new block.')
+                        node.logger.info('Restarting Miner after receiving new block.')
                         node.stop_miner()
                         node.start_miner()
                     return Response("Block received and added successfully", status=200,

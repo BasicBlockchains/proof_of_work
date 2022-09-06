@@ -237,8 +237,6 @@ class DataBase:
     def get_utxos_by_tx_id(self, tx_id: str):
         query = """SELECT * from utxo_pool WHERE tx_id = ?"""
         list_of_utxo_tuples = self.query_db(query, (tx_id,))
-        print(list_of_utxo_tuples)
-
         utxo_dict = {'tx_id': tx_id, 'utxo_count': len(list_of_utxo_tuples)}
 
         # Get utxos as dicts
@@ -258,8 +256,6 @@ class DataBase:
     def get_total_amount_greater_than_block_height(self, block_height: int):
         query = """SELECT amount, block_height from utxo_pool WHERE length(block_height) >= ?"""
         list_of_utxo_tuples = self.query_db(query, (len(hex(block_height)),))
-        # TESTING
-        print(f'GET TOTAL AMOUNT CALL. LIST OF TUPLES: {list_of_utxo_tuples}')
         total_amount = 0
         for amount_tuple in list_of_utxo_tuples:
             (hex_amount, hex_block_height) = amount_tuple
