@@ -343,12 +343,12 @@ class Decoder:
 
     def block_from_dict(self, block_dict: dict):
         # Construct block
-        prev_id = block_dict['prev_id']
-        merkle_root = block_dict['merkle_root']
-        target = self.F.int_from_target(block_dict['target'])
-        nonce = block_dict['nonce']
-        timestamp = block_dict['timestamp']
-        mining_tx_dict = block_dict['mining_tx']
+        prev_id = block_dict['header']['prev_id']
+        merkle_root = block_dict['header']['merkle_root']
+        target = self.F.int_from_target(block_dict['header']['target'])
+        nonce = block_dict['header']['nonce']
+        timestamp = block_dict['header']['timestamp']
+        mining_tx_dict = block_dict['transactions']['mining_tx']
         height = mining_tx_dict['height']
         reward = mining_tx_dict['reward']
         block_fees = mining_tx_dict['block_fees']
@@ -361,10 +361,10 @@ class Decoder:
             # Logging
             self.logger.error('Block failed to reconstruct MiningTransaction')
             return None
-        tx_count = block_dict['tx_count']
+        tx_count = block_dict['transactions']['tx_count']
         transactions = []
         for x in range(tx_count):
-            tx_dict = block_dict[f'tx_{x}']
+            tx_dict = block_dict['transactions'][f'tx_{x}']
             input_count = tx_dict['input_count']
             inputs = []
             for y in range(input_count):
