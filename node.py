@@ -10,7 +10,7 @@ import socket
 import threading
 from multiprocessing import Process, Queue
 import logging
-
+import time
 from logging.handlers import QueueHandler, QueueListener
 import requests
 from requests import get
@@ -95,6 +95,9 @@ class Node:
 
         # Create connected flag for network
         self.is_connected = False
+
+        # Create network height variable for gui
+        self.network_height = 0
 
     # --- PROPERTIES --- #
     @property
@@ -259,6 +262,9 @@ class Node:
     def add_block(self, block: Block, gossip=True) -> bool:
         added = self.blockchain.add_block(block)
         if added:
+            # Logging
+            self.logger.info(f'Added block at height {block.height}')
+
             # Remove validated transactions
             validated_tx_index = self.validated_transactions.copy()
             for tx in validated_tx_index:
@@ -497,7 +503,7 @@ class Node:
                         # Logging
                         self.logger.warning(f'Error connecting to {(ip, port)}')
 
-            # Download the blocks
+            # Catchup to network
             self.catchup_to_network()
 
             # Get validated txs
@@ -536,17 +542,27 @@ class Node:
         node_list_index.remove(self.node)
         if node_list_index != []:
             random_node = random.choice(node_list_index)
-            network_height = self.request_height(random_node)
-            while self.height < network_height:
+            # Assign as class variable for use in gui
+            self.network_height = self.request_height(random_node)
+
+            while self.height < self.network_height:
+                # Class variables for gui loading screen
+                self.percent_complete = int((self.height / self.network_height) * 100)  # take max to avoid div/0
+
+                # Get random node and add next block
                 random_node = random.choice(node_list_index)
                 next_block = self.request_indexed_block(self.height + 1, random_node)
                 added = self.add_block(next_block)
                 if added:
                     # Logging
                     self.logger.info(f'Successfully added block at height {self.height} from node {random_node}.')
+                    # TESTING
+                    self.logger.debug('Waiting')
+                    time.sleep(1)
                 else:
                     # Logging
                     self.logger.critical(f'Failed to add block at {self.height + 1} from node {random_node}.')
+            self.logger.info('Node height equal to network height')
 
     def request_height(self, node: tuple) -> int:
         ip, port = node

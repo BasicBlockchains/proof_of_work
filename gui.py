@@ -25,6 +25,39 @@ DEFAULT_WINDOW_SIZE = (800, 600)
 buffer = ''
 
 
+# --- DOWNLOAD WINDOW --- #
+def create_download_window(theme=DEFAULT_THEME):
+    sg.theme(theme)
+    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_options(font='Ubuntu 12', )
+
+    main_layout = [
+        [
+            sg.Push(),
+            sg.Text('DOWNLOADING BLOCKS', justification='center'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Text('Block', justification='right'),
+            sg.InputText(key='-current_height-', disabled=True, use_readonly_for_disable=True, size=(6, 1),
+                         border_width=0, justification='left'),
+            sg.Text(' of Block', justification='right'),
+            sg.InputText(key='-network_height-', disabled=True, use_readonly_for_disable=True, size=(6, 1),
+                         border_width=0, justification='left'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.ProgressBar(100, orientation='h', size=(40, 2), key='-pct_complete-', bar_color=("#ac92ec", "#000000"),
+                           border_width=5),
+            sg.Push()
+        ]
+    ]
+
+    return sg.Window('LOADING', main_layout, resizable=False, finalize=True, )
+
+
 # --- MAIN GUI WINDOW --- #
 def create_window(theme=DEFAULT_THEME):
     sg.theme(theme)
@@ -337,6 +370,7 @@ def run_node_gui():
     gui_logger = logging.getLogger('GUI')
     gui_logger.setLevel('DEBUG')
     gui_logger.addHandler(Handler())
+    gui_logger.propagate = False
     global buffer
 
     # Start Node
@@ -352,7 +386,13 @@ def run_node_gui():
     app_thread.start()
 
     # Connect to network
-    node.connect_to_network()
+    gui_logger.info('Connecting to network.')
+    connecting_thread = threading.Thread(target=node.connect_to_network)
+    # node.connect_to_network()
+    connecting_thread.start()
+    download_window = create_download_window()
+    download_window['-current_height-'].update(str(node.height))
+    download_window['-network_height-'].update(str(node.network_height))
 
     # Update node wallet
     node.wallet.get_latest_height(node.node)
@@ -422,16 +462,52 @@ def run_node_gui():
     balance = -1
     utxo_list = []
 
+    # Download
+    current_height = -1
+    network_height = -1
+    percent_complete = -1
+
     # Logstring for log window
     log_string = ''
+
+    # Download blocks
+    while connecting_thread.is_alive():
+        if download_window.is_closed():
+            download_window = create_download_window()
+
+        dl_event, dl_values = download_window.read(timeout=10)
+
+        if current_height != node.height:
+            current_height = node.height
+            download_window['-current_height-'].update(str(current_height))
+
+        if network_height != node.network_height:
+            network_height = node.network_height
+            download_window['-network_height-'].update(str(network_height))
+
+        if percent_complete != node.percent_complete:
+            percent_complete = node.percent_complete
+            download_window['-pct_complete-'].update(percent_complete)
+
+        # Update logs
+        if log_string != buffer:
+            log_string = buffer
+            window['-logs-'].update(buffer)
+
+    download_window.close()
 
     # GUI LOOP
     while True:
         event, values = window.read(timeout=10)
 
-        # Exit
+        # Exit conditions
         if event in [sg.WIN_CLOSED, 'Exit']:
             break
+
+        # Update logs
+        if log_string != buffer:
+            log_string = buffer
+            window['-logs-'].update(buffer)
 
         # Tab Groups
         if event == '-tab_group-' and values[event] == '-status_tab-':
@@ -444,9 +520,6 @@ def run_node_gui():
             window['-wallet_address-'].Widget.select_clear()
 
         # ### --- LOGS --- ###
-        if log_string != buffer:
-            log_string = buffer
-            window['-logs-'].update(buffer)
 
         ### --- SAVE/LOAD --- ###
         # Load Blockchain
@@ -842,7 +915,8 @@ def run_node_gui():
 
         # Testing
         if event == 'About BB POW':
-            print(ping_list)
+            # print(values)
+            print(f'Connecting thread alive: {connecting_thread.is_alive()}')
 
     # Cleanup
     if node.is_mining:
