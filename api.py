@@ -3,9 +3,12 @@ REST API for the Blockchain
 '''
 
 import waitress
-from flask import Flask, jsonify, request, Response, json
+from flask import Flask, jsonify, request, Response, json, render_template
 from timestamp import utc_timestamp
 from node import Node
+
+
+# --- ROOT ENDPOINT MESSAGES --- #
 
 
 def create_app(node: Node):
@@ -15,9 +18,10 @@ def create_app(node: Node):
 
     @app.route('/')
     def hello_world():
-        welcome_string = "Welcome to the BB_POW!"
-        # TODO: Add index.html with list of endpoints, links, etc..
-        return welcome_string
+        return "Welcome to the BB POW!"
+
+        # TODO: In prod enable the index page
+        # return render_template('index.html')
 
     @app.route('/ping/')
     def ping():

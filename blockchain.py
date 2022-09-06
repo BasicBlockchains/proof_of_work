@@ -1,7 +1,5 @@
 '''
 The Blockchain Class
-
-TODO: During loading, account for file existing which doesn't contain correct genesis block
 '''
 
 from pathlib import Path
@@ -27,7 +25,7 @@ class Blockchain():
     GENESIS_TIMESTAMP = 1664631000  # October 1st, 9:30 AM EST // 1:30 PM UTC
 
     # Directory defaults
-    DIR_PATH = 'src/data/'
+    DIR_PATH = './data/'
     DB_FILE = 'chain.db'
 
     # Decoder and formatter
@@ -35,31 +33,20 @@ class Blockchain():
     f = Formatter()
 
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None):
-        # Loggging
+        # Logging
         if logger:
-            self.logger = logger.getChild(__name__)
+            self.logger = logger.getChild('Blockchain')
         else:
             self.logger = logging.getLogger('Blockchain')
             self.logger.setLevel('DEBUG')
             self.logger.addHandler(logging.StreamHandler())
+
         self.logger.debug(f'Logger instantiated in blockchain with name: {self.logger.name}')
 
         # Curve for cryptography
         self.curve = secp256k1()
 
-        # Set path and filename variables
-        self.dir_path = dir_path
-        self.db_file = db_file
-
-        # Check for db
-        new_db = False if Path(self.dir_path, self.db_file).exists() else True
-
-        # Create db - Database will create file
-        self.chain_db = DataBase(self.dir_path, self.db_file)
-        if new_db:  # Create db if path doesn't already exist
-            self.chain_db.create_db()
-
-        # Mining values
+        # Initial values
         self.total_mining_amount = self.f.TOTAL_MINING_AMOUNT
         self.mining_reward = 0
         self.target = self.f.target_from_parts(self.f.STARTING_TARGET_COEFFICIENT, self.f.STARTING_TARGET_EXPONENT)
@@ -71,14 +58,27 @@ class Blockchain():
         # Create fork list to index forked blocks
         self.forks = []
 
-        # Create load_count variable for loading chain
+        # Set path and filename variables
+        self.dir_path = dir_path
+        self.db_file = db_file
+
+        # Check for db
+        db_exists = Path(self.dir_path, self.db_file).exists()
+
+        # Create loading counter
         self.load_count = -1
 
-        # Create genesis block - if db is new, then loading = False
-        self.add_block(self.create_genesis_block(), loading=not new_db)
+        # Create db - Database will create file in the given dir_path even if it doesn't exist
+        self.chain_db = DataBase(self.dir_path, self.db_file)
+        if not db_exists:
+            self.chain_db.create_db()
 
-        # Load chain if it exists
-        self.load_chain()
+        # Create genesis block
+        self.add_block(self.create_genesis_block(), loading=db_exists)
+
+        # Load db if it exists
+        if db_exists:
+            self.load_chain()
 
     # Properties
     @property
@@ -209,6 +209,8 @@ class Blockchain():
 
         if valid_block:
             if not loading:
+                # Logging
+                self.logger.info(f'Successfully added block with id {block.id} at height {block.height}')
                 # Consume UTXOS
                 for tx in block.transactions:
                     # Consume UTXOS in tx inputs
@@ -237,10 +239,10 @@ class Blockchain():
                 self.load_count += 1
                 if self.load_count % self.f.HALVING_NUMBER == 0:
                     self.update_reward()
-
-            # When running
-            if self.height % self.f.HALVING_NUMBER == 0 or self.mining_reward > self.total_mining_amount:
-                self.update_reward()
+            else:
+                # When running
+                if self.height % self.f.HALVING_NUMBER == 0 or self.mining_reward > self.total_mining_amount:
+                    self.update_reward()
 
             # Update target
             # Adjust target every heartbeat blocks
@@ -381,6 +383,8 @@ class Blockchain():
         # Genesis
         if self.mining_reward == 0:
             self.mining_reward = self.f.STARTING_REWARD
+            # Logging
+            self.logger.info(f'Setting initial mining reward to {self.mining_reward}')
         # Account for near empty mine
         elif self.mining_reward > self.total_mining_amount:
             self.mining_reward = self.total_mining_amount
@@ -471,6 +475,7 @@ class Blockchain():
 
     # Load chain
     def load_chain(self):
+        self.logger.info(f'Loading blockchain from database. Blockchain saved at height {self.height}.')
         # Load rest of chain if it exists
         temp_height = len(self.chain) - 1
         while temp_height != self.height:
@@ -482,4 +487,5 @@ class Blockchain():
                 else:
                     # Logging
                     self.logger.error('Error loading blocks from chain_db')
-                    temp_height = self.height
+                    break
+        self.logger.info('Successfully loaded Blockchain from database.')
