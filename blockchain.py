@@ -37,10 +37,12 @@ class Blockchain():
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None):
         # Loggging
         if logger:
-            self.logger = logger
+            self.logger = logger.getChild(__name__)
         else:
-            self.logger = logging.getLogger(__name__)
+            self.logger = logging.getLogger('Blockchain')
             self.logger.setLevel('DEBUG')
+            self.logger.addHandler(logging.StreamHandler())
+        self.logger.debug(f'Logger instantiated in blockchain with name: {self.logger.name}')
 
         # Curve for cryptography
         self.curve = secp256k1()
@@ -311,7 +313,8 @@ class Blockchain():
 
     def create_genesis_block(self) -> Block:
         genesis_transaction = MiningTransaction(0, self.f.HALVING_NUMBER * self.f.BASIC_TO_BBS, 0,
-                                                Wallet(seed=0, save=False).address, 0xffffffffffffffff)
+                                                Wallet(seed=0, save=False, logger=self.logger).address,
+                                                0xffffffffffffffff)
         genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
         return genesis_block

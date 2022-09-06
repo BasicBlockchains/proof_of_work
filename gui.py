@@ -2,6 +2,7 @@
 Main File for GUI
 '''
 import _tkinter
+import logging
 import os.path
 import threading
 import time
@@ -13,14 +14,15 @@ import PySimpleGUI as sg
 from api import run_app
 from blockchain import Blockchain
 from decoder import Decoder
-from formatter import Formatter
 from node import Node
 from timestamp import utc_to_seconds, seconds_to_utc
 from wallet import Wallet
+from formatter import Formatter
 
 # --- CONSTANTS --- #
 DEFAULT_THEME = 'SystemDefault'
 DEFAULT_WINDOW_SIZE = (800, 600)
+buffer = ''
 
 
 # --- MAIN GUI WINDOW --- #
@@ -71,8 +73,8 @@ def create_window(theme=DEFAULT_THEME):
          sg.InputText(key='-prev_id-', disabled=True, use_readonly_for_disable=True, border_width=0, size=(64, 1)),
          sg.Push(), ],
         [
-            sg.InputText(key='-logs-', expand_x=True, expand_y=True, disabled=True, use_readonly_for_disable=True,
-                         disabled_readonly_background_color='#ffffff', border_width=10)
+            sg.Multiline(key='-logs-', pad=10, expand_x=True, expand_y=True, disabled=True, background_color='#FFFFFF',
+                         right_click_menu=right_click_menu[0], autoscroll=True, enable_events=True)
         ]
     ]
 
@@ -310,16 +312,39 @@ def create_window(theme=DEFAULT_THEME):
     return sg.Window('BB POW', layout, size=DEFAULT_WINDOW_SIZE, resizable=True, finalize=True)
 
 
+# --- HANDLER FOR LOGGING WINDOW --- #
+class Handler(logging.StreamHandler):
+    '''
+    Following advice here: https://github.com/PySimpleGUI/PySimpleGUI/issues/2968
+    '''
+
+    def __init__(self):
+        logging.StreamHandler.__init__(self)
+        self.formatter = logging.Formatter(Formatter.LOGGING_FORMAT, Formatter.DATE_FORMAT)
+
+    def emit(self, record):
+        global buffer
+        record = self.formatter.format(record)
+        buffer = f'{buffer}\n{record}'.strip()
+
+
 def run_node_gui():
     # Setup Window
     window = create_window()
     window.set_min_size((1200, 800))
 
+    # # Logger
+    gui_logger = logging.getLogger('GUI')
+    gui_logger.setLevel('DEBUG')
+    gui_logger.addHandler(Handler())
+    global buffer
+
     # Start Node
-    node = Node()
+    gui_logger.info('Starting Node. May take a few minutes')
+    node = Node(logger=gui_logger)
 
     # Formatter/Decoder
-    f = Formatter()
+    # f = Formatter()
     d = Decoder()
 
     # Run app with waitress
@@ -397,6 +422,9 @@ def run_node_gui():
     balance = -1
     utxo_list = []
 
+    # Logstring for log window
+    log_string = ''
+
     # GUI LOOP
     while True:
         event, values = window.read(timeout=10)
@@ -415,6 +443,11 @@ def run_node_gui():
         if event == '-tab_group-' and values[event] == '-wallet_tab-':
             window['-wallet_address-'].Widget.select_clear()
 
+        # ### --- LOGS --- ###
+        if log_string != buffer:
+            log_string = buffer
+            window['-logs-'].update(buffer)
+
         ### --- SAVE/LOAD --- ###
         # Load Blockchain
         if event == 'Open Blockchain':
@@ -431,10 +464,10 @@ def run_node_gui():
                         node.db_file = file_name
                     except Exception as e:
                         # Logging
-                        print(f'Failed to load Blockchain. Error: {e}')
+                        gui_logger.error(f'Failed to load Blockchain. Error: {e}')
                 else:
                     # Logging
-                    print(f'Select a database file')
+                    gui_logger.warning(f'Select a database file')
 
         # Load Wallet
         if event == 'Open Wallet':
@@ -446,17 +479,17 @@ def run_node_gui():
                 dir_path, file_name = os.path.split(file_path)
                 if '.dat' in file_name:
                     try:
-                        node.wallet = Wallet(dir_path=dir_path, file_name=file_name)
+                        node.wallet = Wallet(dir_path=dir_path, file_name=file_name, logger=gui_logger)
                         window['-wallet_address-'].update(node.wallet.address)
                         # Update node wallet
                         node.wallet.get_latest_height(node.node)
                         node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
                     except Exception as e:
                         # Logging
-                        print(f'Unable to load wallet. Error: {e}')
+                        gui_logger.error(f'Unable to load wallet. Error: {e}')
                 else:
                     # Logging
-                    print(f'Select a wallet file')
+                    gui_logger.warning(f'Select a wallet file')
 
         # Save Blockchain
         if event == 'Save Blockchain':
@@ -484,10 +517,10 @@ def run_node_gui():
                         node.db_file = file_name
                     except Exception as e:
                         # Logging
-                        print(f'Failed to load Blockchain. Error: {e}')
+                        gui_logger.error(f'Failed to load Blockchain. Error: {e}')
                 else:
                     # Logging
-                    print(f'Database file must have .db extension.')
+                    gui_logger.warning(f'Database file must have .db extension.')
 
         # Save Wallet
         if event == 'Save Wallet':
@@ -500,14 +533,14 @@ def run_node_gui():
                 dir_path, file_name = os.path.split(file_path)
                 if file_name.endswith('.dat'):
                     wallet_seed = node.wallet.load_wallet(node.dir_path, node.wallet_file)
-                    new_wallet = Wallet(seed=wallet_seed, dir_path=dir_path, file_name=file_name)
+                    new_wallet = Wallet(seed=wallet_seed, dir_path=dir_path, file_name=file_name, logger=gui_logger)
                     node.wallet = new_wallet
                     # Update Wallet
                     node.wallet.get_latest_height(node.node)
                     node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
                 else:
                     # Logging
-                    print(f'Wallet file must have .dat extension.')
+                    gui_logger.warning(f'Wallet file must have .dat extension.')
 
         ### --- INFO BAR --- ###
         # Mining Icon
@@ -552,7 +585,7 @@ def run_node_gui():
                 node.connect_to_network(node=(temp_ip, int(temp_port)))
             else:
                 node.connect_to_network()
-                
+
         # Disconnect
         if event == '-disconnect-' and connected:
             node.disconnect_from_network()
@@ -614,10 +647,9 @@ def run_node_gui():
                         ping_list.remove(pt)
                         ping_list.append((ip, port, str(ping_time), seconds_to_utc(contact_dict[(ip, port)])))
                         window['-node_list_table-'].update(ping_list)
-                        print(f'New Ping List: {ping_list}')
                 except IndexError:
                     # Logging
-                    print(f'No node in list with ip {ip} and port {port}')
+                    gui_logger.error(f'No node in list with ip {ip} and port {port}')
 
         if event == '-clear-':
             window['-selected_ip-'].update('')
@@ -647,7 +679,8 @@ def run_node_gui():
                 try:
                     window[window_key].update(paste_text)
                 except Exception as e:
-                    print(f'Encountered exception when copying: {e}')
+                    # Logging
+                    gui_logger.error(f'Encountered exception when copying: {e}')
 
         if event == 'Clear':
             window_key = window.FindElementWithFocus().Key
@@ -657,7 +690,7 @@ def run_node_gui():
             except _tkinter.TclError:
                 pass
             if selected_text:
-                window[window_key].Widget.select_clear()
+                window[window_key].Widget.selection_clear()
                 if window_key in [
                     '-selected_ip-', '-selected_port-',
                     '-wallet_sendto-', '-wallet_amount-', '-wallet_fees-'
@@ -690,8 +723,8 @@ def run_node_gui():
                 window['-bb2b_button-'].update("BBs to Basic")
                 window['-bb2b_button-'].metadata = 'currently_bbs'
 
-        if target != f.target_from_int(node.target) and window['-target_button-'].metadata == 'currently_encoded':
-            target = f.target_from_int(node.target)
+        if target != node.f.target_from_int(node.target) and window['-target_button-'].metadata == 'currently_encoded':
+            target = node.f.target_from_int(node.target)
             window['-miner_target-'].update(target)
         if target != hex(node.target) and window['-target_button-'].metadata == 'currently_hex':
             target = hex(node.target)
@@ -699,15 +732,16 @@ def run_node_gui():
         if reward != node.mining_reward and window['-bb2b_button-'].metadata == 'currently_bbs':
             reward = node.mining_reward
             window['-miner_reward-'].update(str(reward) + " BBs")
-        if reward != node.mining_reward // f.BASIC_TO_BBS and window['-bb2b_button-'].metadata == 'currently_basic':
-            reward = node.mining_reward // f.BASIC_TO_BBS
+        if reward != node.mining_reward // node.f.BASIC_TO_BBS and window[
+            '-bb2b_button-'].metadata == 'currently_basic':
+            reward = node.mining_reward // node.f.BASIC_TO_BBS
             window['-miner_reward-'].update(str(reward) + " BasiCoins")
         if total_mine_amount != node.total_mining_amount and window['-bb2b_button-'].metadata == 'currently_bbs':
             total_mine_amount = node.total_mining_amount
             window['-total_mining_amount-'].update(str(total_mine_amount) + " BBs")
-        if total_mine_amount != node.total_mining_amount // f.BASIC_TO_BBS and window[
+        if total_mine_amount != node.total_mining_amount // node.f.BASIC_TO_BBS and window[
             '-bb2b_button-'].metadata == 'currently_basic':
-            total_mine_amount = node.total_mining_amount // f.BASIC_TO_BBS
+            total_mine_amount = node.total_mining_amount // node.f.BASIC_TO_BBS
             window['-total_mining_amount-'].update(str(total_mine_amount) + " BasiCoins")
 
         # TX tables
@@ -771,35 +805,35 @@ def run_node_gui():
                     block_height = int(string_block_height)
                 else:
                     block_height = 0
-                print(f'Amount: {amount}')
-                print(f'Fees: {fees}')
 
                 if not d.verify_address(sendto_address):
                     # Logging
-                    print(f'Address {sendto_address} is invalid.\n')
+                    gui_logger.warning(f'Address {sendto_address} is invalid.\n')
                 elif amount > node.wallet.spendable:
                     # Logging
-                    print(f'Insufficient balance. Available funds: {node.wallet.spendable}.\n')
+                    gui_logger.warning(f'Insufficient balance. Available funds: {node.wallet.spendable}.\n')
                 elif fees <= 0:
-                    print('Cannot have zero fee amount.\n')
+                    # Logging
+                    gui_logger.warning('Cannot have zero fee amount.\n')
                 else:
                     new_tx = node.wallet.create_transaction(sendto_address, amount, fees, block_height)
-                    # print(new_tx)
+                    # Logging
+                    gui_logger.info(f'New transaction created with id {new_tx.id}.')
                     if new_tx:
                         tx_sent = node.send_tx_to_node(new_tx, node.node)  # Triggers gossip protocol
                         # Logging
-                        print(f'Transaction with id {new_tx.id} sent to network. Received: {tx_sent}.')
+                        gui_logger.info(f'Transaction with id {new_tx.id} sent to network. Received: {tx_sent}.')
                         node.wallet.update_utxos_from_pending_transactions()
                     else:
                         # Logging
-                        print('Error creating transaction.')
+                        gui_logger.error('Error creating transaction.')
                     window['-wallet_sendto-'].update('')
                     window['-wallet_amount-'].update('')
                     window['-wallet_fees-'].update('')
                     window['-wallet_block_height-'].update('')
             else:
                 # Logging
-                print('Enter a valid amount and/or fees.')
+                gui_logger.warning('Enter a valid amount and/or fees.')
         if event == '-wallet_cancel-':
             window['-wallet_sendto-'].update('')
             window['-wallet_amount-'].update('')
@@ -809,7 +843,6 @@ def run_node_gui():
         # Testing
         if event == 'About BB POW':
             print(ping_list)
-            # print(f'Ping List: {node.ping_list}')
 
     # Cleanup
     if node.is_mining:

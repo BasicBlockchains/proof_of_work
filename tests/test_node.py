@@ -52,11 +52,11 @@ def test_add_transaction():
     n.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x1f)
 
     # Mine necessary Block
-    next_block = create_test_node_block(n)
+    block1 = create_test_node_block(n)
     m = Miner()
-    mined_next_block = m.mine_block(next_block)
+    mined_block1 = m.mine_block(block1)
     m.is_mining = False
-    assert n.add_block(mined_next_block, gossip=False)
+    assert n.add_block(mined_block1, gossip=False)
 
     # UTXO_INPUT
     tx_id = n.last_block.mining_tx.id
@@ -91,16 +91,10 @@ def test_add_transaction():
     assert n.orphaned_transactions[0].raw_tx == orphan_tx.raw_tx
 
     # Mine next Block
-    current_height = n.height
-    start_time = utc_to_seconds()
-    n.start_miner(gossip=False)
-    while n.height < current_height + 1:
-        pass
-    n.stop_miner()
-    n.logger.info(f'Elapsed mining time in seconds: {utc_to_seconds() - start_time}')
-
-    # Check mining is off
-    assert not n.is_mining
+    block2 = n.create_next_block()
+    mined_block2 = m.mine_block(block2)
+    m.is_mining = False
+    assert n.add_block(mined_block2, gossip=False)
 
     # Check tx got mined and orphan is validated
     assert n.orphaned_transactions == []

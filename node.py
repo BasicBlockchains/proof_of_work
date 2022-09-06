@@ -11,6 +11,7 @@ import threading
 from multiprocessing import Process, Queue
 import logging
 
+from logging.handlers import QueueHandler, QueueListener
 import requests
 from requests import get
 
@@ -48,10 +49,12 @@ class Node:
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, seed=None, logger=None):
         # Loggging
         if logger:
-            self.logger = logger
+            self.logger = logger.getChild(__name__)
         else:
-            self.logger = logging.getLogger(__name__)
+            self.logger = logging.getLogger('Node')
             self.logger.setLevel('DEBUG')
+            self.logger.addHandler(logging.StreamHandler())
+        self.logger.debug(f'Logger instantiated in Node with name: {self.logger.name}')
 
         # Set path and filename variables
         self.assigned_port = self.find_open_port()
@@ -64,11 +67,11 @@ class Node:
         # Create Blockchain object
         self.blockchain = Blockchain(self.dir_path, self.db_file, logger=self.logger)
 
-        # Create Miner object
-        self.miner = Miner(logger=self.logger)
-
         # Create Block queue for miner
         self.block_queue = Queue()
+
+        # Create Miner object
+        self.miner = Miner()
 
         # Create mining flag for monitoring
         self.is_mining = False
@@ -138,8 +141,13 @@ class Node:
             self.logger.error('Must be connected to network to start miner.')
 
     def mining_monitor(self, gossip: bool):
+        self.logger.info('Mining monitor running')
         while self.is_mining and self.is_connected:
             unmined_block = self.create_next_block()
+
+            # Logging
+
+            self.logger.info(f'Mining block at height {unmined_block.height}')
             self.mining_process = Process(target=self.mine_block, args=(unmined_block,))
             self.mining_process.start()  # Mining happens in its own process
 
@@ -153,17 +161,21 @@ class Node:
                 except Exception:
                     # If not mining, end monitor
                     if not self.is_mining:
+                        self.logger.info('Mining interrupt received.')
                         mining = False
             if next_block:
                 added = self.add_block(next_block, gossip)
-                if added and gossip:
-                    self.gossip_protocol_raw_block(next_block)
+                if added:
+                    # Logging
+                    self.logger.info(f'Successfully mined block at height {next_block.height}')
+                    if gossip:
+                        self.gossip_protocol_raw_block(next_block)
                 else:
                     # Logging
                     self.logger.warning(
                         f'Block mined but failed to be added. Likely fork. Current forks: {self.blockchain.forks}')
-                # Logging
-                self.logger.info(f'Block mined by node. Height: {self.height}, Added: {added}')
+
+        self.logger.info('Mining monitor terminated.')
 
     def mine_block(self, unmined_block: Block):
         mined_block = self.miner.mine_block(unmined_block)
@@ -171,6 +183,7 @@ class Node:
 
     def stop_miner(self):
         if self.is_mining:
+            self.logger.info('Terminating mining functions')
             # Put block transactions back in validated txs
             block_tx_index = self.block_transactions.copy()
             self.block_transactions = []
@@ -442,10 +455,13 @@ class Node:
         return False
 
     def connect_to_network(self, node=LEGACY_NODE):
+        # Logging
+        self.logger.info(f'Connecting to network through {node}')
+
         # Start with empty list_of_nodes
         list_of_nodes = None
 
-        # Append Legacy node
+        # Append node to node list
         self.node_list.append(self.node)
 
         # Get node list from LEGACY_NODE
@@ -457,9 +473,10 @@ class Node:
             list_of_nodes = r.json()
         except requests.exceptions.ConnectionError:
             # Logging
-            self.logger.error(
-                f'Connect to network through {node} failed. If not catastrophic error, try a different address.\n'
-                f'Catastrophic error: {node == self.LEGACY_NODE}')
+            if node == self.LEGACY_NODE:
+                self.logger.critical('Unable to connect to legacy node. Manual connection necessary.')
+            else:
+                self.logger.error(f'Unable to connect to network through {node}.')
 
         # If we get a node list, we've successfully connected
         if list_of_nodes:

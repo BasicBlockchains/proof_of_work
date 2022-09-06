@@ -46,10 +46,12 @@ class Wallet():
     def __init__(self, seed=None, seed_bits=128, dir_path=DIR_PATH, file_name=FILE_NAME, save=True, logger=None):
         # Loggging
         if logger:
-            self.logger = logger
+            self.logger = logger.getChild(__name__)
         else:
-            self.logger = logging.getLogger(__name__)
+            self.logger = logging.getLogger('Wallet')
             self.logger.setLevel('DEBUG')
+            self.logger.addHandler(logging.StreamHandler())
+        self.logger.debug(f'Logger instantiated in blockchain with name: {self.logger.name}')
 
         # Use secp256k1 curve as standard
         self.curve = EC.secp256k1()
