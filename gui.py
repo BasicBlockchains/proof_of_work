@@ -25,6 +25,34 @@ DEFAULT_WINDOW_SIZE = (800, 600)
 buffer = ''
 
 
+# --- PORT WINDOW --- #
+def create_port_window(theme=DEFAULT_THEME):
+    sg.theme(theme)
+    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_options(font='Ubuntu 12')
+
+    main_layout = [
+        [
+            sg.Push(),
+            sg.Text('Enter Port Number. Must be between 41000 and 42000. Default = 41000.'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Button('Select Port', key='-select_port-'),
+            sg.Button('Default Port', key='-default_port-'),
+            sg.Push()
+        ]
+    ]
+
+    return sg.Window('LOADING', main_layout, resizable=False, finalize=True)
+
+
 # --- DOWNLOAD WINDOW --- #
 def create_download_window(theme=DEFAULT_THEME):
     sg.theme(theme)
@@ -362,6 +390,29 @@ class Handler(logging.StreamHandler):
 
 
 def run_node_gui():
+    # Get port first
+    desired_port = 0
+    port_found = False
+    port_window = create_port_window()
+    while not port_found:
+        port_event, port_values = port_window.read(timeout=10)
+
+        if port_window.is_closed():
+            port_window = create_port_window()
+
+        if port_event == '-select_port-':
+            if port_values['-enter_port-'].isnumeric():
+                temp_desired_port = int(port_values['-enter_port-'])
+                if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
+                    desired_port = temp_desired_port
+                    port_found = True
+
+        if port_event == '-default_port-':
+            desired_port = Node.DEFAULT_PORT
+            port_found = True
+
+    port_window.close()
+
     # Setup Window
     window = create_window()
     window.set_min_size((1200, 800))
@@ -375,7 +426,7 @@ def run_node_gui():
 
     # Start Node
     gui_logger.info('Starting Node. May take a few minutes')
-    node = Node(logger=gui_logger)
+    node = Node(port=desired_port, logger=gui_logger)
 
     # Formatter/Decoder
     # f = Formatter()

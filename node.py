@@ -47,7 +47,8 @@ class Node:
     # Constants for requests
     request_header = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
-    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, seed=None, logger=None):
+    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, port=DEFAULT_PORT, seed=None,
+                 logger=None):
         # Loggging
         if logger:
             self.logger = logger.getChild('Node')
@@ -58,7 +59,7 @@ class Node:
         self.logger.debug(f'Logger instantiated in Node with name: {self.logger.name}')
 
         # Set path and filename variables
-        self.assigned_port = self.find_open_port()
+        self.assigned_port = self.find_open_port(port)
         self.ip = self.get_ip()
         self.node = (self.ip, self.assigned_port)
         self.dir_path = os.path.join(dir_path, str(self.assigned_port))
@@ -709,9 +710,9 @@ class Node:
         return gossip_list
 
     # --- NETWORKING --- #
-    def find_open_port(self):
+    def find_open_port(self, desired_port=DEFAULT_PORT):
         port_found = False
-        temp_port = self.DEFAULT_PORT
+        temp_port = desired_port
         while not port_found and temp_port <= self.DEFAULT_PORT + self.PORT_RANGE:
             try:
                 temp_socket = self.create_socket()
