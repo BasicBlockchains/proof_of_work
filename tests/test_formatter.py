@@ -4,26 +4,26 @@ Tests for formatter and decoder
 import random
 import secrets
 
-from .context import Wallet, Decoder, Formatter
-from .test_wallet import random_tx_id
+from .context import Decoder, Formatter
+from .helpers import random_hash, random_public_key, random_address, random_signature, random_target_exponent, \
+    random_target_coefficient, random_target
+
+# --- CONSTANTS --- #
+f = Formatter()
+d = Decoder()
 
 
 def test_cpk():
-    w = Wallet()
-    f = Formatter()
-    d = Decoder()
-
-    cpk = f.cpk(w.public_key)
-    pk = d.decode_cpk(cpk)
-    assert pk == w.public_key
+    public_key = random_public_key()
+    cpk = f.cpk(public_key)
+    decoded_cpk = d.decode_cpk(cpk)
+    assert public_key == decoded_cpk
 
 
 def test_base58():
     '''
     We test base58 encoding and decoding
     '''
-    # Formatter
-    f = Formatter()
 
     # Verify int -> base58 -> int
     random_num = secrets.randbits(256)
@@ -45,28 +45,25 @@ def test_base58():
 
 
 def test_verify_address():
-    # Decoder
-    d = Decoder()
-    assert d.verify_address(Wallet().address)
+    assert d.verify_address(random_address())
 
 
 def test_verify_signature():
-    d = Decoder()
-    f = Formatter()
-    tx_id = random_tx_id()
-    w = Wallet()
-    signature = f.signature(w.private_key, tx_id)
+    tx_id = random_hash()
+    signature = random_signature(tx_id)
     assert d.verify_signature(signature, tx_id)
-    assert d.verify_signature(w.sign_transaction(tx_id), tx_id)
 
 
 def test_target():
-    f = Formatter()
-    coeff = secrets.randbits(24)
-    exp = 0
-    while exp <= 3:
-        exp = secrets.randbits(8)
-    target_num = f.target_from_parts(coeff, exp)
-    target = f.target_from_int(target_num)
-    num_from_target = f.int_from_target(target)
-    assert num_from_target == target_num
+    # Test parts --> target --> parts
+    random_coeff = random_target_coefficient()
+    random_exp = random_target_exponent()
+    target = f.target_from_parts(random_coeff, random_exp)
+    decoded_coeff, decoded_exp = f.get_target_parts(target)
+    assert decoded_coeff == random_coeff
+    assert decoded_exp == random_exp
+
+    # Test target --> parts --> target
+    next_target = random_target()
+    next_coeff, next_exp = f.get_target_parts(next_target)
+    assert f.target_from_parts(next_coeff, next_exp) == next_target

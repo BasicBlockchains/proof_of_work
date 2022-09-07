@@ -6,7 +6,7 @@ from hashlib import sha256
 from basicblockchains_ecc.elliptic_curve import secp256k1
 from .context import Block, calc_merkle_root, merkle_proof, utc_to_seconds, UTXO_OUTPUT, UTXO_INPUT, Transaction, \
     MiningTransaction, Wallet, Decoder, Formatter
-from .test_wallet import random_tx_id
+from .helpers import random_hash
 
 
 # ---Helpers---#
@@ -27,7 +27,7 @@ def get_random_signature(tx_id: str):
 
 def get_random_utxo_input():
     # Id and index
-    tx_id = random_tx_id()
+    tx_id = random_hash()
     index = secrets.randbits(4)
 
     # Signature
@@ -147,7 +147,7 @@ def test_block():
     d = Decoder()
 
     # Get header values
-    prev_id = random_tx_id()
+    prev_id = random_hash()
     target = get_random_target()
     nonce = secrets.randbits(64)
     timestamp = utc_to_seconds()

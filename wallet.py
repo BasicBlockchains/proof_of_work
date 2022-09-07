@@ -51,7 +51,6 @@ class Wallet():
             self.logger = logging.getLogger('Wallet')
             self.logger.setLevel('DEBUG')
             self.logger.addHandler(logging.StreamHandler())
-        self.logger.debug(f'Logger instantiated in blockchain with name: {self.logger.name}')
 
         # Use secp256k1 curve as standard
         self.curve = EC.secp256k1()
@@ -81,6 +80,9 @@ class Wallet():
 
         # Create address
         self.address = self.F.address(self.compressed_public_key)
+
+        # Logging
+        self.logger.debug(f'Logger instantiated in wallet with address{self.address} with name: {self.logger.name}')
 
         # Create node list
         self.node_list = []
@@ -133,7 +135,7 @@ class Wallet():
         if file_exists:
             # Read in wallet file
             with open(f'{dir_path}/{file_name}', 'r') as f:
-                seed_string = f.read()
+                seed_string = f.read().strip('\n')
             if seed_string:
                 return int(seed_string, 16)
 

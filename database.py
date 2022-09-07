@@ -87,6 +87,12 @@ class DataBase:
 
         conn.close()
 
+    def is_empty(self):
+        height_dict = self.get_height()
+        if height_dict['height'] == -1:
+            return True
+        return False
+
     ### --- GENERIC METHODS --- ###
 
     def query_db(self, query: str, data=None):
@@ -319,8 +325,6 @@ class DataBase:
         self.query_db(query, data_tuple)
 
     ### --- RAW BLOCKS --- ###
-    # GET
-
     # POST
     def post_raw_block(self, raw_block: str):
         query = """INSERT INTO raw_blocks VALUES (?)"""

@@ -32,7 +32,7 @@ class Blockchain():
     d = Decoder()
     f = Formatter()
 
-    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None):
+    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None, log_level=None):
         # Logging
         if logger:
             self.logger = logger.getChild('Blockchain')
@@ -41,6 +41,8 @@ class Blockchain():
             self.logger.setLevel('DEBUG')
             self.logger.addHandler(logging.StreamHandler())
 
+        if log_level:
+            self.logger.setLevel(log_level)
         self.logger.debug(f'Logger instantiated in blockchain with name: {self.logger.name}')
 
         # Curve for cryptography
@@ -73,11 +75,15 @@ class Blockchain():
         if not db_exists:
             self.chain_db.create_db()
 
+        # If file exists but is empty, change db_exists to false
+        if self.chain_db.is_empty():
+            db_exists = False
+
         # Create genesis block
         self.add_block(self.create_genesis_block(), loading=db_exists)
 
         # Load db if it exists
-        if db_exists:
+        if db_exists and self.height > 0:
             self.load_chain()
 
     # Properties
@@ -110,9 +116,11 @@ class Blockchain():
             return False
 
         # Check Mining UTXO block_height
-        if block.mining_tx.mining_utxo.block_height < self.last_block.mining_tx.height + 1 + self.f.MINING_DELAY:
+        if block.mining_tx.mining_utxo.block_height < self.last_block.height + 1 + self.f.MINING_DELAY:
             # Logging
             self.logger.error('Block failed validation. Mining tx block height incorrect')
+            self.logger.debug(f'Mining utxo block height: {block.mining_tx.mining_utxo.block_height}')
+            self.logger.debug(f'Calculated blockchain height: {self.last_block.height + 1 + self.f.MINING_DELAY}')
             return False
 
         # Check fees + reward = amount in mining_utxo

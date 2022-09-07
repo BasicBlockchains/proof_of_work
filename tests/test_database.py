@@ -6,9 +6,9 @@ import os
 import secrets
 from pathlib import Path
 
-from .context import DataBase, Block, Wallet, Formatter
-from .test_block import get_random_transaction, get_random_utxo_output, get_random_mining_tx, get_random_target
-from .test_wallet import random_tx_id
+from .context import DataBase, Block, Formatter, utc_to_seconds
+from .helpers import random_hash, random_utxo_output, random_address, random_tx, random_mining_tx, \
+    random_target, random_nonce
 
 
 def test_utxo_methods():
@@ -20,14 +20,13 @@ def test_utxo_methods():
         dir_path = './tests/data/test_database/'
     file_name = 'test_utxos.db'
     db_exsts = Path(dir_path, file_name).exists()
-
     db = DataBase(dir_path, file_name)
     if db_exsts:
         db.wipe_db()
     db.create_db()
 
     # Known address
-    w = Wallet()
+    fixed_address = random_address()
 
     # Get random utxos
     random_length = 0
@@ -36,11 +35,11 @@ def test_utxo_methods():
     utxo_list = []
     tx_list = []
     for x in range(random_length):
-        utxo_list.append(get_random_utxo_output())
-        tx_list.append(random_tx_id())
+        utxo_list.append(random_utxo_output())
+        tx_list.append(random_hash())
 
     for utxo in utxo_list:
-        utxo.address = w.address
+        utxo.address = fixed_address
 
     # post_utxo
     for x in range(len(utxo_list)):
@@ -59,21 +58,21 @@ def test_utxo_methods():
 
     # get_utxos_by_address
     address_dict = {
-        "address": w.address,
+        "address": fixed_address,
         "utxo_count": random_length
     }
     for z in range(random_length):
         address_dict.update({
             f"utxo_{z}": temp_list[z]
         })
-    assert address_dict == db.get_utxos_by_address(w.address)
+    assert address_dict == db.get_utxos_by_address(fixed_address)
 
     # get_<...>_by_utxo
     random_index = secrets.randbelow(random_length)
     result_dict_a = db.get_address_by_utxo(tx_list[random_index], random_index)
     result_dict_b = db.get_amount_by_utxo(tx_list[random_index], random_index)
     result_dict_c = db.get_block_height_by_utxo(tx_list[random_index], random_index)
-    assert result_dict_a["address"] == w.address
+    assert result_dict_a["address"] == fixed_address
     assert result_dict_b["amount"] == utxo_list[random_index].amount
     assert result_dict_c["block_height"] == utxo_list[random_index].block_height
 
@@ -92,33 +91,41 @@ def test_block_header_methods():
         dir_path = './tests/data/test_database/'
     file_name = 'test_headers.db'
 
-    f = Formatter()
-
+    # If db exists, wipe db first
     db_exsts = Path(dir_path, file_name).exists()
-
     db = DataBase(dir_path, file_name)
     if db_exsts:
         db.wipe_db()
     db.create_db()
 
+    # Formatter
+    f = Formatter()
+
     # Random length
-    random_length = 3
+    random_length = 0
+    while random_length < 1:
+        random_length = secrets.randbits(4)
 
     # Post Blocks
     block_list = []
+    # Create random Blocks
     for x in range(random_length):
-        # Create random Block
-        prev_id = random_tx_id()
-        target = get_random_target()
-        nonce = secrets.randbits(64)
-        timestamp = secrets.randbits(64)
+        # Random block vals
+        prev_id = random_hash()
+        target = random_target()
+        nonce = random_nonce()
+        timestamp = utc_to_seconds()
 
-        tx_length = 0
-        while tx_length < 1:
-            tx_length = secrets.randbits(2)
-        transactions = [get_random_transaction() for r in range(tx_length)]
+        # Tx count
+        tx_count = 0
+        while tx_count < 1:
+            tx_count = secrets.randbits(4)
 
-        mining_tx = get_random_mining_tx()
+        # Random tx list
+        transactions = [random_tx() for r in range(tx_count)]
+
+        # Random mining tx
+        mining_tx = random_mining_tx()
 
         sample_block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
         block_list.append(sample_block)

@@ -1,15 +1,14 @@
 '''
 Tests for the Wallet class
 '''
-import random
-import secrets
-import string
-from hashlib import sha256
 import os
-from basicblockchains_ecc.elliptic_curve import secp256k1
 from pathlib import Path
+import logging
+
+from basicblockchains_ecc.elliptic_curve import secp256k1
 
 from .context import Wallet, Decoder
+from .helpers import random_hash, random_signature
 
 
 def test_save_load_wallet():
@@ -19,8 +18,13 @@ def test_save_load_wallet():
     else:
         dir_path = './tests/data/test_wallet/'
 
-    w = Wallet(dir_path=dir_path)  # Will automatically save
-    w2 = Wallet(dir_path=dir_path)  # Will load wallet saved in same dir
+    test_logger = logging.getLogger(__name__)
+    test_logger.setLevel('DEBUG')
+    test_logger.propagate = False
+    test_logger.addHandler(logging.StreamHandler())
+
+    w = Wallet(dir_path=dir_path, logger=test_logger)  # Will automatically save
+    w2 = Wallet(dir_path=dir_path, logger=test_logger)  # Will load wallet saved in same dir
     assert w.private_key == w2.private_key
 
     # Delete wallets
@@ -37,19 +41,10 @@ def test_wallet_signature():
     curve = secp256k1()
 
     # Generate transaction
-    tx_id = random_tx_id()
-    w = Wallet()
-    signature = w.sign_transaction(tx_id)
+    tx_id = random_hash()
+    signature = random_signature(tx_id)
 
     # Get parts back
     cpk, ecdsa_tuple = d.decode_signature(signature)
 
     assert curve.verify_signature(ecdsa_tuple, tx_id, curve.decompress_point(cpk))
-
-
-# --- HELPER METHODS --- #
-def random_tx_id():
-    random_string = ''
-    for x in range(0, secrets.randbelow(100)):
-        random_string += random.choice(string.ascii_letters)
-    return sha256(random_string.encode()).hexdigest()
