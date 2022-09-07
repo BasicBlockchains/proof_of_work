@@ -536,7 +536,7 @@ def run_node_gui():
                         node.db_file = file_name
                     except Exception as e:
                         # Logging
-                        gui_logger.error('Failed to load Blockchain. Error: {e}')
+                        gui_logger.error(f'Failed to load Blockchain. Error: {e}')
                 else:
                     # Logging
                     gui_logger.warning('Select a database file')

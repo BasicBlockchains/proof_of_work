@@ -192,7 +192,7 @@ class Blockchain():
         if fees != block.mining_tx.block_fees:
             # Logging
             self.logger.error(
-                f'Block failed validation. Block fees incorrect. Calculated fees{fees}; mining tx fees {block.mining_tx.block_fees}')
+                f'Validation fails. Block fees incorrect. Calculated fees{fees}; mining tx fees {block.mining_tx.block_fees}')
             return False
 
         return True
