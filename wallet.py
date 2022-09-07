@@ -1,21 +1,21 @@
 '''
 The Wallet class
 '''
+import json
+import logging
 import random
 import secrets
 from hashlib import sha512
 from pathlib import Path
 
 import pandas as pd
-import logging
+import requests
 from basicblockchains_ecc import elliptic_curve as EC
 
 from decoder import Decoder
 from formatter import Formatter
-import requests
-from utxo import UTXO_INPUT, UTXO_OUTPUT
-import json
 from transactions import Transaction
+from utxo import UTXO_INPUT, UTXO_OUTPUT
 
 
 class Wallet():

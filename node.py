@@ -3,15 +3,14 @@ The Node class
 '''
 
 import json
+import logging
 import os
 import random
 import secrets
 import socket
 import threading
 from multiprocessing import Process, Queue
-import logging
-import time
-from logging.handlers import QueueHandler, QueueListener
+
 import requests
 from requests import get
 
@@ -22,7 +21,6 @@ from formatter import Formatter
 from miner import Miner
 from timestamp import utc_to_seconds
 from transactions import Transaction, MiningTransaction
-from utxo import UTXO_OUTPUT, UTXO_INPUT
 from wallet import Wallet
 
 

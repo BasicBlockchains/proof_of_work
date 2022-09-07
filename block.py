@@ -5,8 +5,8 @@ import json
 from hashlib import sha256
 
 from formatter import Formatter
-from transactions import MiningTransaction, Transaction
 from headers import Header
+from transactions import MiningTransaction
 
 
 class Block():

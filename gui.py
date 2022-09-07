@@ -14,10 +14,10 @@ import PySimpleGUI as sg
 from api import run_app
 from blockchain import Blockchain
 from decoder import Decoder
+from formatter import Formatter
 from node import Node
 from timestamp import utc_to_seconds, seconds_to_utc
 from wallet import Wallet
-from formatter import Formatter
 
 # --- CONSTANTS --- #
 DEFAULT_THEME = 'SystemDefault'

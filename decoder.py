@@ -2,14 +2,14 @@
 Decoder - decodes various formatted data structs
 '''
 import json
+import logging
 from hashlib import sha256
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
-import logging
 
-from headers import Header
 from block import Block
 from formatter import Formatter
+from headers import Header
 from transactions import Transaction, MiningTransaction
 from utxo import UTXO_INPUT, UTXO_OUTPUT
 

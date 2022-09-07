@@ -3,9 +3,10 @@ REST API for the Blockchain
 '''
 
 import waitress
-from flask import Flask, jsonify, request, Response, json, render_template
-from timestamp import utc_timestamp
+from flask import Flask, jsonify, request, Response, json
+
 from node import Node
+from timestamp import utc_timestamp
 
 
 # --- ROOT ENDPOINT MESSAGES --- #

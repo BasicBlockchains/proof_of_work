@@ -93,7 +93,7 @@ class DataBase:
             return True
         return False
 
-    ### --- GENERIC METHODS --- ###
+    # --- GENERIC METHODS --- #
 
     def query_db(self, query: str, data=None):
         with closing(sqlite3.connect(self.file_path)) as con, con, closing(con.cursor()) as cur:
@@ -213,7 +213,7 @@ class DataBase:
         raw_block_data_tuple = (height + 1,)
         self.query_db(raw_block_query, raw_block_data_tuple)
 
-    ### --- UTXO POOL ---###
+    # --- UTXO POOL ---#
 
     # GET METHODS
 
@@ -324,7 +324,7 @@ class DataBase:
         data_tuple = (tx_id, hex(tx_index))
         self.query_db(query, data_tuple)
 
-    ### --- RAW BLOCKS --- ###
+    # --- RAW BLOCKS --- #
     # POST
     def post_raw_block(self, raw_block: str):
         query = """INSERT INTO raw_blocks VALUES (?)"""

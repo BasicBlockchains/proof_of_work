@@ -2,8 +2,9 @@
 The Blockchain Class
 '''
 
-from pathlib import Path
 import logging
+from pathlib import Path
+
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
 from block import Block
