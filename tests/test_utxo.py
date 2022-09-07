@@ -1,9 +1,8 @@
 '''
 Tests for the UTXO class
 '''
-import secrets
 
-from .context import UTXO_INPUT, UTXO_OUTPUT, Wallet, Decoder
+from .context import UTXO_INPUT, UTXO_OUTPUT, Decoder
 from .helpers import random_hash, random_signature, random_index, random_amount, random_height, random_address
 
 

@@ -1,9 +1,10 @@
 '''
 Tests for the Node class
 '''
+import logging
 import os
 from pathlib import Path
-import logging
+
 from .context import Node, Wallet, Block, utc_to_seconds, Transaction, MiningTransaction, Miner, UTXO_INPUT, \
     UTXO_OUTPUT, Formatter, DataBase
 

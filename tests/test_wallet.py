@@ -1,9 +1,9 @@
 '''
 Tests for the Wallet class
 '''
+import logging
 import os
 from pathlib import Path
-import logging
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 

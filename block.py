@@ -94,9 +94,6 @@ class Block():
 
     @property
     def to_json(self):
-        # Setup formatter
-        f = Formatter()
-
         # Transactions
         tx_dict = {
             "mining_tx": json.loads(self.mining_tx.to_json),

@@ -536,10 +536,10 @@ def run_node_gui():
                         node.db_file = file_name
                     except Exception as e:
                         # Logging
-                        gui_logger.error(f'Failed to load Blockchain. Error: {e}')
+                        gui_logger.error('Failed to load Blockchain. Error: {e}')
                 else:
                     # Logging
-                    gui_logger.warning(f'Select a database file')
+                    gui_logger.warning('Select a database file')
 
         # Load Wallet
         if event == 'Open Wallet':
@@ -561,7 +561,7 @@ def run_node_gui():
                         gui_logger.error(f'Unable to load wallet. Error: {e}')
                 else:
                     # Logging
-                    gui_logger.warning(f'Select a wallet file')
+                    gui_logger.warning('Select a wallet file')
 
         # Save Blockchain
         if event == 'Save Blockchain':
@@ -592,7 +592,7 @@ def run_node_gui():
                         gui_logger.error(f'Failed to load Blockchain. Error: {e}')
                 else:
                     # Logging
-                    gui_logger.warning(f'Database file must have .db extension.')
+                    gui_logger.warning('Database file must have .db extension.')
 
         # Save Wallet
         if event == 'Save Wallet':
@@ -612,7 +612,7 @@ def run_node_gui():
                     node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
                 else:
                     # Logging
-                    gui_logger.warning(f'Wallet file must have .dat extension.')
+                    gui_logger.warning('Wallet file must have .dat extension.')
 
         # --- INFO BAR --- #
         # Mining Icon

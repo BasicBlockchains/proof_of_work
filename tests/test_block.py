@@ -3,9 +3,11 @@ We test the Block class and related functions
 '''
 import secrets
 from hashlib import sha256
+
 from basicblockchains_ecc.elliptic_curve import secp256k1
+
 from .context import Block, calc_merkle_root, merkle_proof, utc_to_seconds, UTXO_OUTPUT, UTXO_INPUT, Transaction, \
-    MiningTransaction, Wallet, Decoder, Formatter
+    MiningTransaction, Decoder, Formatter
 from .helpers import random_hash
 
 
