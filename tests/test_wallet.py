@@ -19,7 +19,7 @@ def test_save_load_wallet():
         dir_path = './tests/data/test_wallet/'
 
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('DEBUG')
+    test_logger.setLevel('CRITICAL')
     test_logger.propagate = False
     test_logger.addHandler(logging.StreamHandler())
 

@@ -33,7 +33,7 @@ def test_add_pop_block():
 
     # Create test logger
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('ERROR')
+    test_logger.setLevel('CRITICAL')
     test_logger.propagate = False
     sh = logging.StreamHandler()
     sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
