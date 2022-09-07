@@ -368,7 +368,7 @@ def run_node_gui():
 
     # # Logger
     gui_logger = logging.getLogger('GUI')
-    gui_logger.setLevel('DEBUG')
+    gui_logger.setLevel('INFO')
     gui_logger.addHandler(Handler())
     gui_logger.propagate = False
     global buffer

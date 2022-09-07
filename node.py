@@ -46,10 +46,13 @@ class Node:
     LEGACY_NODE = (LEGACY_IP, DEFAULT_PORT)
     PORT_RANGE = 1000
 
+    # Constants for requests
+    request_header = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, seed=None, logger=None):
         # Loggging
         if logger:
-            self.logger = logger.getChild(__name__)
+            self.logger = logger.getChild('Node')
         else:
             self.logger = logging.getLogger('Node')
             self.logger.setLevel('DEBUG')
@@ -142,7 +145,7 @@ class Node:
                 self.logger.info('Miner already running.')
         else:
             # Logging
-            self.logger.error('Must be connected to network to start miner.')
+            self.logger.warning('Must be connected to network to start miner.')
 
     def mining_monitor(self, gossip: bool):
         self.logger.info('Mining monitor running')
@@ -428,9 +431,8 @@ class Node:
         '''
         ip, port = node
         url = f'http://{ip}:{port}/ping'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         try:
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
             self.logger.error(f'Error connecting to {node}.')
@@ -442,12 +444,12 @@ class Node:
         ip, port = node
         url = f'http://{ip}:{port}/node_list'
         data = {'ip': self.ip, 'port': self.assigned_port}
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.post(url, data=json.dumps(data), headers=headers)
+        r = requests.post(url, data=json.dumps(data), headers=self.request_header)
         if r.status_code == 200 and node not in self.node_list:
             correct_genesis = self.check_genesis(node)
             if correct_genesis:
                 self.node_list.append(node)
+                self.logger.info(f'Successfully connected to {node}')
                 return True
             else:
                 # Logging
@@ -474,9 +476,8 @@ class Node:
         # Get node list from LEGACY_NODE
         ip, port = node
         url = f'http://{ip}:{port}/node_list'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         try:
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=self.request_header)
             list_of_nodes = r.json()
         except requests.exceptions.ConnectionError:
             # Logging
@@ -528,8 +529,7 @@ class Node:
             ip, port = node
             url = f'http://{ip}:{port}/node_list'
             data = {'ip': self.ip, 'port': self.assigned_port}
-            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            r = requests.delete(url, data=json.dumps(data), headers=headers)
+            r = requests.delete(url, data=json.dumps(data), headers=self.request_header)
             if r.status_code != 200:
                 # Logging
                 self.logger.error(f'Error connecting to {node} for disconnect. Status code: {r.status_code}')
@@ -566,9 +566,8 @@ class Node:
     def request_height(self, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/height'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         try:
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
             self.logger.error(f'Error connecting to {node}.')
@@ -578,9 +577,8 @@ class Node:
     def request_validated_txs(self, node: tuple):
         ip, port = node
         url = f'http://{ip}:{port}/transaction'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         try:
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
             self.logger.error(f'Error connecting to {node}.')
@@ -604,8 +602,7 @@ class Node:
         '''
         ip, port = node
         url = f'http://{ip}:{port}/raw_block/0'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=self.request_header)
         if r.status_code == 200:
             try:
                 raw_genesis = r.json()['raw_block']
@@ -624,30 +621,26 @@ class Node:
         ip, port = node
         url = f'http://{ip}:{port}/transaction'
         data = {'raw_tx': new_tx.raw_tx}
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.post(url, data=json.dumps(data), headers=headers)
+        r = requests.post(url, data=json.dumps(data), headers=self.request_header)
         return r.status_code
 
     def send_block_to_node(self, block: Block, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/block'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.post(url, data=json.dumps(block.to_json), headers=headers)
+        r = requests.post(url, data=json.dumps(block.to_json), headers=self.request_header)
         return r.status_code
 
     def send_raw_block_to_node(self, raw_block: str, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/raw_block'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.post(url, data=raw_block, headers=headers)
+        r = requests.post(url, data=raw_block, headers=self.request_header)
         return r.status_code
 
     def request_indexed_block(self, block_index: int, node: tuple):
         ip, port = node
         url = f'http://{ip}:{port}/block/{block_index}'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         try:
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
             self.logger.error(f'Error connecting to {node}.')

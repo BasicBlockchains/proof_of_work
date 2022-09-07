@@ -46,7 +46,7 @@ class Wallet():
     def __init__(self, seed=None, seed_bits=128, dir_path=DIR_PATH, file_name=FILE_NAME, save=True, logger=None):
         # Loggging
         if logger:
-            self.logger = logger.getChild(__name__)
+            self.logger = logger.getChild('Wallet')
         else:
             self.logger = logging.getLogger('Wallet')
             self.logger.setLevel('DEBUG')
