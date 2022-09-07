@@ -75,20 +75,28 @@ def test_add_pop_block():
     # tx
     new_tx = Transaction([input_utxo], [output_utxo1, output_utxo2])
 
+    # Add tx
+
     # Create next block
     mining_tx2 = MiningTransaction(2, test_chain.mining_reward, 0, fixed_address,
                                    f.MINING_DELAY + 2)
-    unmined_block2 = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mining_tx2, [])
+    unmined_block2 = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mining_tx2, [new_tx])
     mined_block2 = miner.mine_block(unmined_block2)
 
     # Add next block
     assert test_chain.add_block(mined_block2)
+
+    # Verify tx is in chain
+    assert test_chain.find_block_by_tx_id(new_tx.id).id == mined_block2.id
 
     # Pop Block
     assert test_chain.pop_block()
 
     # Make sure mining_tx from 2nd block is gone
     assert test_chain.chain_db.get_utxo(mining_tx2.id, 0) == {}
+
+    # Make sure constructed tx isn't found
+    assert test_chain.find_block_by_tx_id(new_tx.id) is None
 
     # Pop Block
     assert test_chain.pop_block()

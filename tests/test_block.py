@@ -4,94 +4,16 @@ We test the Block class and related functions
 import secrets
 from hashlib import sha256
 
-from basicblockchains_ecc.elliptic_curve import secp256k1
-
-from .context import Block, calc_merkle_root, merkle_proof, utc_to_seconds, UTXO_OUTPUT, UTXO_INPUT, Transaction, \
-    MiningTransaction, Decoder, Formatter
-from .helpers import random_hash
-
-
-# ---Helpers---#
-def get_random_address():
-    f = Formatter()
-    curve = secp256k1()
-    private_key = secrets.randbits(256)
-    public_key = curve.scalar_multiplication(private_key, curve.generator)
-    cpk = f.cpk(public_key)
-    return f.address(cpk)
-
-
-def get_random_signature(tx_id: str):
-    f = Formatter()
-    private_key = secrets.randbits(256)
-    return f.signature(private_key, tx_id)
-
-
-def get_random_utxo_input():
-    # Id and index
-    tx_id = random_hash()
-    index = secrets.randbits(4)
-
-    # Signature
-    signature = get_random_signature(tx_id)
-
-    # UTXO
-    return UTXO_INPUT(tx_id, index, signature)
-
-
-def get_random_utxo_output():
-    # Wallet
-
-    # Random values
-    amount = secrets.randbits(64)
-    address = get_random_address()
-    height = secrets.randbits(64)
-
-    # UTXO
-    return UTXO_OUTPUT(amount=amount, address=address, block_height=height)
-
-
-def get_random_transaction():
-    input_count = secrets.randbits(4)
-    output_count = secrets.randbits(4)
-
-    inputs = []
-    for x in range(0, input_count):
-        inputs.append(get_random_utxo_input())
-
-    outputs = []
-    for y in range(0, output_count):
-        outputs.append(get_random_utxo_output())
-
-    return Transaction(inputs=inputs, outputs=outputs)
-
-
-def get_random_mining_tx():
-    # Formatter/Decoder
-    f = Formatter()
-    address = get_random_address()
-    height = secrets.randbits(64)
-    reward = secrets.randbits(40)
-    block_fees = secrets.randbits(64)
-    block_height = secrets.randbits(64)
-
-    return MiningTransaction(height, reward, block_fees, address, block_height)
-
-
-def get_random_target():
-    random_coeff = secrets.randbits(24)
-    random_exp = 0
-    while random_exp < 4:
-        random_exp = secrets.randbits(8)
-    return Formatter().target_from_parts(random_coeff, random_exp)
+from .context import Block, calc_merkle_root, merkle_proof, utc_to_seconds, Decoder
+from .helpers import random_hash, random_target, random_tx, random_mining_tx
 
 
 def test_merkle_root():
     transactions = []
     for x in range(0, 2):
-        transactions.append(get_random_transaction())
+        transactions.append(random_tx())
 
-    mining_tx = get_random_mining_tx()
+    mining_tx = random_mining_tx()
 
     test_block = Block(prev_id='', target=secrets.randbits(256), nonce=secrets.randbits(64), timestamp=utc_to_seconds(),
                        mining_tx=mining_tx,
@@ -150,18 +72,18 @@ def test_block():
 
     # Get header values
     prev_id = random_hash()
-    target = get_random_target()
+    target = random_target()
     nonce = secrets.randbits(64)
     timestamp = utc_to_seconds()
 
     # Get mining_tx
-    mining_tx = get_random_mining_tx()
+    mining_tx = random_mining_tx()
 
     # Get transactions
     transactions = []
     tx_num = secrets.randbits(4)
     for x in range(0, tx_num):
-        transactions.append(get_random_transaction())
+        transactions.append(random_tx())
 
     # Create Block
     block1 = Block(prev_id=prev_id, target=target, nonce=nonce, timestamp=timestamp, mining_tx=mining_tx,
