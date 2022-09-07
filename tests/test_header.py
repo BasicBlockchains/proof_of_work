@@ -1,23 +1,25 @@
 '''
 Tests for header class
 '''
-import secrets
-from .test_wallet import random_tx_id
-from .test_block import get_random_target
-from .context import Decoder, utc_to_seconds, Header
+from .context import Decoder
+from .helpers import random_header
 
 
 def test_raw_header():
+    '''
+    Verifies encoding/decoding of block header
+    '''
+
     # Decoder
     d = Decoder()
 
-    # Random header values
-    prev_id = random_tx_id()
-    merkle_root = random_tx_id()
-    target = get_random_target()
-    nonce = secrets.randbelow(pow(10, 6))
-    timestamp = utc_to_seconds()
+    # Random header
+    header = random_header()
 
-    header = Header(prev_id, merkle_root, target, nonce, timestamp)
-    constructed_header = d.raw_block_header(header.raw_header)
-    assert constructed_header.id == header.id
+    # Decode raw header
+    raw_header = header.raw_header
+    decoded_header = d.raw_block_header(raw_header)
+
+    # Asserts
+    assert decoded_header.id == header.id
+    assert decoded_header.raw_header == raw_header

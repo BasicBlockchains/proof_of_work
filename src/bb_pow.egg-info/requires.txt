@@ -1,1 +1,0 @@
-basicblockchains_ecc>=2.1.0

@@ -1,10 +1,15 @@
 '''
 Tests for the Node class
 '''
+import logging
 import os
+from pathlib import Path
 
 from .context import Node, Wallet, Block, utc_to_seconds, Transaction, MiningTransaction, Miner, UTXO_INPUT, \
-    UTXO_OUTPUT, Formatter
+    UTXO_OUTPUT, Formatter, DataBase
+
+# --- CONSTANTS --- #
+f = Formatter()
 
 
 def create_test_node_block(node: Node):
@@ -36,11 +41,24 @@ def test_add_transaction():
         dir_path = './tests/data/test_node/'
     file_name = 'test_add_transaction.db'
 
-    # Formatter
-    f = Formatter()
+    # Wipe db if it exists
+    db_exsts = Path(dir_path, file_name).exists()
+    db = DataBase(dir_path, file_name)
+    if db_exsts:
+        db.wipe_db()
+    db.create_db()
+
+    # Logging
+    # Create test logger
+    test_logger = logging.getLogger(__name__)
+    test_logger.setLevel('CRITICAL')
+    test_logger.propagate = False
+    sh = logging.StreamHandler()
+    sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
+    test_logger.addHandler(sh)
 
     # Create Node
-    n = Node(dir_path, file_name)
+    n = Node(dir_path, file_name, logger=test_logger)
 
     # Set connected flag
     n.is_connected = True
@@ -66,7 +84,7 @@ def test_add_transaction():
 
     # UTXO_OUTPUTS
     amount = n.mining_reward // 2
-    new_address = Wallet().address
+    new_address = Wallet(logger=test_logger).address
     utxo_output1 = UTXO_OUTPUT(amount=amount, address=new_address)
     utxo_output2 = UTXO_OUTPUT(amount=amount, address=n.wallet.address)
 

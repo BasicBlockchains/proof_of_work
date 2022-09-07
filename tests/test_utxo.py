@@ -1,10 +1,9 @@
 '''
 Tests for the UTXO class
 '''
-import secrets
 
-from .context import UTXO_INPUT, UTXO_OUTPUT, Wallet, Decoder
-from .test_wallet import random_tx_id
+from .context import UTXO_INPUT, UTXO_OUTPUT, Decoder
+from .helpers import random_hash, random_signature, random_index, random_amount, random_height, random_address
 
 
 def test_utxo():
@@ -15,11 +14,10 @@ def test_utxo():
     d = Decoder()
 
     # Utxo input
-    w = Wallet()
-    tx_id = random_tx_id()
-    random_num = secrets.randbelow(100)
-    signature = w.sign_transaction(tx_id)
-    utxo_input = UTXO_INPUT(tx_id, random_num, signature)
+    tx_id = random_hash()
+    index = random_index()
+    signature = random_signature(tx_id)
+    utxo_input = UTXO_INPUT(tx_id, index, signature)
 
     # Recreated utxo from raw
     decoded_utxo_input = d.raw_utxo_input(utxo_input.raw_utxo)
@@ -29,9 +27,10 @@ def test_utxo():
     assert utxo_input.id == decoded_utxo_input.id
 
     # Utxo output
-    amount = secrets.randbelow(100)
-    block_height = secrets.randbelow(100)
-    utxo_output = UTXO_OUTPUT(amount, w.address, block_height)
+    amount = random_amount()
+    address = random_address()
+    block_height = random_height()
+    utxo_output = UTXO_OUTPUT(amount, address, block_height)
 
     # Recreated utxo from raw
     decoded_utxo_output = d.raw_utxo_output(utxo_output.raw_utxo)

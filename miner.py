@@ -2,10 +2,6 @@
 The Miner class
 '''
 from block import Block
-import logging
-from logging.handlers import QueueHandler
-from formatter import Formatter
-from multiprocessing import Queue
 
 
 class Miner():

@@ -36,10 +36,6 @@ class DataBase:
         # Get file_path for future use
         self.file_path = join(dir_path, db_file)
 
-        # if Path(self.file_path).exists():
-        #     self.wipe_db()
-        # self.create_db()
-
     def wipe_db(self):
         conn = sqlite3.connect(self.file_path)
         c = conn.cursor()
@@ -91,7 +87,13 @@ class DataBase:
 
         conn.close()
 
-    ### --- GENERIC METHODS --- ###
+    def is_empty(self):
+        height_dict = self.get_height()
+        if height_dict['height'] == -1:
+            return True
+        return False
+
+    # --- GENERIC METHODS --- #
 
     def query_db(self, query: str, data=None):
         with closing(sqlite3.connect(self.file_path)) as con, con, closing(con.cursor()) as cur:
@@ -211,7 +213,7 @@ class DataBase:
         raw_block_data_tuple = (height + 1,)
         self.query_db(raw_block_query, raw_block_data_tuple)
 
-    ### --- UTXO POOL ---###
+    # --- UTXO POOL ---#
 
     # GET METHODS
 
@@ -322,9 +324,7 @@ class DataBase:
         data_tuple = (tx_id, hex(tx_index))
         self.query_db(query, data_tuple)
 
-    ### --- RAW BLOCKS --- ###
-    # GET
-
+    # --- RAW BLOCKS --- #
     # POST
     def post_raw_block(self, raw_block: str):
         query = """INSERT INTO raw_blocks VALUES (?)"""

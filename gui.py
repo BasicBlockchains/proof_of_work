@@ -14,15 +14,48 @@ import PySimpleGUI as sg
 from api import run_app
 from blockchain import Blockchain
 from decoder import Decoder
+from formatter import Formatter
 from node import Node
 from timestamp import utc_to_seconds, seconds_to_utc
 from wallet import Wallet
-from formatter import Formatter
 
 # --- CONSTANTS --- #
 DEFAULT_THEME = 'SystemDefault'
 DEFAULT_WINDOW_SIZE = (800, 600)
 buffer = ''
+
+
+# --- DOWNLOAD WINDOW --- #
+def create_download_window(theme=DEFAULT_THEME):
+    sg.theme(theme)
+    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_options(font='Ubuntu 12', )
+
+    main_layout = [
+        [
+            sg.Push(),
+            sg.Text('DOWNLOADING BLOCKS', justification='center'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Text('Block', justification='right'),
+            sg.InputText(key='-current_height-', disabled=True, use_readonly_for_disable=True, size=(6, 1),
+                         border_width=0, justification='left'),
+            sg.Text(' of Block', justification='right'),
+            sg.InputText(key='-network_height-', disabled=True, use_readonly_for_disable=True, size=(6, 1),
+                         border_width=0, justification='left'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.ProgressBar(100, orientation='h', size=(40, 2), key='-pct_complete-', bar_color=("#ac92ec", "#000000"),
+                           border_width=5),
+            sg.Push()
+        ]
+    ]
+
+    return sg.Window('LOADING', main_layout, resizable=False, finalize=True, )
 
 
 # --- MAIN GUI WINDOW --- #
@@ -335,8 +368,9 @@ def run_node_gui():
 
     # # Logger
     gui_logger = logging.getLogger('GUI')
-    gui_logger.setLevel('DEBUG')
+    gui_logger.setLevel('INFO')
     gui_logger.addHandler(Handler())
+    gui_logger.propagate = False
     global buffer
 
     # Start Node
@@ -352,7 +386,13 @@ def run_node_gui():
     app_thread.start()
 
     # Connect to network
-    node.connect_to_network()
+    gui_logger.info('Connecting to network.')
+    connecting_thread = threading.Thread(target=node.connect_to_network)
+    # node.connect_to_network()
+    connecting_thread.start()
+    download_window = create_download_window()
+    download_window['-current_height-'].update(str(node.height))
+    download_window['-network_height-'].update(str(node.network_height))
 
     # Update node wallet
     node.wallet.get_latest_height(node.node)
@@ -422,16 +462,53 @@ def run_node_gui():
     balance = -1
     utxo_list = []
 
+    # Download
+    current_height = -1
+    network_height = -1
+    percent_complete = -1
+
     # Logstring for log window
     log_string = ''
+
+    # Download blocks
+    while connecting_thread.is_alive():
+
+        dl_event, dl_values = download_window.read(timeout=100)
+        if download_window.is_closed():
+            download_window = create_download_window()
+            network_height = -1
+
+        if current_height != node.height:
+            current_height = node.height
+            download_window['-current_height-'].update(str(current_height))
+
+        if network_height != node.network_height:
+            network_height = node.network_height
+            download_window['-network_height-'].update(str(network_height))
+
+        if percent_complete != node.percent_complete:
+            percent_complete = node.percent_complete
+            download_window['-pct_complete-'].update(percent_complete)
+
+        # Update logs
+        if log_string != buffer:
+            log_string = buffer
+            window['-logs-'].update(buffer)
+
+    download_window.close()
 
     # GUI LOOP
     while True:
         event, values = window.read(timeout=10)
 
-        # Exit
+        # Exit conditions
         if event in [sg.WIN_CLOSED, 'Exit']:
             break
+
+        # Update logs
+        if log_string != buffer:
+            log_string = buffer
+            window['-logs-'].update(buffer)
 
         # Tab Groups
         if event == '-tab_group-' and values[event] == '-status_tab-':
@@ -443,12 +520,7 @@ def run_node_gui():
         if event == '-tab_group-' and values[event] == '-wallet_tab-':
             window['-wallet_address-'].Widget.select_clear()
 
-        # ### --- LOGS --- ###
-        if log_string != buffer:
-            log_string = buffer
-            window['-logs-'].update(buffer)
-
-        ### --- SAVE/LOAD --- ###
+        # --- SAVE/LOAD --- #
         # Load Blockchain
         if event == 'Open Blockchain':
             file_path = sg.popup_get_file('Load Blockchain', no_window=True,
@@ -467,13 +539,13 @@ def run_node_gui():
                         gui_logger.error(f'Failed to load Blockchain. Error: {e}')
                 else:
                     # Logging
-                    gui_logger.warning(f'Select a database file')
+                    gui_logger.warning('Select a database file')
 
         # Load Wallet
         if event == 'Open Wallet':
             file_path = sg.popup_get_file('Load Wallet', no_window=True,
                                           default_extension='.dat',
-                                          initial_folder=f'{node.dir_path}',
+                                          initial_folder=node.dir_path,
                                           file_types=(('Wallet Files', '*.dat'), ('All Files', '*.*')))
             if file_path:
                 dir_path, file_name = os.path.split(file_path)
@@ -489,13 +561,13 @@ def run_node_gui():
                         gui_logger.error(f'Unable to load wallet. Error: {e}')
                 else:
                     # Logging
-                    gui_logger.warning(f'Select a wallet file')
+                    gui_logger.warning('Select a wallet file')
 
         # Save Blockchain
         if event == 'Save Blockchain':
             file_path = sg.popup_get_file('Save Blockchain', no_window=True, save_as=True,
                                           default_extension='.db',
-                                          initial_folder=f'{node.dir_path}',
+                                          initial_folder=node.dir_path,
                                           default_path='chain.db',
                                           file_types=(('Database Files', '*.db'), ('All Files', '*.*')))
             if file_path:
@@ -520,13 +592,13 @@ def run_node_gui():
                         gui_logger.error(f'Failed to load Blockchain. Error: {e}')
                 else:
                     # Logging
-                    gui_logger.warning(f'Database file must have .db extension.')
+                    gui_logger.warning('Database file must have .db extension.')
 
         # Save Wallet
         if event == 'Save Wallet':
             file_path = sg.popup_get_file('Save Wallet', no_window=True, save_as=True,
                                           default_extension='.dat',
-                                          initial_folder=f'{node.wallet.dir_path}',
+                                          initial_folder=node.wallet.dir_path,
                                           default_path='wallet.dat',
                                           file_types=(('Wallet Files', '*.dat'), ('All Files', '*.*')))
             if file_path:
@@ -540,9 +612,9 @@ def run_node_gui():
                     node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
                 else:
                     # Logging
-                    gui_logger.warning(f'Wallet file must have .dat extension.')
+                    gui_logger.warning('Wallet file must have .dat extension.')
 
-        ### --- INFO BAR --- ###
+        # --- INFO BAR --- #
         # Mining Icon
         if mining != node.is_mining:
             mining = node.is_mining
@@ -573,18 +645,50 @@ def run_node_gui():
             prev_id = node.last_block.id
             window['-prev_id-'].update(prev_id)
 
-        ### --- NODE TAB --- ###
+        # --- NODE TAB --- #
         # Connect
         if event == '-connect-' and not connected:
             # Get ip and port values
             temp_ip = values['-selected_ip-']
             temp_port = values['-selected_port-']
 
-            # Connect to given node or default to legacy node
+            # Create node for connecting
             if temp_ip and temp_port and temp_port.isnumeric():
-                node.connect_to_network(node=(temp_ip, int(temp_port)))
+                temp_node = (temp_ip, int(temp_port))
             else:
-                node.connect_to_network()
+                temp_node = node.LEGACY_NODE
+
+            # Create connecting thread
+            download_window = create_download_window()
+            connecting_thread = threading.Thread(target=node.connect_to_network, args=(temp_node,))
+            connecting_thread.start()
+
+            # Download blocks
+            while connecting_thread.is_alive():
+
+                dl_event, dl_values = download_window.read(timeout=100)
+                if download_window.is_closed():
+                    download_window = create_download_window()
+                    network_height = -1
+
+                if current_height != node.height:
+                    current_height = node.height
+                    download_window['-current_height-'].update(str(current_height))
+
+                if network_height != node.network_height:
+                    network_height = node.network_height
+                    download_window['-network_height-'].update(str(network_height))
+
+                if percent_complete != node.percent_complete:
+                    percent_complete = node.percent_complete
+                    download_window['-pct_complete-'].update(percent_complete)
+
+                # Update logs
+                if log_string != buffer:
+                    log_string = buffer
+                    window['-logs-'].update(buffer)
+
+            download_window.close()
 
         # Disconnect
         if event == '-disconnect-' and connected:
@@ -699,7 +803,7 @@ def run_node_gui():
                     updated_text = temp_text.replace(selected_text, '')
                     window[window_key].update(updated_text)
 
-        ### --- MINER TAB --- ###
+        # --- MINER TAB --- #
 
         # Stop/Start Miner
         if event == '-start_miner-':
@@ -770,7 +874,7 @@ def run_node_gui():
                 temp_list.append(tx.id)
             window['-orphaned_tx_table-'].update(values=temp_list)
 
-        ### --- WALLET TAB --- ###
+        # --- WALLET TAB --- #
         # Update Wallet Balance
         if available_funds != node.wallet.spendable:
             available_funds = node.wallet.spendable
@@ -842,7 +946,10 @@ def run_node_gui():
 
         # Testing
         if event == 'About BB POW':
-            print(ping_list)
+            # print(values)
+            print(f'Connecting thread alive: {connecting_thread.is_alive()}')
+            print(f'Node connected: {node.is_connected}')
+            print(f'Ping list: {ping_list}')
 
     # Cleanup
     if node.is_mining:
