@@ -96,7 +96,8 @@ class Node:
         # Create connected flag for network
         self.is_connected = False
 
-        # Create network height variable for gui
+        # Create network variables for gui
+        self.percent_complete = 0
         self.network_height = 0
 
     # --- PROPERTIES --- #
@@ -556,9 +557,7 @@ class Node:
                 if added:
                     # Logging
                     self.logger.info(f'Successfully added block at height {self.height} from node {random_node}.')
-                    # TESTING
-                    self.logger.debug('Waiting')
-                    time.sleep(1)
+
                 else:
                     # Logging
                     self.logger.critical(f'Failed to add block at {self.height + 1} from node {random_node}.')

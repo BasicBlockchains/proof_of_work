@@ -472,10 +472,11 @@ def run_node_gui():
 
     # Download blocks
     while connecting_thread.is_alive():
+
+        dl_event, dl_values = download_window.read(timeout=100)
         if download_window.is_closed():
             download_window = create_download_window()
-
-        dl_event, dl_values = download_window.read(timeout=10)
+            network_height = -1
 
         if current_height != node.height:
             current_height = node.height
@@ -653,11 +654,44 @@ def run_node_gui():
             temp_ip = values['-selected_ip-']
             temp_port = values['-selected_port-']
 
-            # Connect to given node or default to legacy node
+            # Create node for connecting
             if temp_ip and temp_port and temp_port.isnumeric():
-                node.connect_to_network(node=(temp_ip, int(temp_port)))
+                temp_node = (temp_ip, int(temp_port))
             else:
-                node.connect_to_network()
+                temp_node = node.LEGACY_NODE
+
+            # node.connect_to_network(temp_node)
+            # Create connecting thread
+            download_window = create_download_window()
+            connecting_thread = threading.Thread(target=node.connect_to_network, args=(temp_node,))
+            connecting_thread.start()
+
+            # Download blocks
+            while connecting_thread.is_alive():
+
+                dl_event, dl_values = download_window.read(timeout=100)
+                if download_window.is_closed():
+                    download_window = create_download_window()
+                    network_height = -1
+
+                if current_height != node.height:
+                    current_height = node.height
+                    download_window['-current_height-'].update(str(current_height))
+
+                if network_height != node.network_height:
+                    network_height = node.network_height
+                    download_window['-network_height-'].update(str(network_height))
+
+                if percent_complete != node.percent_complete:
+                    percent_complete = node.percent_complete
+                    download_window['-pct_complete-'].update(percent_complete)
+
+                # Update logs
+                if log_string != buffer:
+                    log_string = buffer
+                    window['-logs-'].update(buffer)
+
+            download_window.close()
 
         # Disconnect
         if event == '-disconnect-' and connected:
@@ -917,6 +951,8 @@ def run_node_gui():
         if event == 'About BB POW':
             # print(values)
             print(f'Connecting thread alive: {connecting_thread.is_alive()}')
+            print(f'Node connected: {node.is_connected}')
+            print(f'Ping list: {ping_list}')
 
     # Cleanup
     if node.is_mining:
