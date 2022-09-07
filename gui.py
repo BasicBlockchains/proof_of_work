@@ -520,9 +520,7 @@ def run_node_gui():
         if event == '-tab_group-' and values[event] == '-wallet_tab-':
             window['-wallet_address-'].Widget.select_clear()
 
-        # ### --- LOGS --- ###
-
-        ### --- SAVE/LOAD --- ###
+        # --- SAVE/LOAD --- #
         # Load Blockchain
         if event == 'Open Blockchain':
             file_path = sg.popup_get_file('Load Blockchain', no_window=True,
@@ -547,7 +545,7 @@ def run_node_gui():
         if event == 'Open Wallet':
             file_path = sg.popup_get_file('Load Wallet', no_window=True,
                                           default_extension='.dat',
-                                          initial_folder=f'{node.dir_path}',
+                                          initial_folder=node.dir_path,
                                           file_types=(('Wallet Files', '*.dat'), ('All Files', '*.*')))
             if file_path:
                 dir_path, file_name = os.path.split(file_path)
@@ -569,7 +567,7 @@ def run_node_gui():
         if event == 'Save Blockchain':
             file_path = sg.popup_get_file('Save Blockchain', no_window=True, save_as=True,
                                           default_extension='.db',
-                                          initial_folder=f'{node.dir_path}',
+                                          initial_folder=node.dir_path,
                                           default_path='chain.db',
                                           file_types=(('Database Files', '*.db'), ('All Files', '*.*')))
             if file_path:
@@ -600,7 +598,7 @@ def run_node_gui():
         if event == 'Save Wallet':
             file_path = sg.popup_get_file('Save Wallet', no_window=True, save_as=True,
                                           default_extension='.dat',
-                                          initial_folder=f'{node.wallet.dir_path}',
+                                          initial_folder=node.wallet.dir_path,
                                           default_path='wallet.dat',
                                           file_types=(('Wallet Files', '*.dat'), ('All Files', '*.*')))
             if file_path:
@@ -616,7 +614,7 @@ def run_node_gui():
                     # Logging
                     gui_logger.warning(f'Wallet file must have .dat extension.')
 
-        ### --- INFO BAR --- ###
+        # --- INFO BAR --- #
         # Mining Icon
         if mining != node.is_mining:
             mining = node.is_mining
@@ -647,7 +645,7 @@ def run_node_gui():
             prev_id = node.last_block.id
             window['-prev_id-'].update(prev_id)
 
-        ### --- NODE TAB --- ###
+        # --- NODE TAB --- #
         # Connect
         if event == '-connect-' and not connected:
             # Get ip and port values
@@ -660,7 +658,6 @@ def run_node_gui():
             else:
                 temp_node = node.LEGACY_NODE
 
-            # node.connect_to_network(temp_node)
             # Create connecting thread
             download_window = create_download_window()
             connecting_thread = threading.Thread(target=node.connect_to_network, args=(temp_node,))
@@ -806,7 +803,7 @@ def run_node_gui():
                     updated_text = temp_text.replace(selected_text, '')
                     window[window_key].update(updated_text)
 
-        ### --- MINER TAB --- ###
+        # --- MINER TAB --- #
 
         # Stop/Start Miner
         if event == '-start_miner-':
@@ -877,7 +874,7 @@ def run_node_gui():
                 temp_list.append(tx.id)
             window['-orphaned_tx_table-'].update(values=temp_list)
 
-        ### --- WALLET TAB --- ###
+        # --- WALLET TAB --- #
         # Update Wallet Balance
         if available_funds != node.wallet.spendable:
             available_funds = node.wallet.spendable
