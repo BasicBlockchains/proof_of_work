@@ -519,6 +519,9 @@ class Node:
             self.node_list = []
 
     def disconnect_from_network(self):
+        # No longer connected - will be used to confirm delete
+        self.is_connected = False
+
         # Remove own node first
         try:
             self.node_list.remove(self.node)
@@ -544,8 +547,7 @@ class Node:
 
             self.node_list.remove(node)
 
-        # No longer connected
-        self.is_connected = False
+
 
     def catchup_to_network(self):
         #Get node list
@@ -568,10 +570,6 @@ class Node:
 
                 # Get random node and add next block
                 random_node = random.choice(node_list_index)
-                # next_block = self.request_indexed_block(self.height + 1, random_node)
-                # raw_block = self.request_indexed_raw_block(self.height+1, random_node)
-                # if raw_block.id == next_block.id:
-                #     print(f'Raw block success')
                 next_block = self.request_indexed_raw_block(self.height + 1, random_node)
                 added = self.add_block(next_block)
                 if added:
