@@ -3,6 +3,7 @@ The Blockchain Class
 '''
 
 import logging
+import sqlite3
 from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
@@ -90,7 +91,17 @@ class Blockchain():
     # Properties
     @property
     def height(self):
-        return self.chain_db.get_height()['height']
+        retrieved_height = False
+        height = 0
+        while not retrieved_height:
+            try:
+                height = self.chain_db.get_height()['height']
+                retrieved_height = True
+            except sqlite3.OperationalError:
+                #Logging
+                self.logger.warning('DB is locked.')
+                pass
+        return height
 
     @property
     def last_block(self):
