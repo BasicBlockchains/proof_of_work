@@ -25,6 +25,29 @@ DEFAULT_WINDOW_SIZE = (800, 600)
 buffer = ''
 
 
+# --- ABOUT WINDOW --- #
+def create_about_window(theme=DEFAULT_THEME):
+    sg.theme(theme)
+    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_options(font='Ubuntu 12', )
+
+    main_layout = [
+        [
+            sg.Push(),
+            sg.Text("The BB POW is a proof-of-work blockchain, written entirely in python.\n"
+                    "For more information please visit http://www.basicblockchains.com/\n\n"
+                    f"Current version: {Formatter.VERSION}\n"
+                    f"Contact: basicblockchains@gmail.com\n"
+                    f""),
+            sg.Push()
+        ]
+    ]
+
+    return sg.Window('ABOUT', main_layout, resizable=False, finalize=True)
+
+
+
+
 # --- PORT WINDOW --- #
 def create_port_window(theme=DEFAULT_THEME):
     sg.theme(theme)
@@ -50,7 +73,7 @@ def create_port_window(theme=DEFAULT_THEME):
         ]
     ]
 
-    return sg.Window('LOADING', main_layout, resizable=False, finalize=True)
+    return sg.Window('SELECT PORT', main_layout, resizable=False, finalize=True)
 
 
 # --- DOWNLOAD WINDOW --- #
@@ -112,7 +135,7 @@ def create_window(theme=DEFAULT_THEME):
            ]
           ]
          ],
-        ['&Help', ['Abo&ut BB POW', 'Version', '&Contact']]
+        ['&Help', ['Abo&ut BB POW']]
     ]
 
     # --- Status Tab --- #
@@ -133,9 +156,16 @@ def create_window(theme=DEFAULT_THEME):
          sg.Text('BLOCK ID:', justification='right', auto_size_text=False, size=(12, 1)),
          sg.InputText(key='-prev_id-', disabled=True, use_readonly_for_disable=True, border_width=0, size=(64, 1)),
          sg.Push(), ],
+        [sg.HorizontalSeparator(pad=10, color='#000000')],
         [
             sg.Multiline(key='-logs-', pad=10, expand_x=True, expand_y=True, disabled=True, background_color='#FFFFFF',
                          right_click_menu=right_click_menu[0], autoscroll=True, enable_events=True)
+        ],
+        [
+            sg.Push(),
+            sg.Button('Save Logs', size=(10,2), key='-save_logs-'),
+            sg.Button('Clear Logs', size=(10,2), key='-clear_logs-'),
+            sg.Push()
         ]
     ]
 
@@ -163,7 +193,7 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Text('SELECTED PORT:', justification='right', auto_size_text=False, size=(16, 1)),
          sg.InputText(justification='left', size=(16, 1), background_color='#FFFFFF', key='-selected_port-',
                       right_click_menu=right_click_menu[0])],
-        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-'), sg.Button('CLEAR', size=(10, 2), key='-clear-'),
+        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-', tooltip='Ping selected node'), sg.Button('CLEAR', size=(10, 2), key='-clear-'),
          sg.Push()],
         [sg.HorizontalSeparator(pad=5, color='#000000')],
 
@@ -180,7 +210,7 @@ def create_window(theme=DEFAULT_THEME):
                   col_widths=node_table_column_widths, key='-node_list_table-', bind_return_key=True)],
         [sg.Push(),
          sg.Button('CONNECT', button_color='#00AA00', size=(10, 2), tooltip='Connect to network', key='-connect-'),
-         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-'), sg.Push()],
+         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-', tooltip='Disconnect from network'), sg.Push()],
     ]
     node_tab_layout = [
         [sg.Column(node_column, vertical_alignment='center', pad=50, expand_y=True),
@@ -348,11 +378,11 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Menu(menu_layout)],
         [
             sg.Push(),
-            sg.Text('SERVER:', justification='right', auto_size_text=False, size=(12, 1)),
+            sg.Text('SERVER:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Server Status.'),
             sg.Image('./images/red_circle_small.png', key='-server_icon-'),
-            sg.Text('NETWORK:', justification='right', auto_size_text=False, size=(12, 1)),
+            sg.Text('NETWORK:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Network Status'),
             sg.Image('./images/red_circle_small.png', key='-network_icon-'),
-            sg.Text('MINING:', justification='right', auto_size_text=False, size=(12, 1)),
+            sg.Text('MINING:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Mining Status'),
             sg.Image('./images/red_circle_small.png', key='-mining_icon-'),
             sg.Push(),
             sg.Button('START MINER', auto_size_button=False, size=(12, 2), key='-start_miner-', button_color='#00AA00'),
@@ -394,24 +424,45 @@ def run_node_gui():
     desired_port = 0
     port_found = False
     port_window = create_port_window()
+
+    #Bind enter key in port_window
+    port_window.bind("<Return>", "_Enter")
+    port_window.bind("<KP_Enter>", "_Enter")
+
     while not port_found:
         port_event, port_values = port_window.read(timeout=10)
 
         if port_window.is_closed():
             port_window = create_port_window()
+            port_window.bind("<Return>", "_Enter")
+            port_window.bind("<KP_Enter>", "_Enter")
 
-        if port_event == '-select_port-':
-            if port_values['-enter_port-'].isnumeric():
-                temp_desired_port = int(port_values['-enter_port-'])
-                if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
-                    desired_port = temp_desired_port
+        if port_event:
+
+            if port_event in '-select_port-':
+                if port_values['-enter_port-'].isnumeric():
+                    temp_desired_port = int(port_values['-enter_port-'])
+                    if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
+                        desired_port = temp_desired_port
+                        port_found = True
+
+            if port_event in '-default_port-':
+                desired_port = Node.DEFAULT_PORT
+                port_found = True
+
+            if port_event == '_Enter':
+                if port_values['-enter_port-'].isnumeric():
+                    temp_desired_port = int(port_values['-enter_port-'])
+                    if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
+                        desired_port = temp_desired_port
+                        port_found = True
+                else:
+                    desired_port = Node.DEFAULT_PORT
                     port_found = True
 
-        if port_event == '-default_port-':
-            desired_port = Node.DEFAULT_PORT
-            port_found = True
-
     port_window.close()
+
+    # -- MAIN WINDOW -- #
 
     # Setup Window
     window = create_window()
@@ -560,6 +611,23 @@ def run_node_gui():
         if log_string != buffer:
             log_string = buffer
             window['-logs-'].update(buffer)
+
+        #Save logs
+        if event == '-save_logs-':
+            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True, initial_folder=node.dir_path,
+                              file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
+            if file_path:
+                dir_path, file_name = os.path.split(file_path)
+                if file_name.endswith('.txt'):
+                    with open(file_path, 'w') as f:
+                        f.write(buffer)
+                else:
+                    gui_logger.warning('Logs must have .txt extension.')
+
+
+        #Clear Logs
+        if event == '-clear_logs-':
+            buffer = ''
 
         # Tab Groups
         if event == '-tab_group-' and values[event] == '-status_tab-':
@@ -995,12 +1063,9 @@ def run_node_gui():
             window['-wallet_fees-'].update('')
             window['-wallet_block_height-'].update('')
 
-        # Testing
+        # About
         if event == 'About BB POW':
-            # print(values)
-            print(f'Connecting thread alive: {connecting_thread.is_alive()}')
-            print(f'Node connected: {node.is_connected}')
-            print(f'Ping list: {ping_list}')
+            create_about_window()
 
     # Cleanup
     if node.is_mining:

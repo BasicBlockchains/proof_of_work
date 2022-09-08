@@ -1,7 +1,7 @@
 '''
 REST API for the Blockchain
 '''
-
+import requests
 import waitress
 from flask import Flask, jsonify, request, Response, json
 
@@ -19,7 +19,8 @@ def create_app(node: Node):
 
     @app.route('/')
     def hello_world():
-        return "Welcome to the BB POW!"
+
+        return "Welcome to the BBPOW!"
 
         # TODO: In prod enable the index page
         # return render_template('index.html')
@@ -31,6 +32,14 @@ def create_app(node: Node):
     @app.route('/height/')
     def get_height():
         return node.blockchain.chain_db.get_height()
+
+    @app.route('/is_connected/')
+    def is_connected_endpoint():
+        if node.is_connected:
+            return Response("Node is connected", status=200, mimetype='application/json')
+        else:
+            return Response("Node is not connected", status=202, mimetype='application/json')
+
 
     @app.route('/node_list/', methods=['GET', 'POST', 'DELETE'])
     def get_node_list():
@@ -52,6 +61,7 @@ def create_app(node: Node):
                 return Response("Submitted node malformed.", status=400, mimetype='application/json')
 
         elif request.method == 'DELETE':
+            #Get node first
             node_dict = request.get_json()
             try:
                 ip = node_dict['ip']
@@ -59,11 +69,25 @@ def create_app(node: Node):
             except KeyError:
                 return Response("Submitted node malformed.", status=400, mimetype='application/json')
 
+            #Confirm connected status
+            url = f'http://{ip}:{port}/is_connected'
+            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             try:
-                node.node_list.remove((ip, port))
-                return Response("Node removed from list", status=200, mimetype='application/json')
-            except ValueError:
-                return Response("Submitted node not in node list", status=400, mimetype='application/json')
+                r = requests.get(url, headers=headers)
+            except requests.exceptions.ConnectionError:
+                #Logging
+                return Response(f"Could not confirm connected status with {(ip,port)}",status=401, mimetype='application/json')
+
+            #Remove node
+            if r.status_code == 202:
+                try:
+                    node.node_list.remove((ip, port))
+                    return Response("Node removed from list", status=200, mimetype='application/json')
+                except ValueError:
+                    return Response("Submitted node not in node list", status=404, mimetype='application/json')
+            else:
+                return Response(f"Did not receive 202 code from {ip,port} for disconnect", status=401, mimetype='application/json')
+
 
     @app.route('/transaction/', methods=['GET', 'POST'])
     def post_tx():
@@ -91,6 +115,25 @@ def create_app(node: Node):
             except Exception as e:
                 return Response(f'Exception encountered handling post request. Error {e}', status=400,
                                 mimetype='application/json')
+
+    @app.route('/transaction/<tx_id>')
+    def confirm_tx(tx_id: str):
+        block = node.blockchain.find_block_by_tx_id(tx_id)
+        tx_dict = {
+            "tx_id": tx_id
+        }
+        if block:
+            tx_dict.update({
+                "in_chain": True,
+                "in_block": block.id,
+                "block_height": block.mining_tx.height
+            })
+        else:
+            tx_dict.update({
+                "in_chain": False
+            })
+
+        return jsonify(tx_dict)
 
     @app.route('/block/', methods=['GET', 'POST'])
     def get_last_block():
@@ -202,39 +245,11 @@ def create_app(node: Node):
         utxo_dict = node.blockchain.chain_db.get_utxo(tx_id, index)
         return utxo_dict
 
-    @app.route('/address/')
-    def address_display():
-        info_string = 'Get all utxos by address at /address/<address>'
-        return jsonify(info_string)
-
-    @app.route('/address/<address>')
+    @app.route('/<address>')
     def get_utxo_by_address(address: str):
-        utxo_dict = node.blockchain.chain_db.get_utxos_by_address(address)
-        return jsonify(utxo_dict)
-
-    @app.route('/tx_id/')
-    def tx_display():
-        info_string = 'Confirm if a tx is in the chain at /tx_id/<tx_id>'
-        return jsonify(info_string)
-
-    @app.route('/tx_id/<tx_id>')
-    def confirm_tx(tx_id: str):
-        block = node.blockchain.find_block_by_tx_id(tx_id)
-        tx_dict = {
-            "tx_id": tx_id
-        }
-        if block:
-            tx_dict.update({
-                "in_chain": True,
-                "in_block": block.id,
-                "block_height": block.mining_tx.height
-            })
-        else:
-            tx_dict.update({
-                "in_chain": False
-            })
-
-        return jsonify(tx_dict)
+        return jsonify(
+            node.blockchain.chain_db.get_utxos_by_address(address)
+        )
 
     return app
 
