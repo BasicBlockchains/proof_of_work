@@ -547,8 +547,6 @@ class Node:
 
             self.node_list.remove(node)
 
-
-
     def catchup_to_network(self):
         #Get node list
         node_list_index = self.node_list.copy()
