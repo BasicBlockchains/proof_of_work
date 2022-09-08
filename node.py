@@ -519,6 +519,12 @@ class Node:
             self.node_list = []
 
     def disconnect_from_network(self):
+        #Stop all mining
+        if self.is_mining:
+            self.stop_miner()
+            while self.mining_thread.is_alive():
+                pass
+
         # No longer connected - will be used to confirm delete
         self.is_connected = False
 
