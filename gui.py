@@ -879,48 +879,54 @@ def run_node_gui():
             window['-selected_port-'].update('')
 
         if event == 'Copy':
-            window_key = window.FindElementWithFocus().Key
-            copy_text = None
-            try:
-                copy_text = window[window_key].Widget.selection_get()
-            except _tkinter.TclError:
-                pass
-            if copy_text:
-                cb = Tk()
-                cb.clipboard_clear()
-                cb.clipboard_append(copy_text)
-                cb.update()
-                cb.destroy()
+            element = window.FindElementWithFocus()
+            if element:
+                window_key = element.Key
+                copy_text = None
+                try:
+                    copy_text = window[window_key].Widget.selection_get()
+                except _tkinter.TclError:
+                    pass
+                if copy_text:
+                    cb = Tk()
+                    cb.clipboard_clear()
+                    cb.clipboard_append(copy_text)
+                    cb.update()
+                    cb.destroy()
 
         if event == 'Paste':
-            window_key = window.FindElementWithFocus().Key
-            if window_key in needs_paste_keys:
-                cb = Tk()
-                paste_text = cb.clipboard_get()
-                cb.update()
-                cb.destroy()
-                try:
-                    window[window_key].update(paste_text)
-                except Exception as e:
-                    # Logging
-                    gui_logger.error(f'Encountered exception when copying: {e}')
+            element = window.FindElementWithFocus()
+            if element:
+                window_key = element.Key
+                if window_key in needs_paste_keys:
+                    cb = Tk()
+                    paste_text = cb.clipboard_get()
+                    cb.update()
+                    cb.destroy()
+                    try:
+                        window[window_key].update(paste_text)
+                    except Exception as e:
+                        # Logging
+                        gui_logger.error(f'Encountered exception when copying: {e}')
 
         if event == 'Clear':
-            window_key = window.FindElementWithFocus().Key
-            selected_text = None
-            try:
-                selected_text = window[window_key].Widget.selection_get()
-            except _tkinter.TclError:
-                pass
-            if selected_text:
-                window[window_key].Widget.selection_clear()
-                if window_key in [
-                    '-selected_ip-', '-selected_port-',
-                    '-wallet_sendto-', '-wallet_amount-', '-wallet_fees-'
-                ]:
-                    temp_text = values[window_key]
-                    updated_text = temp_text.replace(selected_text, '')
-                    window[window_key].update(updated_text)
+            element = window.FindElementWithFocus()
+            if element:
+                window_key = element.Key
+                selected_text = None
+                try:
+                    selected_text = window[window_key].Widget.selection_get()
+                except _tkinter.TclError:
+                    pass
+                if selected_text:
+                    window[window_key].Widget.selection_clear()
+                    if window_key in [
+                        '-selected_ip-', '-selected_port-',
+                        '-wallet_sendto-', '-wallet_amount-', '-wallet_fees-'
+                    ]:
+                        temp_text = values[window_key]
+                        updated_text = temp_text.replace(selected_text, '')
+                        window[window_key].update(updated_text)
 
         # --- MINER TAB --- #
 
@@ -1066,6 +1072,7 @@ def run_node_gui():
         # About
         if event == 'About BB POW':
             create_about_window()
+
 
     # Cleanup
     if node.is_mining:
