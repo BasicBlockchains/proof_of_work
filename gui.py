@@ -193,7 +193,7 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Text('SELECTED PORT:', justification='right', auto_size_text=False, size=(16, 1)),
          sg.InputText(justification='left', size=(16, 1), background_color='#FFFFFF', key='-selected_port-',
                       right_click_menu=right_click_menu[0])],
-        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-'), sg.Button('CLEAR', size=(10, 2), key='-clear-'),
+        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-', tooltip='Ping selected node'), sg.Button('CLEAR', size=(10, 2), key='-clear-'),
          sg.Push()],
         [sg.HorizontalSeparator(pad=5, color='#000000')],
 
@@ -210,7 +210,7 @@ def create_window(theme=DEFAULT_THEME):
                   col_widths=node_table_column_widths, key='-node_list_table-', bind_return_key=True)],
         [sg.Push(),
          sg.Button('CONNECT', button_color='#00AA00', size=(10, 2), tooltip='Connect to network', key='-connect-'),
-         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-'), sg.Push()],
+         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-', tooltip='Disconnect from network'), sg.Push()],
     ]
     node_tab_layout = [
         [sg.Column(node_column, vertical_alignment='center', pad=50, expand_y=True),
@@ -378,11 +378,11 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Menu(menu_layout)],
         [
             sg.Push(),
-            sg.Text('SERVER:', justification='right', auto_size_text=False, size=(12, 1)),
+            sg.Text('SERVER:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Server Status.'),
             sg.Image('./images/red_circle_small.png', key='-server_icon-'),
-            sg.Text('NETWORK:', justification='right', auto_size_text=False, size=(12, 1)),
+            sg.Text('NETWORK:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Network Status'),
             sg.Image('./images/red_circle_small.png', key='-network_icon-'),
-            sg.Text('MINING:', justification='right', auto_size_text=False, size=(12, 1)),
+            sg.Text('MINING:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Mining Status'),
             sg.Image('./images/red_circle_small.png', key='-mining_icon-'),
             sg.Push(),
             sg.Button('START MINER', auto_size_button=False, size=(12, 2), key='-start_miner-', button_color='#00AA00'),
