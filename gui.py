@@ -50,7 +50,7 @@ def create_port_window(theme=DEFAULT_THEME):
         ]
     ]
 
-    return sg.Window('LOADING', main_layout, resizable=False, finalize=True)
+    return sg.Window('SELECT PORT', main_layout, resizable=False, finalize=True)
 
 
 # --- DOWNLOAD WINDOW --- #
@@ -394,22 +394,43 @@ def run_node_gui():
     desired_port = 0
     port_found = False
     port_window = create_port_window()
+
+    #Bind enter key in port_window
+    port_window.bind("<Return>", "_Enter")
+    port_window.bind("<KP_Enter>", "_Enter")
+
     while not port_found:
         port_event, port_values = port_window.read(timeout=10)
 
         if port_window.is_closed():
             port_window = create_port_window()
+            port_window.bind("<Return>", "_Enter")
+            port_window.bind("<KP_Enter>", "_Enter")
 
-        if port_event == '-select_port-':
-            if port_values['-enter_port-'].isnumeric():
-                temp_desired_port = int(port_values['-enter_port-'])
-                if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
-                    desired_port = temp_desired_port
+        if port_event:
+
+            if port_event in '-select_port-':
+                if port_values['-enter_port-'].isnumeric():
+                    temp_desired_port = int(port_values['-enter_port-'])
+                    if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
+                        desired_port = temp_desired_port
+                        port_found = True
+
+            if port_event in '-default_port-':
+                desired_port = Node.DEFAULT_PORT
+                port_found = True
+
+            if port_event == '_Enter':
+                if port_values['-enter_port-'].isnumeric():
+                    temp_desired_port = int(port_values['-enter_port-'])
+                    if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
+                        desired_port = temp_desired_port
+                        port_found = True
+                else:
+                    desired_port = Node.DEFAULT_PORT
                     port_found = True
 
-        if port_event == '-default_port-':
-            desired_port = Node.DEFAULT_PORT
-            port_found = True
+
 
     port_window.close()
 
