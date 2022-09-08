@@ -432,7 +432,7 @@ class Node:
         url = f'http://{ip}:{port}/ping'
         try:
             r = requests.get(url, headers=self.request_header)
-        except ConnectionRefusedError:
+        except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Error connecting to {node} for ping.')
             return False
@@ -584,7 +584,7 @@ class Node:
         url = f'http://{ip}:{port}/height'
         try:
             r = requests.get(url, headers=self.request_header)
-        except ConnectionRefusedError:
+        except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Error connecting to {node} for height.')
             return 0
@@ -595,7 +595,7 @@ class Node:
         url = f'http://{ip}:{port}/transaction'
         try:
             r = requests.get(url, headers=self.request_header)
-        except ConnectionRefusedError:
+        except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Error connecting to {node} for validated txs.')
             return
@@ -677,7 +677,7 @@ class Node:
         url = f'http://{ip}:{port}/block/{block_index}'
         try:
             r = requests.get(url, headers=self.request_header)
-        except ConnectionRefusedError:
+        except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Error connecting to {node} for indexed block.')
             return None
@@ -696,7 +696,7 @@ class Node:
         url = f'http://{ip}:{port}/raw_block/{block_index}'
         try:
             r = requests.get(url, headers=self.request_header)
-        except ConnectionRefusedError:
+        except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Error connecting to {node} for indexed block.')
             return None
@@ -709,6 +709,8 @@ class Node:
             return None
 
         return self.d.raw_block(block_dict['raw_block'])
+
+    # --- GOSSIP PROTOCOLS --- #
 
     def gossip_protocol_tx(self, tx: Transaction):
         node_list_index = self.node_list.copy()
@@ -769,7 +771,7 @@ class Node:
             node_list_index.remove(random_node)
         return gossip_list
 
-    # --- NETWORKING --- #
+    # --- NETWORKING TOOLS --- #
     def find_open_port(self, desired_port=DEFAULT_PORT):
         port_found = False
         temp_port = desired_port
