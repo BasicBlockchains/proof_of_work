@@ -434,7 +434,7 @@ class Node:
             r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
-            self.logger.error(f'Error connecting to {node}.')
+            self.logger.error(f'Error connecting to {node} for ping.')
             return False
 
         return r.status_code == 200
@@ -443,7 +443,12 @@ class Node:
         ip, port = node
         url = f'http://{ip}:{port}/node_list'
         data = {'ip': self.ip, 'port': self.assigned_port}
-        r = requests.post(url, data=json.dumps(data), headers=self.request_header)
+        try:
+            r = requests.post(url, data=json.dumps(data), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.error(f'Could not connect to {node}')
+            return False
         if r.status_code == 200 and node not in self.node_list:
             correct_genesis = self.check_genesis(node)
             if correct_genesis:
@@ -499,7 +504,6 @@ class Node:
                     if connected:
                         # Logging
                         self.logger.info(f'Successfully connected to {(ip, port)}')
-
                     else:
                         # Logging
                         self.logger.warning(f'Error connecting to {(ip, port)}')
@@ -528,26 +532,39 @@ class Node:
             ip, port = node
             url = f'http://{ip}:{port}/node_list'
             data = {'ip': self.ip, 'port': self.assigned_port}
-            r = requests.delete(url, data=json.dumps(data), headers=self.request_header)
-            if r.status_code != 200:
-                # Logging
-                self.logger.error(f'Error connecting to {node} for disconnect. Status code: {r.status_code}')
+            try:
+                r = requests.delete(url, data=json.dumps(data), headers=self.request_header)
+                if r.status_code != 200:
+                    # Logging
+                    self.logger.error(
+                        f'Did not receive 200 code from {node} for disconnect. Status code: {r.status_code}')
+            except requests.exceptions.ConnectionError:
+                #Logging
+                self.logger.error(f'Error connecting to {node} for disconnect.')
+
             self.node_list.remove(node)
 
         # No longer connected
         self.is_connected = False
 
     def catchup_to_network(self):
+        #Get node list
         node_list_index = self.node_list.copy()
-        node_list_index.remove(self.node)
+
+        # Remove own node
+        if node_list_index:
+            node_list_index.remove(self.node)
+
+        #Iterate over nodes
         if node_list_index != []:
+            #Get random node
             random_node = random.choice(node_list_index)
-            # Assign as class variable for use in gui
+            # Network height class var for use in gui
             self.network_height = self.request_height(random_node)
 
             while self.height < self.network_height:
                 # Class variables for gui loading screen
-                self.percent_complete = int((self.height / self.network_height) * 100)  # take max to avoid div/0
+                self.percent_complete = int((self.height / self.network_height) * 100)
 
                 # Get random node and add next block
                 random_node = random.choice(node_list_index)
@@ -569,7 +586,7 @@ class Node:
             r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
-            self.logger.error(f'Error connecting to {node}.')
+            self.logger.error(f'Error connecting to {node} for height.')
             return 0
         return r.json()['height']
 
@@ -580,8 +597,8 @@ class Node:
             r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
-            self.logger.error(f'Error connecting to {node}.')
-            return 0
+            self.logger.error(f'Error connecting to {node} for validated txs.')
+            return
         validated_tx_dict = r.json()
         tx_num = validated_tx_dict['validated_txs']
         for x in range(tx_num):
@@ -601,7 +618,12 @@ class Node:
         '''
         ip, port = node
         url = f'http://{ip}:{port}/raw_block/0'
-        r = requests.get(url, headers=self.request_header)
+        try:
+            r = requests.get(url, headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.critical(f'Unable to get genesis block from {node}')
+            return False
         if r.status_code == 200:
             try:
                 raw_genesis = r.json()['raw_block']
@@ -620,19 +642,34 @@ class Node:
         ip, port = node
         url = f'http://{ip}:{port}/transaction'
         data = {'raw_tx': new_tx.raw_tx}
-        r = requests.post(url, data=json.dumps(data), headers=self.request_header)
+        try:
+            r = requests.post(url, data=json.dumps(data), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.warning(f'Unable to send tx with id {new_tx.id} to {node}')
+            return 0
         return r.status_code
 
     def send_block_to_node(self, block: Block, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/block'
-        r = requests.post(url, data=json.dumps(block.to_json), headers=self.request_header)
+        try:
+            r = requests.post(url, data=json.dumps(block.to_json), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.warning(f'Unable to send block at height {block.height} to {node}')
+            return 0
         return r.status_code
 
     def send_raw_block_to_node(self, raw_block: str, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/raw_block'
-        r = requests.post(url, data=raw_block, headers=self.request_header)
+        try:
+            r = requests.post(url, data=raw_block, headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.warning(f'Unable to send raw block at height {self.d.raw_block(raw_block).height} to {node}')
+            return 0
         return r.status_code
 
     def request_indexed_block(self, block_index: int, node: tuple):
@@ -642,7 +679,7 @@ class Node:
             r = requests.get(url, headers=self.request_header)
         except ConnectionRefusedError:
             # Logging
-            self.logger.error(f'Error connecting to {node}.')
+            self.logger.error(f'Error connecting to {node} for indexed block.')
             return None
 
         try:
@@ -656,7 +693,8 @@ class Node:
 
     def gossip_protocol_tx(self, tx: Transaction):
         node_list_index = self.node_list.copy()
-        node_list_index.remove(self.node)
+        if node_list_index:
+            node_list_index.remove(self.node)
         gossip_count = 0
         while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
             list_length = len(node_list_index)
@@ -671,7 +709,8 @@ class Node:
 
     def gossip_protocol_block(self, block: Block):
         node_list_index = self.node_list.copy()
-        node_list_index.remove(self.node)
+        if node_list_index:
+            node_list_index.remove(self.node)
         gossip_count = 0
         while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
             list_length = len(node_list_index)
@@ -686,7 +725,8 @@ class Node:
 
     def gossip_protocol_raw_block(self, block: Block):
         node_list_index = self.node_list.copy()
-        node_list_index.remove(self.node)
+        if node_list_index:
+            node_list_index.remove(self.node)
         gossip_count = 0
         while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
             list_length = len(node_list_index)
@@ -701,7 +741,8 @@ class Node:
     def get_gossip_nodes(self):
         # Get gossip nodes
         node_list_index = self.node_list.copy()
-        node_list_index.remove(self.node)
+        if node_list_index:
+            node_list_index.remove(self.node)
         gossip_list = []
         while len(gossip_list) < self.f.GOSSIP_NUMBER and node_list_index != []:
             random_node = random.choice(node_list_index)
