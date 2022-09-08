@@ -1,7 +1,7 @@
 '''
 REST API for the Blockchain
 '''
-
+import requests
 import waitress
 from flask import Flask, jsonify, request, Response, json
 
@@ -19,28 +19,8 @@ def create_app(node: Node):
 
     @app.route('/')
     def hello_world():
-        info_string = "Welcome to the BB POW!\n" \
-                      "Endpoints:\n" \
-                      "----------\n" \
-                      "/ping | get" \
-                      "/height | get" \
-                      "/node_list | get, post, delete" \
-                      "/transaction | get, post" \
-                      "/transaction/<tx_id> | get" \
-                      "/block | get, post" \
-                      "/block/<height> | get" \
-                      "/block/ids | get" \
-                      "/block/headers | get" \
-                      "/block/headers/<height> | get" \
-                      "/raw_block | get, post" \
-                      "/raw_block/<height> | get" \
-                      "/utxo | get" \
-                      "/utxo/<tx_id> | get" \
-                      "/utxo/<tx_id>/<index> | get" \
-                      "/<address> | get"
 
-
-        return "Welcome to the BB POW!"
+        return "Welcome to the BBPOW!"
 
         # TODO: In prod enable the index page
         # return render_template('index.html')
@@ -52,6 +32,14 @@ def create_app(node: Node):
     @app.route('/height/')
     def get_height():
         return node.blockchain.chain_db.get_height()
+
+    @app.route('/is_connected/')
+    def is_connected_endpoint():
+        if node.is_connected:
+            return Response("Node is connected", status=200, mimetype='application/json')
+        else:
+            return Response("Node is not connected", status=202, mimetype='application/json')
+
 
     @app.route('/node_list/', methods=['GET', 'POST', 'DELETE'])
     def get_node_list():
@@ -73,17 +61,33 @@ def create_app(node: Node):
                 return Response("Submitted node malformed.", status=400, mimetype='application/json')
 
         elif request.method == 'DELETE':
+            #Get node first
             node_dict = request.get_json()
             try:
                 ip = node_dict['ip']
                 port = node_dict['port']
             except KeyError:
                 return Response("Submitted node malformed.", status=400, mimetype='application/json')
+
+            #Confirm connected status
+            url = f'http://{ip}:{port}/is_connected'
+            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             try:
-                node.node_list.remove((ip, port))
-                return Response("Node removed from list", status=200, mimetype='application/json')
-            except ValueError:
-                return Response("Submitted node not in node list", status=400, mimetype='application/json')
+                r = requests.get(url, headers=headers)
+            except requests.exceptions.ConnectionError:
+                #Logging
+                return Response(f"Could not confirm connected status with {(ip,port)}",status=401, mimetype='application/json')
+
+            #Remove node
+            if r.status_code == 202:
+                try:
+                    node.node_list.remove((ip, port))
+                    return Response("Node removed from list", status=200, mimetype='application/json')
+                except ValueError:
+                    return Response("Submitted node not in node list", status=404, mimetype='application/json')
+            else:
+                return Response(f"Did not receive 202 code from {ip,port} for disconnect", status=401, mimetype='application/json')
+
 
     @app.route('/transaction/', methods=['GET', 'POST'])
     def post_tx():
