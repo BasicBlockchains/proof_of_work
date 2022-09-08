@@ -160,6 +160,10 @@ def test_fork():
     assert not test_chain.add_block(mined_fork)
     assert test_chain.forks == [{1: mined_fork}]
 
+    #Add block again - forks should remain the same
+    assert not test_chain.add_block(mined_fork)
+    assert test_chain.forks == [{1: mined_fork}]
+
     # Create next block for fork
     unmined_fork2 = random_unmined_block(mined_fork.id, 2, test_chain.mining_reward,
                                          test_chain.target)

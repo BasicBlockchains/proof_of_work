@@ -333,11 +333,14 @@ class Blockchain():
     # Fork methods
 
     def create_fork(self, block: Block):
-        self.forks.append({
-            block.mining_tx.height: block
-        })
-        # Logging
-        self.logger.info(f'Fork created at height {block.height} for block with id {block.id}')
+        fork_dict = {block.height: block}
+        if fork_dict not in self.forks:
+            self.forks.append(fork_dict)
+            # Logging
+            self.logger.info(f'Fork created at height {block.height} for block with id {block.id}')
+        else:
+            #Logging
+            self.logger.info(f'Block with height {block.height} and id {block.id} already in forks.')
 
     def handle_fork(self, block: Block) -> bool:
         # Logging
