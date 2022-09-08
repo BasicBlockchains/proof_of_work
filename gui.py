@@ -156,9 +156,16 @@ def create_window(theme=DEFAULT_THEME):
          sg.Text('BLOCK ID:', justification='right', auto_size_text=False, size=(12, 1)),
          sg.InputText(key='-prev_id-', disabled=True, use_readonly_for_disable=True, border_width=0, size=(64, 1)),
          sg.Push(), ],
+        [sg.HorizontalSeparator(pad=10, color='#000000')],
         [
             sg.Multiline(key='-logs-', pad=10, expand_x=True, expand_y=True, disabled=True, background_color='#FFFFFF',
                          right_click_menu=right_click_menu[0], autoscroll=True, enable_events=True)
+        ],
+        [
+            sg.Push(),
+            sg.Button('Save Logs', size=(10,2), key='-save_logs-'),
+            sg.Button('Clear Logs', size=(10,2), key='-clear_logs-'),
+            sg.Push()
         ]
     ]
 
@@ -605,6 +612,23 @@ def run_node_gui():
             log_string = buffer
             window['-logs-'].update(buffer)
 
+        #Save logs
+        if event == '-save_logs-':
+            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True, initial_folder=node.dir_path,
+                              file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
+            if file_path:
+                dir_path, file_name = os.path.split(file_path)
+                if file_name.endswith('.txt'):
+                    with open(file_path, 'w') as f:
+                        f.write(buffer)
+                else:
+                    gui_logger.warning('Logs must have .txt extension.')
+
+
+        #Clear Logs
+        if event == '-clear_logs-':
+            buffer = ''
+
         # Tab Groups
         if event == '-tab_group-' and values[event] == '-status_tab-':
             window['-height-'].Widget.select_clear()
@@ -1039,7 +1063,7 @@ def run_node_gui():
             window['-wallet_fees-'].update('')
             window['-wallet_block_height-'].update('')
 
-        # Testing
+        # About
         if event == 'About BB POW':
             create_about_window()
 
