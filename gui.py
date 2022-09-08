@@ -25,6 +25,29 @@ DEFAULT_WINDOW_SIZE = (800, 600)
 buffer = ''
 
 
+# --- ABOUT WINDOW --- #
+def create_about_window(theme=DEFAULT_THEME):
+    sg.theme(theme)
+    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_options(font='Ubuntu 12', )
+
+    main_layout = [
+        [
+            sg.Push(),
+            sg.Text("The BB POW is a proof-of-work blockchain, written entirely in python.\n"
+                    "For more information please visit http://www.basicblockchains.com/\n\n"
+                    f"Current version: {Formatter.VERSION}\n"
+                    f"Contact: basicblockchains@gmail.com\n"
+                    f""),
+            sg.Push()
+        ]
+    ]
+
+    return sg.Window('ABOUT', main_layout, resizable=False, finalize=True)
+
+
+
+
 # --- PORT WINDOW --- #
 def create_port_window(theme=DEFAULT_THEME):
     sg.theme(theme)
@@ -112,7 +135,7 @@ def create_window(theme=DEFAULT_THEME):
            ]
           ]
          ],
-        ['&Help', ['Abo&ut BB POW', 'Version', '&Contact']]
+        ['&Help', ['Abo&ut BB POW']]
     ]
 
     # --- Status Tab --- #
@@ -1018,10 +1041,7 @@ def run_node_gui():
 
         # Testing
         if event == 'About BB POW':
-            # print(values)
-            print(f'Connecting thread alive: {connecting_thread.is_alive()}')
-            print(f'Node connected: {node.is_connected}')
-            print(f'Ping list: {ping_list}')
+            create_about_window()
 
     # Cleanup
     if node.is_mining:
