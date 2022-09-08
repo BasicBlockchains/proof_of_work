@@ -568,7 +568,11 @@ class Node:
 
                 # Get random node and add next block
                 random_node = random.choice(node_list_index)
-                next_block = self.request_indexed_block(self.height + 1, random_node)
+                # next_block = self.request_indexed_block(self.height + 1, random_node)
+                # raw_block = self.request_indexed_raw_block(self.height+1, random_node)
+                # if raw_block.id == next_block.id:
+                #     print(f'Raw block success')
+                next_block = self.request_indexed_raw_block(self.height + 1, random_node)
                 added = self.add_block(next_block)
                 if added:
                     # Logging
@@ -690,6 +694,25 @@ class Node:
             return None
 
         return self.d.block_from_dict(block_dict)
+
+    def request_indexed_raw_block(self, block_index: int, node: tuple):
+        ip, port = node
+        url = f'http://{ip}:{port}/raw_block/{block_index}'
+        try:
+            r = requests.get(url, headers=self.request_header)
+        except ConnectionRefusedError:
+            # Logging
+            self.logger.error(f'Error connecting to {node} for indexed block.')
+            return None
+
+        try:
+            block_dict = r.json()
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.critical(f'Unable to decode request for index {block_index} from {node}')
+            return None
+
+        return self.d.raw_block(block_dict['raw_block'])
 
     def gossip_protocol_tx(self, tx: Transaction):
         node_list_index = self.node_list.copy()

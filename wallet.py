@@ -38,8 +38,10 @@ class Wallet():
     # UTXO Constants
     COLUMNS = ['tx_id', 'tx_index', 'amount', 'block_height']
 
+    # Constants for requests
+    request_header = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
     # ---Constants
-    DICTIONARY_EXPONENT = 11
     F = Formatter()
     D = Decoder()
 
@@ -231,8 +233,7 @@ class Wallet():
         ip, port = node
         url = f'http://{ip}:{port}/transaction/'
         data = {'raw_tx': tx.raw_tx}
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.post(url, data=json.dumps(data), headers=headers)
+        r = requests.post(url, data=json.dumps(data), headers=self.request_header)
         if r.status_code in [201, 202]:
             # Logging
             self.logger.info(f'New tx sent to {node}')
@@ -245,8 +246,7 @@ class Wallet():
     def get_node_list(self, node=LEGACY_NODE) -> bool:
         ip, port = node
         url = f'http://{ip}:{port}/node_list'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=self.request_header)
         list_of_nodes = r.json()
 
         if list_of_nodes:
@@ -263,9 +263,8 @@ class Wallet():
     def get_utxos_from_node(self, node=LEGACY_NODE):
         try:
             temp_ip, temp_port = node
-            url = f'http://{temp_ip}:{temp_port}/address/{self.address}'
-            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            r = requests.get(url, headers=headers)
+            url = f'http://{temp_ip}:{temp_port}/{self.address}'
+            r = requests.get(url, headers=self.request_header)
             utxo_dict = r.json()
             return utxo_dict
         except ConnectionRefusedError:
@@ -277,8 +276,7 @@ class Wallet():
         try:
             temp_ip, temp_port = node
             url = f'http://{temp_ip}:{temp_port}/height'
-            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=self.request_header)
             height_dict = r.json()
             self.height = height_dict['height']
         except ConnectionRefusedError:
@@ -289,9 +287,8 @@ class Wallet():
     def confirm_tx_by_id(self, tx_id: str) -> bool:
         node = random.choice(self.node_list)
         ip, port = node
-        url = f'http://{ip}:{port}/tx_id/{tx_id}'
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.get(url, headers=headers)
+        url = f'http://{ip}:{port}/transaction/{tx_id}'
+        r = requests.get(url, headers=self.request_header)
         tx_dict = r.json()
         in_chain = tx_dict["in_chain"]
         return in_chain

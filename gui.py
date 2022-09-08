@@ -460,9 +460,9 @@ def run_node_gui():
                     desired_port = Node.DEFAULT_PORT
                     port_found = True
 
-
-
     port_window.close()
+
+    # -- MAIN WINDOW -- #
 
     # Setup Window
     window = create_window()
