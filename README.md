@@ -2,7 +2,15 @@
 
 ---
 
+## Encryption
+
+We use ellipitic curve encryption (ECC) with the NIST secp256k1 curve values for the ECDSA signature. These methods are detailed in our ECC package: https://pypi.org/project/basicblockchains-ecc/.
+
+
 ## Wallet
+The Wallet class contains the private and public keys used in the ECC. Each wallet can be represented by a seed value, which will be a randomly generated 256-bit integer.
+This will be saved as a hex string in plaintext to the user's harddrive. 
+
 
 ### Address and BASE58 Encoding
 
