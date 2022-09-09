@@ -49,7 +49,7 @@ def create_about_window(theme=DEFAULT_THEME):
 
 
 # --- PORT WINDOW --- #
-def create_port_window(theme=DEFAULT_THEME):
+def create_config_window(theme=DEFAULT_THEME):
     sg.theme(theme)
     sg.set_global_icon('./images/logo_icon.png')
     sg.set_options(font='Ubuntu 12')
@@ -62,18 +62,36 @@ def create_port_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff'),
+            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff', tooltip='Blank field will use default value'),
+            sg.Push()
+        ],
+        [sg.HorizontalSeparator(pad=10, color='#000000')],
+        [
+            sg.Push(),
+            sg.Text('Choose minimum app size. Default = 1200 x 800'),
+            sg.Push(),
+        ],
+        [
+            sg.Push(),
+            sg.InputText(key='-minimum_width-', size=(6,1), background_color='#ffffff'),
+            sg.InputText(key='-minimum_height-', size=(6,1), background_color='#ffffff'),
             sg.Push()
         ],
         [
             sg.Push(),
-            sg.Button('Select Port', key='-select_port-'),
-            sg.Button('Default Port', key='-default_port-'),
+            sg.Text('Press Enter to accept defaults or confirm choices. Invalid options will force defaults.'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Button('Confirm config', key='-confirm_config-'),
+            sg.Button('Accept defaults', key='-accept_defaults-'),
             sg.Push()
         ]
+
     ]
 
-    return sg.Window('SELECT PORT', main_layout, resizable=False, finalize=True)
+    return sg.Window('APP CONFIG', main_layout, resizable=False, finalize=True)
 
 
 # --- DOWNLOAD WINDOW --- #
@@ -421,52 +439,82 @@ class Handler(logging.StreamHandler):
 
 def run_node_gui():
     # Get port first
-    desired_port = 0
-    port_found = False
-    port_window = create_port_window()
+    desired_port = Node.DEFAULT_PORT
+    desired_width = 1200
+    desired_height = 800
+    port_confirmed = False
+    size_confirmed = False
+    config_window = create_config_window()
 
     #Bind enter key in port_window
-    port_window.bind("<Return>", "_Enter")
-    port_window.bind("<KP_Enter>", "_Enter")
+    config_window.bind("<Return>", "_Enter")
+    config_window.bind("<KP_Enter>", "_Enter")
 
-    while not port_found:
-        port_event, port_values = port_window.read(timeout=10)
+    while not port_confirmed and not size_confirmed:
+        config_event, config_values = config_window.read(timeout=10)
 
-        if port_window.is_closed():
-            port_window = create_port_window()
-            port_window.bind("<Return>", "_Enter")
-            port_window.bind("<KP_Enter>", "_Enter")
+        if config_window.is_closed():
+            config_window = create_config_window()
+            config_window.bind("<Return>", "_Enter")
+            config_window.bind("<KP_Enter>", "_Enter")
 
-        if port_event:
+        if config_event:
+            if config_event in '-confirm_config-':
+                # temp_desired_port = config_values['-enter_port-']
+                # temp_desired_width = config_values['-minimum_width-']
+                # temp_desired_height = config_values['-minimum_height-']
 
-            if port_event in '-select_port-':
-                if port_values['-enter_port-'].isnumeric():
-                    temp_desired_port = int(port_values['-enter_port-'])
+                if config_values['-enter_port-'].isnumeric():
+                    temp_desired_port = int(config_values['-enter_port-'])
                     if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
                         desired_port = temp_desired_port
-                        port_found = True
+                        port_confirmed = True
 
-            if port_event in '-default_port-':
+                if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
+                    temp_width = int(config_values['-minimum_width-'])
+                    temp_height = int(config_values['-minimum_height-'])
+                    if 200 <= temp_width <= 1200:
+                        desired_width = temp_width
+                    if 200 <= temp_height <= 800:
+                        desired_height = temp_height
+                    size_confirmed = True
+            if config_event == '-accept_defaults-':
                 desired_port = Node.DEFAULT_PORT
-                port_found = True
+                desired_width = 1200
+                desired_height = 800
+                port_confirmed = True
+                size_confirmed = True
 
-            if port_event == '_Enter':
-                if port_values['-enter_port-'].isnumeric():
-                    temp_desired_port = int(port_values['-enter_port-'])
+            if config_event == '_Enter':
+                if config_values['-enter_port-'].isnumeric():
+                    temp_desired_port = int(config_values['-enter_port-'])
                     if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
                         desired_port = temp_desired_port
-                        port_found = True
+                        port_confirmed = True
                 else:
                     desired_port = Node.DEFAULT_PORT
-                    port_found = True
+                    port_confirmed = True
 
-    port_window.close()
+                if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
+                    temp_width = int(config_values['-minimum_width-'])
+                    temp_height = int(config_values['-minimum_height-'])
+                    if 200 <= temp_width <= 1200:
+                        desired_width = temp_width
+                    if 200 <= temp_height <= 800:
+                        desired_height = temp_height
+                    size_confirmed = True
+                else:
+                    desired_width = 1200
+                    desired_height = 800
+                    size_confirmed = True
+
+    config_window.close()
 
     # -- MAIN WINDOW -- #
 
     # Setup Window
     window = create_window()
-    window.set_min_size((1200, 800))
+    window.set_min_size((desired_width, desired_height))
 
     # # Logger
     gui_logger = logging.getLogger('GUI')
