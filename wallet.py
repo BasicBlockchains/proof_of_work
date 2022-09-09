@@ -233,7 +233,13 @@ class Wallet():
         ip, port = node
         url = f'http://{ip}:{port}/transaction/'
         data = {'raw_tx': tx.raw_tx}
-        r = requests.post(url, data=json.dumps(data), headers=self.request_header)
+        try:
+            r = requests.post(url, data=json.dumps(data), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.warning(f'Unable to post tx to {node}.')
+            return False
+
         if r.status_code in [201, 202]:
             # Logging
             self.logger.info(f'New tx sent to {node}')
@@ -246,8 +252,19 @@ class Wallet():
     def get_node_list(self, node=LEGACY_NODE) -> bool:
         ip, port = node
         url = f'http://{ip}:{port}/node_list'
-        r = requests.get(url, headers=self.request_header)
-        list_of_nodes = r.json()
+        try:
+            r = requests.get(url, headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.warning(f'Unable to connect to {node} for node list')
+            return False
+
+        try:
+            list_of_nodes = r.json()
+        except requests.exceptions.JSONDecodeError:
+            #Logging
+            self.logger.warning(f'Unable to decode json response from {node} for node list.')
+            return False
 
         if list_of_nodes:
             self.node_list = []
@@ -261,37 +278,42 @@ class Wallet():
             return False
 
     def get_utxos_from_node(self, node=LEGACY_NODE):
+        temp_ip, temp_port = node
+        url = f'http://{temp_ip}:{temp_port}/{self.address}'
         try:
-            temp_ip, temp_port = node
-            url = f'http://{temp_ip}:{temp_port}/{self.address}'
             r = requests.get(url, headers=self.request_header)
             utxo_dict = r.json()
             return utxo_dict
-        except ConnectionRefusedError:
+        except requests.exceptions.ConnectionError:
             # Logging
             self.logger.warning(f'Unable to connect to {node}. Update node list.')
             return {}
 
     def get_latest_height(self, node=LEGACY_NODE):
+        temp_ip, temp_port = node
+        url = f'http://{temp_ip}:{temp_port}/height'
         try:
-            temp_ip, temp_port = node
-            url = f'http://{temp_ip}:{temp_port}/height'
             r = requests.get(url, headers=self.request_header)
             height_dict = r.json()
             self.height = height_dict['height']
-        except ConnectionRefusedError:
+        except requests.exceptions.ConnectionError:
             # Logging
             self.logger.warning(f'Unable to connect to {node}. Update node list.')
-            return {}
+
 
     def confirm_tx_by_id(self, tx_id: str) -> bool:
         node = random.choice(self.node_list)
         ip, port = node
         url = f'http://{ip}:{port}/transaction/{tx_id}'
-        r = requests.get(url, headers=self.request_header)
-        tx_dict = r.json()
-        in_chain = tx_dict["in_chain"]
-        return in_chain
+        try:
+            r = requests.get(url, headers=self.request_header)
+            tx_dict = r.json()
+            in_chain = tx_dict["in_chain"]
+            return in_chain
+        except requests.exceptions.ConnectionError:
+            #Logging
+            self.logger.warning(f'Unable to connect to {node} in node list for tx confirmation.')
+            return False
 
     # --- UTXO METHODS --- #
     def update_utxo_df(self, utxos: dict):
