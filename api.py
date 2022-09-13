@@ -9,9 +9,6 @@ from node import Node
 from timestamp import utc_timestamp
 
 
-# --- ROOT ENDPOINT MESSAGES --- #
-
-
 def create_app(node: Node):
     app = Flask(__name__)
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -39,7 +36,6 @@ def create_app(node: Node):
             return Response("Node is connected", status=200, mimetype='application/json')
         else:
             return Response("Node is not connected", status=202, mimetype='application/json')
-
 
     @app.route('/node_list/', methods=['GET', 'POST', 'DELETE'])
     def get_node_list():
@@ -87,7 +83,6 @@ def create_app(node: Node):
                     return Response("Submitted node not in node list", status=404, mimetype='application/json')
             else:
                 return Response(f"Did not receive 202 code from {ip,port} for disconnect", status=401, mimetype='application/json')
-
 
     @app.route('/transaction/', methods=['GET', 'POST'])
     def post_tx():
