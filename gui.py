@@ -36,7 +36,7 @@ def create_about_window(theme=DEFAULT_THEME):
             sg.Push(),
             sg.Text("The BB POW is a proof-of-work blockchain, written entirely in python.\n"
                     "For more information please visit http://www.basicblockchains.com/\n\n"
-                    f"Current version: {Formatter.VERSION}\n"
+                    f"Current version: {Formatter.MAJOR_VERSION}.{Formatter.MINOR_VERSION}.{Formatter.PATCH_VERSION}\n"
                     f"Contact: basicblockchains@gmail.com\n"
                     f""),
             sg.Push()

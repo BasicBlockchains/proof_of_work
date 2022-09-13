@@ -7,13 +7,22 @@ import basicblockchains_ecc.elliptic_curve
 
 
 class Formatter():
-    # TYPE/VERSION
+    # TYPE
     TYPE_CHARS = 2
-    VERSION_CHARS = 2
-    # Fixed version to start
-    VERSION = 0x01
-    ACCEPTED_VERSIONS = [0x01]
-    FORMATTED_VERSION = format(VERSION, f'0{VERSION_CHARS}x')
+
+
+    #VERSION
+    MAJOR_VERSION = 0x01
+    MINOR_VERSION = 0x00
+    PATCH_VERSION = 0x00
+
+    VERSION_CHARS = 6
+    VERSION = format(MAJOR_VERSION, f'0{TYPE_CHARS}x') \
+                        + format(MINOR_VERSION, f'0{TYPE_CHARS}x') \
+                        + format(PATCH_VERSION, f'0{TYPE_CHARS}x')
+
+    #Accepted versions to be maintained when patching or adding functionality
+    ACCEPTED_VERSIONS = ['010000']
 
     # Assigned Types
     UTXO_INPUT_TYPE = 0x11
@@ -156,7 +165,8 @@ class Formatter():
 
         # Prefix type and version
         type = format(self.ADDRESS_TYPE, f'0{self.TYPE_CHARS}x')
-        version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
+        #version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
+        version = self.VERSION
 
         # Address = type + version + epk + checksum (26 byte address)
         return self.int_to_base58(int(type + version + epk + checksum, 16))
@@ -189,7 +199,8 @@ class Formatter():
 
         # signature = type + version + cpk + h_r + h_s (100 bytes)
         type = format(self.SIGNATURE_TYPE, f'0{self.TYPE_CHARS}x')
-        version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
+        #version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
+        version = self.VERSION
 
         return type + version + cpk + h_r + h_s
 
