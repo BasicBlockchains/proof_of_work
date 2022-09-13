@@ -8,7 +8,7 @@ import threading
 import time
 from pathlib import Path
 from tkinter import Tk
-
+import multiprocessing
 import PySimpleGUI as sg
 
 from api import run_app
@@ -1130,4 +1130,5 @@ def run_node_gui():
 
 
 if __name__ == '__main__':
+    multiprocessing.set_start_method('spawn')
     run_node_gui()

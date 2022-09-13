@@ -18,7 +18,7 @@ from block import Block
 from blockchain import Blockchain
 from decoder import Decoder
 from formatter import Formatter
-from miner import Miner
+from miner import mine_a_block
 from timestamp import utc_to_seconds
 from transactions import Transaction, MiningTransaction
 from wallet import Wallet
@@ -73,7 +73,7 @@ class Node:
         self.block_queue = Queue()
 
         # Create Miner object
-        self.miner = Miner()
+        #self.miner = Miner()
 
         # Create mining flag for monitoring
         self.is_mining = False
@@ -152,10 +152,14 @@ class Node:
             unmined_block = self.create_next_block()
 
             # Logging
-
             self.logger.info(f'Mining block at height {unmined_block.height}')
-            self.mining_process = Process(target=self.mine_block, args=(unmined_block,))
-            self.mining_process.start()  # Mining happens in its own process
+
+            #Process
+            # self.mining_process = Process(target=self.mine_block, args=(unmined_block,))
+            # self.mining_process.start()  # Mining happens in its own process
+
+            self.mining_process = Process(target=mine_a_block, args=(unmined_block, self.block_queue))
+            self.mining_process.start()
 
             # Handle blocking function
             next_block = None
@@ -183,13 +187,20 @@ class Node:
 
         self.logger.info('Mining monitor terminated.')
 
-    def mine_block(self, unmined_block: Block):
-        mined_block = self.miner.mine_block(unmined_block)
-        self.block_queue.put(mined_block)
+    # def mine_block(self, unmined_block: Block):
+    #     mined_block = self.miner.mine_block(unmined_block)
+    #     self.block_queue.put(mined_block)
 
     def stop_miner(self):
         if self.is_mining:
+            #Kill mining process
+            if self.mining_process.is_alive():
+                self.mining_process.terminate()
+            self.is_mining = False
+
+            #Logging
             self.logger.info('Terminating mining functions')
+
             # Put block transactions back in validated txs
             block_tx_index = self.block_transactions.copy()
             self.block_transactions = []
@@ -204,9 +215,7 @@ class Node:
                     # Revalidate tx
                     self.add_transaction(tx)
 
-            if self.mining_process.is_alive():
-                self.mining_process.terminate()
-            self.is_mining = False
+            #Wait until mining thread dies
             while self.mining_thread.is_alive():
                 pass
 
@@ -823,3 +832,6 @@ class Node:
         new_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         new_socket.settimeout(self.SERVER_TIMEOUT)
         return new_socket
+
+
+

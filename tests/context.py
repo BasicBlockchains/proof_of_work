@@ -8,7 +8,7 @@ from database import DataBase
 from decoder import Decoder
 from block import Block, calc_merkle_root, merkle_proof
 from blockchain import Blockchain
-from miner import Miner
+from miner import mine_a_block
 from timestamp import utc_to_seconds
 from utxo import UTXO_INPUT, UTXO_OUTPUT
 from formatter import Formatter
