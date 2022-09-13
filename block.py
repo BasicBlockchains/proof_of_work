@@ -63,7 +63,8 @@ class Block():
 
         # Type/version
         type = format(f.BLOCK_TX_TYPE, f'0{f.TYPE_CHARS}x')
-        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        #version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        version = f.VERSION
 
         # Format tx_count
         tx_count = format(len(self.transactions), f'0{f.BLOCK_TX_CHARS}x')
@@ -83,7 +84,8 @@ class Block():
 
         # Type/version
         type = format(f.BLOCK_TYPE, f'0{f.TYPE_CHARS}x')
-        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        #version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        version = f.VERSION
 
         # Raw = type + version + raw_headers + raw_transactions
         return type + version + self.raw_header + self.raw_transactions

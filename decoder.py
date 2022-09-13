@@ -28,10 +28,10 @@ class Decoder:
             self.logger.setLevel('DEBUG')
 
     # Verify type version
-    def verify_type_version(self, data_type: int, data_version: int, raw_data: str) -> bool:
+    def verify_type_version(self, data_type: int, data_version: str, raw_data: str) -> bool:
         # Type and version
         type = int(raw_data[:self.t_index], 16)
-        version = int(raw_data[self.t_index:self.v_index], 16)
+        version = raw_data[self.t_index:self.v_index]
 
         try:
             assert type == data_type
@@ -120,7 +120,7 @@ class Decoder:
 
         # Verify type/version
         type = int(hex_addy[:self.F.TYPE_CHARS], 16)
-        version = int(hex_addy[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS], 16)
+        version = hex_addy[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS]
 
         try:
             assert type == self.F.ADDRESS_TYPE

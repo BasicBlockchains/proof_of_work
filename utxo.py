@@ -35,7 +35,8 @@ class UTXO_INPUT():
 
         # Type version
         type = format(f.UTXO_INPUT_TYPE, f'0{f.TYPE_CHARS}x')
-        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        #version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        version = f.VERSION
 
         # Input values - signature already formatted
         tx_id = format(int(self.tx_id, 16), f'0{f.HASH_CHARS}x')
@@ -80,7 +81,8 @@ class UTXO_OUTPUT():
 
         # Type version
         type = format(f.UTXO_OUTPUT_TYPE, f'0{f.TYPE_CHARS}x')
-        version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        #version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        version = f.VERSION
 
         # Format values
         amount = format(self.amount, f'0{f.AMOUNT_CHARS}x')
