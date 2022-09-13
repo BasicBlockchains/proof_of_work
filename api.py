@@ -57,7 +57,7 @@ def create_app(node: Node):
                 return Response("Submitted node malformed.", status=400, mimetype='application/json')
 
         elif request.method == 'DELETE':
-            #Get node first
+            # Get node first
             node_dict = request.get_json()
             try:
                 ip = node_dict['ip']
@@ -65,16 +65,16 @@ def create_app(node: Node):
             except KeyError:
                 return Response("Submitted node malformed.", status=400, mimetype='application/json')
 
-            #Confirm connected status
+            # Confirm connected status
             url = f'http://{ip}:{port}/is_connected'
             headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             try:
                 r = requests.get(url, headers=headers)
             except requests.exceptions.ConnectionError:
-                #Logging
-                return Response(f"Could not confirm connected status with {(ip,port)}",status=401, mimetype='application/json')
+                # Logging
+                return Response(f"Could not confirm connected status with {(ip, port)}",status=401, mimetype='application/json')
 
-            #Remove node
+            # Remove node
             if r.status_code == 202:
                 try:
                     node.node_list.remove((ip, port))
@@ -82,7 +82,7 @@ def create_app(node: Node):
                 except ValueError:
                     return Response("Submitted node not in node list", status=404, mimetype='application/json')
             else:
-                return Response(f"Did not receive 202 code from {ip,port} for disconnect", status=401, mimetype='application/json')
+                return Response(f"Did not receive success code from {ip,port} for disconnect", status=401, mimetype='application/json')
 
     @app.route('/transaction/', methods=['GET', 'POST'])
     def post_tx():
