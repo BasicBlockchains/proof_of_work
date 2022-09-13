@@ -42,7 +42,7 @@ class MiningTransaction():
 
         # Type/version
         type = format(f.MINING_TX_TYPE, f'0{f.TYPE_CHARS}x')
-        #version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
+        # version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
         version = f.VERSION
 
         # Block info
@@ -97,7 +97,6 @@ class Transaction():
 
         # Type/version
         type = format(f.TX_TYPE, f'0{f.TYPE_CHARS}x')
-        #version = format(f.VERSION, f'0{f.VERSION_CHARS}x')
         version = f.VERSION
 
         # Format counts
