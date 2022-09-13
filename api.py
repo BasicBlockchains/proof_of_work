@@ -72,7 +72,7 @@ def create_app(node: Node):
                 r = requests.get(url, headers=headers)
             except requests.exceptions.ConnectionError:
                 # Logging
-                return Response(f"Could not confirm connected status with {(ip, port)}",status=401, mimetype='application/json')
+                return Response(f"Could not confirm with {(ip, port)}", status=401, mimetype='application/json')
 
             # Remove node
             if r.status_code == 202:
@@ -82,7 +82,7 @@ def create_app(node: Node):
                 except ValueError:
                     return Response("Submitted node not in node list", status=404, mimetype='application/json')
             else:
-                return Response(f"Did not receive success code from {ip,port} for disconnect", status=401, mimetype='application/json')
+                return Response(f"Wrong code from {ip,port} for disconnect", status=401, mimetype='application/json')
 
     @app.route('/transaction/', methods=['GET', 'POST'])
     def post_tx():
