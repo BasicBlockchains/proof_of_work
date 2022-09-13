@@ -16,9 +16,8 @@ class Formatter():
     PATCH_VERSION = 0x00
 
     VERSION_CHARS = 6
-    VERSION = format(MAJOR_VERSION, f'0{TYPE_CHARS}x') \
-              + format(MINOR_VERSION, f'0{TYPE_CHARS}x') \
-              + format(PATCH_VERSION, f'0{TYPE_CHARS}x')
+    VERSION = format(MAJOR_VERSION, f'0{TYPE_CHARS}x') + format(MINOR_VERSION, f'0{TYPE_CHARS}x') + format(
+        PATCH_VERSION, f'0{TYPE_CHARS}x')
 
     # Accepted versions to be maintained when patching or adding functionality
     ACCEPTED_VERSIONS = ['010000']
