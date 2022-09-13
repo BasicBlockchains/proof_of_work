@@ -82,10 +82,13 @@ For peer-to-peer (P2P) transactions, we have the Transaction class, which accept
 The UTXO_INPUT class will contain a tx id and an index value, which uniquely identify a UTXO_OUTPUT; and the input will contain a signature for the UTXO_OUTPUT.
 The signature contains the compressed public key, which will be used to identity the address of the UTXO_OUTPUT. 
 As well, the signature contains the ECDSA signature tuple, which, along with the compressed public key and tx_id, is used to validate the signature.
-The ECDSA integer tuple is generated with the private key.
 
+When a Transaction gets saved to the blockchain, the UTXO_OUTPUTS referred to by the UTXO_INPUT will get removed from the Node database; we refer to this as "consuming" the utxos.
 
 ## Block
+
+A Block is the class which is saved to the Blockchain. It will contain some header information, packaged in the Header class, as well as a MiningTransaction and a list of Transactions.
+
 
 ### Merkle root
 
