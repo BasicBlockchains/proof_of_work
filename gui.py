@@ -46,8 +46,6 @@ def create_about_window(theme=DEFAULT_THEME):
     return sg.Window('ABOUT', main_layout, resizable=False, finalize=True)
 
 
-
-
 # --- PORT WINDOW --- #
 def create_config_window(theme=DEFAULT_THEME):
     sg.theme(theme)
@@ -62,7 +60,8 @@ def create_config_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff', tooltip='Blank field will use default value'),
+            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff',
+                         tooltip='Blank field will use default value'),
             sg.Push()
         ],
         [sg.HorizontalSeparator(pad=10, color='#000000')],
@@ -73,8 +72,8 @@ def create_config_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.InputText(key='-minimum_width-', size=(6,1), background_color='#ffffff'),
-            sg.InputText(key='-minimum_height-', size=(6,1), background_color='#ffffff'),
+            sg.InputText(key='-minimum_width-', size=(6, 1), background_color='#ffffff'),
+            sg.InputText(key='-minimum_height-', size=(6, 1), background_color='#ffffff'),
             sg.Push()
         ],
         [
@@ -181,8 +180,8 @@ def create_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.Button('Save Logs', size=(10,2), key='-save_logs-'),
-            sg.Button('Clear Logs', size=(10,2), key='-clear_logs-'),
+            sg.Button('Save Logs', size=(10, 2), key='-save_logs-'),
+            sg.Button('Clear Logs', size=(10, 2), key='-clear_logs-'),
             sg.Push()
         ]
     ]
@@ -211,7 +210,8 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Text('SELECTED PORT:', justification='right', auto_size_text=False, size=(16, 1)),
          sg.InputText(justification='left', size=(16, 1), background_color='#FFFFFF', key='-selected_port-',
                       right_click_menu=right_click_menu[0])],
-        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-', tooltip='Ping selected node'), sg.Button('CLEAR', size=(10, 2), key='-clear-'),
+        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-', tooltip='Ping selected node'),
+         sg.Button('CLEAR', size=(10, 2), key='-clear-'),
          sg.Push()],
         [sg.HorizontalSeparator(pad=5, color='#000000')],
 
@@ -228,7 +228,8 @@ def create_window(theme=DEFAULT_THEME):
                   col_widths=node_table_column_widths, key='-node_list_table-', bind_return_key=True)],
         [sg.Push(),
          sg.Button('CONNECT', button_color='#00AA00', size=(10, 2), tooltip='Connect to network', key='-connect-'),
-         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-', tooltip='Disconnect from network'), sg.Push()],
+         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-',
+                   tooltip='Disconnect from network'), sg.Push()],
     ]
     node_tab_layout = [
         [sg.Column(node_column, vertical_alignment='center', pad=50, expand_y=True),
@@ -446,7 +447,7 @@ def run_node_gui():
     size_confirmed = False
     config_window = create_config_window()
 
-    #Bind enter key in port_window
+    # Bind enter key in port_window
     config_window.bind("<Return>", "_Enter")
     config_window.bind("<KP_Enter>", "_Enter")
 
@@ -660,10 +661,11 @@ def run_node_gui():
             log_string = buffer
             window['-logs-'].update(buffer)
 
-        #Save logs
+        # Save logs
         if event == '-save_logs-':
-            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True, initial_folder=node.dir_path,
-                              file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
+            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True,
+                                          initial_folder=node.dir_path,
+                                          file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
             if file_path:
                 dir_path, file_name = os.path.split(file_path)
                 if file_name.endswith('.txt'):
@@ -672,8 +674,7 @@ def run_node_gui():
                 else:
                     gui_logger.warning('Logs must have .txt extension.')
 
-
-        #Clear Logs
+        # Clear Logs
         if event == '-clear_logs-':
             buffer = ''
 
@@ -1120,7 +1121,6 @@ def run_node_gui():
         # About
         if event == 'About BB POW':
             create_about_window()
-
 
     # Cleanup
     if node.is_mining:
