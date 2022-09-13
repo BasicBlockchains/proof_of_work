@@ -72,9 +72,6 @@ class Node:
         # Create Block queue for miner
         self.block_queue = Queue()
 
-        # Create Miner object
-        #self.miner = Miner()
-
         # Create mining flag for monitoring
         self.is_mining = False
 
@@ -154,10 +151,7 @@ class Node:
             # Logging
             self.logger.info(f'Mining block at height {unmined_block.height}')
 
-            #Process
-            # self.mining_process = Process(target=self.mine_block, args=(unmined_block,))
-            # self.mining_process.start()  # Mining happens in its own process
-
+            # Process
             self.mining_process = Process(target=mine_a_block, args=(unmined_block, self.block_queue))
             self.mining_process.start()
 
@@ -187,18 +181,14 @@ class Node:
 
         self.logger.info('Mining monitor terminated.')
 
-    # def mine_block(self, unmined_block: Block):
-    #     mined_block = self.miner.mine_block(unmined_block)
-    #     self.block_queue.put(mined_block)
-
     def stop_miner(self):
         if self.is_mining:
-            #Kill mining process
+            # Kill mining process
             if self.mining_process.is_alive():
                 self.mining_process.terminate()
             self.is_mining = False
 
-            #Logging
+            # Logging
             self.logger.info('Terminating mining functions')
 
             # Put block transactions back in validated txs
@@ -215,7 +205,7 @@ class Node:
                     # Revalidate tx
                     self.add_transaction(tx)
 
-            #Wait until mining thread dies
+            # Wait until mining thread dies
             while self.mining_thread.is_alive():
                 pass
 
@@ -455,7 +445,7 @@ class Node:
         try:
             r = requests.post(url, data=json.dumps(data), headers=self.request_header)
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.error(f'Could not connect to {node}')
             return False
         if r.status_code == 200 and node not in self.node_list:
@@ -528,7 +518,7 @@ class Node:
             self.node_list = []
 
     def disconnect_from_network(self):
-        #Stop all mining
+        # Stop all mining
         if self.is_mining:
             self.stop_miner()
             while self.mining_thread.is_alive():
@@ -557,22 +547,22 @@ class Node:
                     self.logger.error(
                         f'Did not receive 200 code from {node} for disconnect. Status code: {r.status_code}')
             except requests.exceptions.ConnectionError:
-                #Logging
+                # Logging
                 self.logger.error(f'Error connecting to {node} for disconnect.')
 
             self.node_list.remove(node)
 
     def catchup_to_network(self):
-        #Get node list
+        # Get node list
         node_list_index = self.node_list.copy()
 
         # Remove own node
         if node_list_index:
             node_list_index.remove(self.node)
 
-        #Iterate over nodes
+        # Iterate over nodes
         if node_list_index != []:
-            #Get random node
+            # Get random node
             random_node = random.choice(node_list_index)
             # Network height class var for use in gui
             self.network_height = self.request_height(random_node)
@@ -636,7 +626,7 @@ class Node:
         try:
             r = requests.get(url, headers=self.request_header)
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.critical(f'Unable to get genesis block from {node}')
             return False
         if r.status_code == 200:
@@ -660,7 +650,7 @@ class Node:
         try:
             r = requests.post(url, data=json.dumps(data), headers=self.request_header)
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.warning(f'Unable to send tx with id {new_tx.id} to {node}')
             return 0
         return r.status_code
@@ -671,7 +661,7 @@ class Node:
         try:
             r = requests.post(url, data=json.dumps(block.to_json), headers=self.request_header)
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.warning(f'Unable to send block at height {block.height} to {node}')
             return 0
         return r.status_code
@@ -682,7 +672,7 @@ class Node:
         try:
             r = requests.post(url, data=raw_block, headers=self.request_header)
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.warning(f'Unable to send raw block at height {self.d.raw_block(raw_block).height} to {node}')
             return 0
         return r.status_code
@@ -832,6 +822,3 @@ class Node:
         new_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         new_socket.settimeout(self.SERVER_TIMEOUT)
         return new_socket
-
-
-
