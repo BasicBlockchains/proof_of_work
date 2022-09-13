@@ -71,10 +71,7 @@ def test_add_transaction():
 
     # Mine necessary Block
     block1 = create_test_node_block(n)
-    #m = Miner()
-    #mined_block1 = m.mine_block(block1)
     mined_block1 = mine_a_block(block1)
-    #m.is_mining = False
     assert n.add_block(mined_block1, gossip=False)
 
     # UTXO_INPUT
@@ -111,9 +108,7 @@ def test_add_transaction():
 
     # Mine next Block
     block2 = n.create_next_block()
-    #mined_block2 = m.mine_block(block2)
     mined_block2 = mine_a_block(block2)
-    #m.is_mining = False
     assert n.add_block(mined_block2, gossip=False)
 
     # Check tx got mined and orphan is validated
