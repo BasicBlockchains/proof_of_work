@@ -1132,7 +1132,7 @@ def run_node_gui():
             create_about_window()
 
         # Save/clear logs
-        if height % (Formatter.HEARTBEAT ** 2) == 0:
+        if height % (Formatter.HEARTBEAT ** 2) == 0 and height > 0:
             # Save logs
             log_file = f'logs_block{height - Formatter.HEARTBEAT ** 2}--{height}.txt'
             with open(log_file, 'w') as file:
