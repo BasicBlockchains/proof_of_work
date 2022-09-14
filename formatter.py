@@ -161,12 +161,12 @@ class Formatter():
             sha256(epk.encode()).hexdigest().encode()
         ).hexdigest()[:self.CHECKSUM_CHARS]
 
-        # Prefix type and version
+        # Prefix type
         type = format(self.ADDRESS_TYPE, f'0{self.TYPE_CHARS}x')
-        version = self.VERSION
+        # version = self.VERSION
 
-        # Address = type + version + epk + checksum (26 byte address)
-        return self.int_to_base58(int(type + version + epk + checksum, 16))
+        # Address = type + epk + checksum (26 byte address)
+        return self.int_to_base58(int(type + epk + checksum, 16))
 
     def hex_address(self, address: str):
         temp_hex = hex(self.base58_to_int(address))[2:]

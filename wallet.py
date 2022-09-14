@@ -84,7 +84,7 @@ class Wallet():
         self.address = self.F.address(self.compressed_public_key)
 
         # Logging
-        self.logger.debug(f'Logger instantiated in wallet with address{self.address} with name: {self.logger.name}')
+        self.logger.debug(f'Logger instantiated in wallet with address {self.address} with name: {self.logger.name}')
 
         # Create node list
         self.node_list = []

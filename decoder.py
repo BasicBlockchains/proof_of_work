@@ -120,18 +120,18 @@ class Decoder:
 
         # Verify type/version
         type = int(hex_addy[:self.F.TYPE_CHARS], 16)
-        version = hex_addy[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS]
+        # version = hex_addy[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS]
 
         try:
             assert type == self.F.ADDRESS_TYPE
-            assert version in self.F.ACCEPTED_VERSIONS
+            # assert version in self.F.ACCEPTED_VERSIONS
         except AssertionError:
             # Logging
-            self.logger.error('Address has incorrect type and/or version')
+            self.logger.error('Address has incorrect type')
             return False
 
         # Indexing
-        start_index = self.F.TYPE_CHARS + self.F.VERSION_CHARS
+        start_index = self.F.TYPE_CHARS  # + self.F.VERSION_CHARS
         end_index = -self.F.CHECKSUM_CHARS
 
         epk = hex_addy[start_index:end_index]
