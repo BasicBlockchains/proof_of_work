@@ -37,7 +37,7 @@ buffer = ''
 # --- ABOUT WINDOW --- #
 def create_about_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon(LOGO_PATH.as_posix())
+    sg.set_global_icon(LOGO_PATH.absolute().as_posix())
     sg.set_options(font='Ubuntu 12', )
 
     main_layout = [
@@ -58,7 +58,7 @@ def create_about_window(theme=DEFAULT_THEME):
 # --- PORT WINDOW --- #
 def create_config_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon(LOGO_PATH.as_posix())
+    sg.set_global_icon(LOGO_PATH.absolute().as_posix())
     sg.set_options(font='Ubuntu 12')
 
     main_layout = [
@@ -105,7 +105,7 @@ def create_config_window(theme=DEFAULT_THEME):
 # --- DOWNLOAD WINDOW --- #
 def create_download_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon(LOGO_PATH.as_posix())
+    sg.set_global_icon(LOGO_PATH.absolute().as_posix())
     sg.set_options(font='Ubuntu 12', )
 
     main_layout = [
@@ -138,7 +138,7 @@ def create_download_window(theme=DEFAULT_THEME):
 # --- MAIN GUI WINDOW --- #
 def create_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon(LOGO_PATH.as_posix())
+    sg.set_global_icon(LOGO_PATH.absolute().as_posix())
     sg.set_options(font='Ubuntu 12')
 
     # -- Right Click Menu --- #
@@ -174,7 +174,7 @@ def create_window(theme=DEFAULT_THEME):
             sg.Push()
         ],
 
-        [sg.Push(), sg.Image(LOGO_PATH.as_posix(), enable_events=True, key='-logo-'), sg.Push()],
+        [sg.Push(), sg.Image(LOGO_PATH.absolute().as_posix(), enable_events=True, key='-logo-'), sg.Push()],
         [sg.HorizontalSeparator(pad=10, color='#000000')],
         [sg.Push(),
          sg.Text('CURRENT HEIGHT:', justification='right', auto_size_text=False, size=(18, 1)),
@@ -407,11 +407,11 @@ def create_window(theme=DEFAULT_THEME):
         [
             sg.Push(),
             sg.Text('SERVER:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Server Status.'),
-            sg.Image(RED_CIRCLE_PATH.as_posix(), key='-server_icon-'),
+            sg.Image(RED_CIRCLE_PATH.absolute().as_posix(), key='-server_icon-'),
             sg.Text('NETWORK:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Network Status'),
-            sg.Image(RED_CIRCLE_PATH.as_posix(), key='-network_icon-'),
+            sg.Image(RED_CIRCLE_PATH.absolute().as_posix(), key='-network_icon-'),
             sg.Text('MINING:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Mining Status'),
-            sg.Image(RED_CIRCLE_PATH.as_posix(), key='-mining_icon-'),
+            sg.Image(RED_CIRCLE_PATH.absolute().as_posix(), key='-mining_icon-'),
             sg.Push(),
             sg.Button('START MINER', auto_size_button=False, size=(12, 2), key='-start_miner-', button_color='#00AA00'),
             sg.Button('STOP MINER', auto_size_button=False, size=(12, 2), key='-stop_miner-', button_color='#FF0000',
@@ -570,11 +570,11 @@ def run_node_gui():
 
     # Verify webserver is running
     if app_thread.is_alive():
-        window['-server_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
+        window['-server_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
 
     # Verify connection to network
     if node.is_connected:
-        window['-network_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
+        window['-network_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
 
     # Bind Keys
     window['-node_list_table-'].bind("<Return>", "_Enter")
@@ -796,17 +796,17 @@ def run_node_gui():
         if mining != node.is_mining:
             mining = node.is_mining
             if mining:
-                window['-mining_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
+                window['-mining_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
                 window['-start_miner-'].update(disabled=True)
                 window['-stop_miner-'].update(disabled=False)
             else:
-                window['-mining_icon-'].update(RED_CIRCLE_PATH.as_posix())
+                window['-mining_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
                 window['-start_miner-'].update(disabled=False)
                 window['-stop_miner-'].update(disabled=True)
 
         # If Server fails
         if not app_thread.is_alive():
-            window['-server_icon-'].update(RED_CIRCLE_PATH.as_posix())
+            window['-server_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
 
         # Height
         if height != node.height:
@@ -877,9 +877,9 @@ def run_node_gui():
         if connected != node.is_connected:
             connected = node.is_connected
             if connected:
-                window['-network_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
+                window['-network_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
             else:
-                window['-network_icon-'].update(RED_CIRCLE_PATH.as_posix())
+                window['-network_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
 
         # Node List Table
         if node_list != node.node_list:
