@@ -1131,6 +1131,15 @@ def run_node_gui():
         if event == 'About BB POW':
             create_about_window()
 
+        # Save/clear logs
+        if height % (Formatter.HEARTBEAT ** 2) == 0:
+            # Save logs
+            log_file = f'logs_block{height - Formatter.HEARTBEAT ** 2}--{height}.txt'
+            with open(log_file, 'w') as file:
+                file.write(buffer)
+
+            # Clear logs
+            buffer = ''
     # Cleanup
     if node.is_mining:
         node.stop_miner()
