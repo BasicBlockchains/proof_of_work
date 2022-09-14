@@ -22,13 +22,22 @@ from wallet import Wallet
 # --- CONSTANTS --- #
 DEFAULT_THEME = 'SystemDefault'
 DEFAULT_WINDOW_SIZE = (800, 600)
+
+IMAGE_DIR = './images'
+LOGO_FILE = 'logo_icon.png'
+RED_CIRCLE_FILE = 'red_circle_small.png'
+GREEN_CIRCLE_FILE = 'green_circle_small.png'
+LOGO_PATH = Path(IMAGE_DIR, LOGO_FILE)
+RED_CIRCLE_PATH = Path(IMAGE_DIR, RED_CIRCLE_FILE)
+GREEN_CIRCLE_PATH = Path(IMAGE_DIR, GREEN_CIRCLE_FILE)
+
 buffer = ''
 
 
 # --- ABOUT WINDOW --- #
 def create_about_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_global_icon(LOGO_PATH.as_posix())
     sg.set_options(font='Ubuntu 12', )
 
     main_layout = [
@@ -46,12 +55,10 @@ def create_about_window(theme=DEFAULT_THEME):
     return sg.Window('ABOUT', main_layout, resizable=False, finalize=True)
 
 
-
-
 # --- PORT WINDOW --- #
 def create_config_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_global_icon(LOGO_PATH.as_posix())
     sg.set_options(font='Ubuntu 12')
 
     main_layout = [
@@ -62,7 +69,8 @@ def create_config_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff', tooltip='Blank field will use default value'),
+            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff',
+                         tooltip='Blank field will use default value'),
             sg.Push()
         ],
         [sg.HorizontalSeparator(pad=10, color='#000000')],
@@ -73,8 +81,8 @@ def create_config_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.InputText(key='-minimum_width-', size=(6,1), background_color='#ffffff'),
-            sg.InputText(key='-minimum_height-', size=(6,1), background_color='#ffffff'),
+            sg.InputText(key='-minimum_width-', size=(6, 1), background_color='#ffffff'),
+            sg.InputText(key='-minimum_height-', size=(6, 1), background_color='#ffffff'),
             sg.Push()
         ],
         [
@@ -97,7 +105,7 @@ def create_config_window(theme=DEFAULT_THEME):
 # --- DOWNLOAD WINDOW --- #
 def create_download_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_global_icon(LOGO_PATH.as_posix())
     sg.set_options(font='Ubuntu 12', )
 
     main_layout = [
@@ -130,7 +138,7 @@ def create_download_window(theme=DEFAULT_THEME):
 # --- MAIN GUI WINDOW --- #
 def create_window(theme=DEFAULT_THEME):
     sg.theme(theme)
-    sg.set_global_icon('./images/logo_icon.png')
+    sg.set_global_icon(LOGO_PATH.as_posix())
     sg.set_options(font='Ubuntu 12')
 
     # -- Right Click Menu --- #
@@ -166,7 +174,7 @@ def create_window(theme=DEFAULT_THEME):
             sg.Push()
         ],
 
-        [sg.Push(), sg.Image('./images/logo_icon.png', enable_events=True, key='-logo-'), sg.Push()],
+        [sg.Push(), sg.Image(LOGO_PATH.as_posix(), enable_events=True, key='-logo-'), sg.Push()],
         [sg.HorizontalSeparator(pad=10, color='#000000')],
         [sg.Push(),
          sg.Text('CURRENT HEIGHT:', justification='right', auto_size_text=False, size=(18, 1)),
@@ -181,8 +189,8 @@ def create_window(theme=DEFAULT_THEME):
         ],
         [
             sg.Push(),
-            sg.Button('Save Logs', size=(10,2), key='-save_logs-'),
-            sg.Button('Clear Logs', size=(10,2), key='-clear_logs-'),
+            sg.Button('Save Logs', size=(10, 2), key='-save_logs-'),
+            sg.Button('Clear Logs', size=(10, 2), key='-clear_logs-'),
             sg.Push()
         ]
     ]
@@ -211,7 +219,8 @@ def create_window(theme=DEFAULT_THEME):
         [sg.Text('SELECTED PORT:', justification='right', auto_size_text=False, size=(16, 1)),
          sg.InputText(justification='left', size=(16, 1), background_color='#FFFFFF', key='-selected_port-',
                       right_click_menu=right_click_menu[0])],
-        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-', tooltip='Ping selected node'), sg.Button('CLEAR', size=(10, 2), key='-clear-'),
+        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-', tooltip='Ping selected node'),
+         sg.Button('CLEAR', size=(10, 2), key='-clear-'),
          sg.Push()],
         [sg.HorizontalSeparator(pad=5, color='#000000')],
 
@@ -228,7 +237,8 @@ def create_window(theme=DEFAULT_THEME):
                   col_widths=node_table_column_widths, key='-node_list_table-', bind_return_key=True)],
         [sg.Push(),
          sg.Button('CONNECT', button_color='#00AA00', size=(10, 2), tooltip='Connect to network', key='-connect-'),
-         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-', tooltip='Disconnect from network'), sg.Push()],
+         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-',
+                   tooltip='Disconnect from network'), sg.Push()],
     ]
     node_tab_layout = [
         [sg.Column(node_column, vertical_alignment='center', pad=50, expand_y=True),
@@ -397,11 +407,11 @@ def create_window(theme=DEFAULT_THEME):
         [
             sg.Push(),
             sg.Text('SERVER:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Server Status.'),
-            sg.Image('./images/red_circle_small.png', key='-server_icon-'),
+            sg.Image(RED_CIRCLE_PATH.as_posix(), key='-server_icon-'),
             sg.Text('NETWORK:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Network Status'),
-            sg.Image('./images/red_circle_small.png', key='-network_icon-'),
+            sg.Image(RED_CIRCLE_PATH.as_posix(), key='-network_icon-'),
             sg.Text('MINING:', justification='right', auto_size_text=False, size=(12, 1), tooltip='Mining Status'),
-            sg.Image('./images/red_circle_small.png', key='-mining_icon-'),
+            sg.Image(RED_CIRCLE_PATH.as_posix(), key='-mining_icon-'),
             sg.Push(),
             sg.Button('START MINER', auto_size_button=False, size=(12, 2), key='-start_miner-', button_color='#00AA00'),
             sg.Button('STOP MINER', auto_size_button=False, size=(12, 2), key='-stop_miner-', button_color='#FF0000',
@@ -446,7 +456,7 @@ def run_node_gui():
     size_confirmed = False
     config_window = create_config_window()
 
-    #Bind enter key in port_window
+    # Bind enter key in port_window
     config_window.bind("<Return>", "_Enter")
     config_window.bind("<KP_Enter>", "_Enter")
 
@@ -560,11 +570,11 @@ def run_node_gui():
 
     # Verify webserver is running
     if app_thread.is_alive():
-        window['-server_icon-'].update('./images/green_circle_small.png')
+        window['-server_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
 
     # Verify connection to network
     if node.is_connected:
-        window['-network_icon-'].update('./images/green_circle_small.png')
+        window['-network_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
 
     # Bind Keys
     window['-node_list_table-'].bind("<Return>", "_Enter")
@@ -660,10 +670,11 @@ def run_node_gui():
             log_string = buffer
             window['-logs-'].update(buffer)
 
-        #Save logs
+        # Save logs
         if event == '-save_logs-':
-            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True, initial_folder=node.dir_path,
-                              file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
+            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True,
+                                          initial_folder=node.dir_path,
+                                          file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
             if file_path:
                 dir_path, file_name = os.path.split(file_path)
                 if file_name.endswith('.txt'):
@@ -672,8 +683,7 @@ def run_node_gui():
                 else:
                     gui_logger.warning('Logs must have .txt extension.')
 
-
-        #Clear Logs
+        # Clear Logs
         if event == '-clear_logs-':
             buffer = ''
 
@@ -786,17 +796,17 @@ def run_node_gui():
         if mining != node.is_mining:
             mining = node.is_mining
             if mining:
-                window['-mining_icon-'].update('./images/green_circle_small.png')
+                window['-mining_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
                 window['-start_miner-'].update(disabled=True)
                 window['-stop_miner-'].update(disabled=False)
             else:
-                window['-mining_icon-'].update('./images/red_circle_small.png')
+                window['-mining_icon-'].update(RED_CIRCLE_PATH.as_posix())
                 window['-start_miner-'].update(disabled=False)
                 window['-stop_miner-'].update(disabled=True)
 
         # If Server fails
         if not app_thread.is_alive():
-            window['-server_icon-'].update('./images/red_circle_small.png')
+            window['-server_icon-'].update(RED_CIRCLE_PATH.as_posix())
 
         # Height
         if height != node.height:
@@ -867,9 +877,9 @@ def run_node_gui():
         if connected != node.is_connected:
             connected = node.is_connected
             if connected:
-                window['-network_icon-'].update('./images/green_circle_small.png')
+                window['-network_icon-'].update(GREEN_CIRCLE_PATH.as_posix())
             else:
-                window['-network_icon-'].update('./images/red_circle_small.png')
+                window['-network_icon-'].update(RED_CIRCLE_PATH.as_posix())
 
         # Node List Table
         if node_list != node.node_list:
@@ -1121,7 +1131,15 @@ def run_node_gui():
         if event == 'About BB POW':
             create_about_window()
 
+        # Save/clear logs
+        if height % (Formatter.HEARTBEAT ** 2) == 0:
+            # Save logs
+            log_file = f'logs_block{height - Formatter.HEARTBEAT ** 2}--{height}.txt'
+            with open(log_file, 'w') as file:
+                file.write(buffer)
 
+            # Clear logs
+            buffer = ''
     # Cleanup
     if node.is_mining:
         node.stop_miner()

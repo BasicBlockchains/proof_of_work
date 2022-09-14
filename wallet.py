@@ -236,7 +236,7 @@ class Wallet():
         try:
             r = requests.post(url, data=json.dumps(data), headers=self.request_header)
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.warning(f'Unable to post tx to {node}.')
             return False
 
@@ -255,14 +255,14 @@ class Wallet():
         try:
             r = requests.get(url, headers=self.request_header)
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.warning(f'Unable to connect to {node} for node list')
             return False
 
         try:
             list_of_nodes = r.json()
         except requests.exceptions.JSONDecodeError:
-            #Logging
+            # Logging
             self.logger.warning(f'Unable to decode json response from {node} for node list.')
             return False
 
@@ -300,7 +300,6 @@ class Wallet():
             # Logging
             self.logger.warning(f'Unable to connect to {node}. Update node list.')
 
-
     def confirm_tx_by_id(self, tx_id: str) -> bool:
         node = random.choice(self.node_list)
         ip, port = node
@@ -311,7 +310,7 @@ class Wallet():
             in_chain = tx_dict["in_chain"]
             return in_chain
         except requests.exceptions.ConnectionError:
-            #Logging
+            # Logging
             self.logger.warning(f'Unable to connect to {node} in node list for tx confirmation.')
             return False
 

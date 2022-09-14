@@ -10,18 +10,16 @@ class Formatter():
     # TYPE
     TYPE_CHARS = 2
 
-
-    #VERSION
+    # VERSION
     MAJOR_VERSION = 0x01
     MINOR_VERSION = 0x00
     PATCH_VERSION = 0x00
 
     VERSION_CHARS = 6
-    VERSION = format(MAJOR_VERSION, f'0{TYPE_CHARS}x') \
-                        + format(MINOR_VERSION, f'0{TYPE_CHARS}x') \
-                        + format(PATCH_VERSION, f'0{TYPE_CHARS}x')
+    VERSION = format(MAJOR_VERSION, f'0{TYPE_CHARS}x') + format(MINOR_VERSION, f'0{TYPE_CHARS}x') + format(
+        PATCH_VERSION, f'0{TYPE_CHARS}x')
 
-    #Accepted versions to be maintained when patching or adding functionality
+    # Accepted versions to be maintained when patching or adding functionality
     ACCEPTED_VERSIONS = ['010000']
 
     # Assigned Types
@@ -165,7 +163,6 @@ class Formatter():
 
         # Prefix type and version
         type = format(self.ADDRESS_TYPE, f'0{self.TYPE_CHARS}x')
-        #version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
         version = self.VERSION
 
         # Address = type + version + epk + checksum (26 byte address)
@@ -199,7 +196,6 @@ class Formatter():
 
         # signature = type + version + cpk + h_r + h_s (100 bytes)
         type = format(self.SIGNATURE_TYPE, f'0{self.TYPE_CHARS}x')
-        #version = format(self.VERSION, f'0{self.VERSION_CHARS}x')
         version = self.VERSION
 
         return type + version + cpk + h_r + h_s

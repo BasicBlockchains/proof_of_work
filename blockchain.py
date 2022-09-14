@@ -98,7 +98,7 @@ class Blockchain():
                 height = self.chain_db.get_height()['height']
                 retrieved_height = True
             except sqlite3.OperationalError:
-                #Logging
+                # Logging
                 self.logger.warning('DB is locked.')
                 pass
         return height
@@ -350,7 +350,7 @@ class Blockchain():
             # Logging
             self.logger.info(f'Fork created at height {block.height} for block with id {block.id}')
         else:
-            #Logging
+            # Logging
             self.logger.info(f'Block with height {block.height} and id {block.id} already in forks.')
 
     def handle_fork(self, block: Block) -> bool:
