@@ -82,7 +82,7 @@ def test_add_transaction():
 
     # UTXO_OUTPUTS
     amount = n.mining_reward // 2
-    new_address = Wallet(logger=test_logger).address
+    new_address = Wallet(logger=test_logger, save=False).address
     utxo_output1 = UTXO_OUTPUT(amount=amount, address=new_address)
     utxo_output2 = UTXO_OUTPUT(amount=amount, address=n.wallet.address)
 
