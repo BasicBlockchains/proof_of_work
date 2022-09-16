@@ -124,7 +124,7 @@ class Wallet():
         # Create directory if it doesn't exist
         Path(dir_path).mkdir(parents=True, exist_ok=True)
 
-        with open(f'{dir_path}/{file_name}', 'w') as f:
+        with open(Path(dir_path, file_name).absolute().as_posix(), 'w') as f:
             seed_string = hex(seed) + '\n'
             f.write(seed_string)
 
@@ -136,7 +136,7 @@ class Wallet():
         file_exists = Path(dir_path, file_name).exists()
         if file_exists:
             # Read in wallet file
-            with open(f'{dir_path}/{file_name}', 'r') as f:
+            with open(Path(dir_path, file_name).absolute().as_posix(), 'r') as f:
                 seed_string = f.read().strip('\n')
             if seed_string:
                 return int(seed_string, 16)
