@@ -131,8 +131,6 @@ class Blockchain():
         if block.mining_tx.mining_utxo.block_height < self.last_block.height + 1 + self.f.MINING_DELAY:
             # Logging
             self.logger.error('Block failed validation. Mining tx block height incorrect')
-            self.logger.debug(f'Mining utxo block height: {block.mining_tx.mining_utxo.block_height}')
-            self.logger.debug(f'Calculated blockchain height: {self.last_block.height + 1 + self.f.MINING_DELAY}')
             return False
 
         # Check fees + reward = amount in mining_utxo
@@ -147,6 +145,12 @@ class Blockchain():
         # if block.timestamp <= self.last_block.timestamp:
         #     # Logging
         #     self.logger.error('Block failed validation. Block time too early.')
+        #     return False
+        #
+        # # Make sure timestamp isn't too far ahead
+        # if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
+        #     # Logging
+        #     self.logger.error('Block timestamp too far ahead.')
         #     return False
 
         # Check each tx
