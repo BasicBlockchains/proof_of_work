@@ -3,6 +3,7 @@ Testing the blockchain
 '''
 import logging
 import os
+import json
 import secrets
 from pathlib import Path
 
@@ -215,3 +216,73 @@ def test_fork():
     mined_fork4 = mine_a_block(unmined_fork4)
     assert test_chain.add_block(mined_fork4)
     assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}, {3: mined_block3}]
+
+
+def test_memchain():
+    # Create db with path in tests directory
+    current_path = os.getcwd()
+    if '/tests' in current_path:
+        dir_path = current_path + '/data/test_blockchain/'
+    else:
+        dir_path = './tests/data/test_blockchain/'
+    file_name = 'test_memchain.db'
+
+    # Wipe db if it exists. Start with empty db
+    db_exsts = Path(dir_path, file_name).exists()
+    db = DataBase(dir_path, file_name)
+    if db_exsts:
+        db.wipe_db()
+    db.create_db()
+
+    # Create test logger
+    test_logger = logging.getLogger(__name__)
+    test_logger.setLevel('ERROR')
+    test_logger.propagate = False
+    test_logger.addHandler(logging.StreamHandler())
+
+    # Blockchain
+    test_chain = Blockchain(dir_path, file_name, logger=test_logger)
+    genesis_block = test_chain.chain[0]
+
+    # Modify target for testing
+    test_chain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
+
+    # Modify heartbeat for testing
+    test_chain.heartbeat = 5
+
+    # Mine heartbeat + x blocks, where x in (2,3)
+    block_list_ids = [genesis_block.id]
+    while test_chain.height < test_chain.heartbeat + 2:
+        # Create first block
+        next_unmined_block = random_unmined_block(test_chain.last_block.id, test_chain.height + 1,
+                                                  test_chain.mining_reward, test_chain.target)
+        next_block = mine_a_block(next_unmined_block)
+        block_list_ids.append(next_block.id)
+        assert test_chain.add_block(next_block)
+
+    # # Test memchain
+    assert test_chain.height == test_chain.heartbeat + 2
+    assert len(test_chain.chain) == test_chain.heartbeat + 1
+    assert test_chain.last_block.id == block_list_ids[test_chain.height]
+    assert test_chain.chain[0].id == genesis_block.id == block_list_ids[0]
+    assert test_chain.chain[1].id == block_list_ids[test_chain.height + 1 - test_chain.heartbeat]
+
+    # Test pop block
+    assert test_chain.pop_block()
+
+    # Test memchain
+    assert test_chain.height == test_chain.heartbeat + 1
+    assert len(test_chain.chain) == test_chain.heartbeat + 1
+    assert test_chain.last_block.id == block_list_ids[test_chain.height]
+    assert test_chain.chain[0].id == genesis_block.id == block_list_ids[0]
+    assert test_chain.chain[1].id == block_list_ids[test_chain.height - test_chain.heartbeat]
+
+    # Test pop block
+    assert test_chain.pop_block()
+
+    # Test memchain removing blocks as expected
+    assert test_chain.height == test_chain.heartbeat
+    assert len(test_chain.chain) == test_chain.heartbeat
+    assert test_chain.last_block.id == block_list_ids[test_chain.height]
+    assert test_chain.chain[0].id == genesis_block.id == block_list_ids[0]
+    assert test_chain.chain[1].id == block_list_ids[1]

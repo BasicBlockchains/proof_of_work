@@ -331,6 +331,11 @@ class Blockchain():
         # Remove block from db
         self.chain_db.delete_block(self.height)
 
+        # Insert block at height self.height - self.heartbeat if it exists
+        if len(self.chain) < self.heartbeat + 1 and self.height > self.heartbeat:
+            raw_block_dict = self.chain_db.get_raw_block(self.height - self.heartbeat)
+            self.chain.insert(1, self.d.raw_block(raw_block_dict['raw_block']))
+
         return True
 
     def create_genesis_block(self) -> Block:
@@ -440,13 +445,6 @@ class Blockchain():
         desired_time = self.heartbeat * self.heartbeat
         abs_diff = abs(elapsed_time - desired_time)
 
-        # # Use absolute difference to find adjust factor for target
-        # adjust_factor = 0
-        # interval = self.heartbeat
-        # while abs_diff > interval:
-        #     adjust_factor += 1
-        #     interval += self.heartbeat
-
         # Adjust either up or down
         if elapsed_time - desired_time > 0:  # Took longer than expected, lower target
             # Logging
@@ -465,16 +463,19 @@ class Blockchain():
     # Search methods
     def find_block_by_tx_id(self, tx_id: str):
         '''
-        Will return a Block if the tx_id is in its list. Otherwise return None
-        THIS IS EXPENSIVE
-        TODO: Change to search through memchain first then through db
+        Will return a Block if the tx_id is in its list. Otherwise, return None
+        Searches through db.
         '''
         temp_height = self.height
         block = None
         block_found = False
+
         while temp_height > 0 and not block_found:
+            # Search through database
             raw_block_dict = self.chain_db.get_raw_block(temp_height)
             temp_block = self.d.raw_block(raw_block_dict['raw_block'])
+
+            # Search for tx_id in Block
             if tx_id in temp_block.tx_ids:
                 block = temp_block
                 block_found = True
