@@ -194,8 +194,8 @@ class Blockchain():
             for output_utxo in tx.outputs:
                 output_amount += output_utxo.amount
 
-            # Check input_amount < output_amount
-            if input_amount < output_amount:
+            # Check input_amount > output_amount
+            if input_amount <= output_amount:
                 # Logging
                 self.logger.error(
                     f'Input amount in transactions {input_amount}; greater than output amount in transactions {output_amount}')

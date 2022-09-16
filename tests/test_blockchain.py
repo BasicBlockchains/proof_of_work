@@ -67,16 +67,16 @@ def test_add_pop_block():
         signature=f.signature(private_key, mining_tx1.id)
     )
     # outputs
-    output_utxo1 = UTXO_OUTPUT(amount=test_chain.mining_reward // 2, address=random_address())
-    output_utxo2 = UTXO_OUTPUT(amount=test_chain.mining_reward // 2, address=fixed_address)
+    output_utxo1 = UTXO_OUTPUT(amount=test_chain.mining_reward // 2 - 1, address=random_address())
+    output_utxo2 = UTXO_OUTPUT(amount=test_chain.mining_reward // 2 - 1, address=fixed_address)
 
     # tx
     new_tx = Transaction([input_utxo], [output_utxo1, output_utxo2])
 
-    # Add tx
+    block_fees = test_chain.mining_reward - 2 * (test_chain.mining_reward // 2 - 1)
 
     # Create next block
-    mining_tx2 = MiningTransaction(2, test_chain.mining_reward, 0, fixed_address,
+    mining_tx2 = MiningTransaction(2, test_chain.mining_reward, block_fees, fixed_address,
                                    f.MINING_DELAY + 2)
     unmined_block2 = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mining_tx2, [new_tx])
     mined_block2 = mine_a_block(unmined_block2)
