@@ -6,7 +6,6 @@ import waitress
 from flask import Flask, jsonify, request, Response, json
 
 from node import Node
-from timestamp import utc_timestamp
 
 
 def create_app(node: Node):
