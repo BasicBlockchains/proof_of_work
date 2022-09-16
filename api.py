@@ -6,7 +6,6 @@ import waitress
 from flask import Flask, jsonify, request, Response, json
 
 from node import Node
-from timestamp import utc_timestamp
 
 
 def create_app(node: Node):
@@ -24,7 +23,7 @@ def create_app(node: Node):
 
     @app.route('/ping/')
     def ping():
-        return Response(f'{utc_timestamp()}', status=200, mimetype='application/json')
+        return Response(status=200, mimetype='application/json')
 
     @app.route('/height/')
     def get_height():
@@ -33,9 +32,9 @@ def create_app(node: Node):
     @app.route('/is_connected/')
     def is_connected_endpoint():
         if node.is_connected:
-            return Response("Node is connected", status=200, mimetype='application/json')
+            return Response(status=200, mimetype='application/json')
         else:
-            return Response("Node is not connected", status=202, mimetype='application/json')
+            return Response(status=202, mimetype='application/json')
 
     @app.route('/node_list/', methods=['GET', 'POST', 'DELETE'])
     def get_node_list():
@@ -50,11 +49,11 @@ def create_app(node: Node):
                 if (ip, port) not in node.node_list:
                     node.node_list.append((ip, port))
                     node.ping_node((ip, port))
-                    return Response("New node received", status=200, mimetype='application/json')
+                    return Response(status=200, mimetype='application/json')
                 elif (ip, port) in node.node_list:
-                    return Response("Post successful, node already in list", status=202, mimetype='application/json')
+                    return Response(status=202, mimetype='application/json')
             except KeyError:
-                return Response("Submitted node malformed.", status=400, mimetype='application/json')
+                return Response(status=400, mimetype='application/json')
 
         elif request.method == 'DELETE':
             # Get node first
@@ -63,7 +62,7 @@ def create_app(node: Node):
                 ip = node_dict['ip']
                 port = node_dict['port']
             except KeyError:
-                return Response("Submitted node malformed.", status=400, mimetype='application/json')
+                return Response(status=400, mimetype='application/json')
 
             # Confirm connected status
             url = f'http://{ip}:{port}/is_connected'
@@ -72,17 +71,17 @@ def create_app(node: Node):
                 r = requests.get(url, headers=headers)
             except requests.exceptions.ConnectionError:
                 # Logging
-                return Response(f"Could not confirm with {(ip, port)}", status=401, mimetype='application/json')
+                return Response(status=401, mimetype='application/json')
 
             # Remove node
             if r.status_code == 202:
                 try:
                     node.node_list.remove((ip, port))
-                    return Response("Node removed from list", status=200, mimetype='application/json')
+                    return Response(status=200, mimetype='application/json')
                 except ValueError:
-                    return Response("Submitted node not in node list", status=404, mimetype='application/json')
+                    return Response(status=404, mimetype='application/json')
             else:
-                return Response(f"Wrong code from {ip,port} for disconnect", status=401, mimetype='application/json')
+                return Response(status=401, mimetype='application/json')
 
     @app.route('/transaction/', methods=['GET', 'POST'])
     def post_tx():
@@ -103,13 +102,11 @@ def create_app(node: Node):
                 tx = node.d.raw_transaction(raw_tx)
                 added = node.add_transaction(tx)
                 if added:
-                    return Response("Tx received and validated or orphaned.", status=200, mimetype='application/json')
+                    return Response(status=200, mimetype='application/json')
                 else:
-                    return Response("Tx Received but not validated or orphaned.", status=202,
-                                    mimetype='application/json')
+                    return Response(status=202, mimetype='application/json')
             except Exception as e:
-                return Response(f'Exception encountered handling post request. Error {e}', status=400,
-                                mimetype='application/json')
+                return Response(status=400, mimetype='application/json')
 
     @app.route('/transaction/<tx_id>')
     def confirm_tx(tx_id: str):
@@ -151,17 +148,15 @@ def create_app(node: Node):
                             node.logger.info('Restarting Miner after receiving new block.')
                             node.stop_miner()
                             node.start_miner()
-                        return Response("Block received and added successfully", status=200,
-                                        mimetype='application/json')
+                        return Response(status=200, mimetype='application/json')
                     else:
-                        return Response("Block received but not added. Could be forked or orphan.", status=202,
-                                        mimetype='application/json')
+                        return Response(status=202, mimetype='application/json')
                 else:
-                    return Response("Block failed to reconstruct from dict.", status=406, mimetype='application/json')
+                    return Response(status=406, mimetype='application/json')
             except Exception as e:
                 # Logging
                 node.logger.error(f'Post request failed with exception {e}')
-                return Response(f'Post request failed with exception {e}', status=404, mimetype='application/json')
+                return Response(status=404, mimetype='application/json')
 
     @app.route('/block/<height>/', methods=['GET'])
     def get_block_by_height(height):
@@ -171,7 +166,7 @@ def create_app(node: Node):
             block = node.d.raw_block(raw_block)
             return jsonify(json.loads(block.to_json))
         else:
-            return Response("No block at that height", status=404, mimetype='application/json')
+            return Response(status=404, mimetype='application/json')
 
     @app.route('/block/ids/')
     def get_block_ids():
@@ -187,7 +182,7 @@ def create_app(node: Node):
         if header_dict:
             return header_dict
         else:
-            return Response("No block at that height", status=404, mimetype='application/json')
+            return Response(status=404, mimetype='application/json')
 
     @app.route('/raw_block/', methods=['GET', 'POST'])
     def get_last_block_raw():
@@ -209,13 +204,11 @@ def create_app(node: Node):
                         node.logger.info('Restarting Miner after receiving new block.')
                         node.stop_miner()
                         node.start_miner()
-                    return Response("Block received and added successfully", status=200,
-                                    mimetype='application/json')
+                    return Response(status=200, mimetype='application/json')
                 else:
-                    return Response("Block received but not added. Could be forked or orphan.", status=202,
-                                    mimetype='application/json')
+                    return Response(status=202, mimetype='application/json')
             else:
-                return Response("Block failed to reconstruct from dict.", status=406, mimetype='application/json')
+                return Response(status=406, mimetype='application/json')
 
     @app.route('/raw_block/<height>')
     def get_raw_block_by_height(height):
@@ -223,7 +216,7 @@ def create_app(node: Node):
         if raw_block_dict:
             return raw_block_dict
         else:
-            return Response("No block at that height", status=404, mimetype='application/json')
+            return Response(status=404, mimetype='application/json')
 
     @app.route('/utxo/')
     def get_utxo_display_info():

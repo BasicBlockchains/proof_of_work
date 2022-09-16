@@ -83,8 +83,8 @@ def test_add_transaction():
     # UTXO_OUTPUTS
     amount = n.mining_reward // 2
     new_address = Wallet(logger=test_logger, save=False).address
-    utxo_output1 = UTXO_OUTPUT(amount=amount, address=new_address)
-    utxo_output2 = UTXO_OUTPUT(amount=amount, address=n.wallet.address)
+    utxo_output1 = UTXO_OUTPUT(amount=amount - 1, address=new_address)
+    utxo_output2 = UTXO_OUTPUT(amount=amount - 1, address=n.wallet.address)
 
     # Transaction
     new_tx = Transaction(inputs=[utxo_input], outputs=[utxo_output1, utxo_output2])
@@ -95,8 +95,8 @@ def test_add_transaction():
     orphan_sig = n.wallet.sign_transaction(orphan_id)
     orphan_utxo_input = UTXO_INPUT(orphan_id, orphan_output_index, orphan_sig)
 
-    orphan_utxo_output1 = UTXO_OUTPUT(amount=amount // 2, address=new_address)
-    orphan_utxo_output2 = UTXO_OUTPUT(amount=amount // 2, address=n.wallet.address)
+    orphan_utxo_output1 = UTXO_OUTPUT(amount=amount // 2 - 1, address=new_address)
+    orphan_utxo_output2 = UTXO_OUTPUT(amount=amount // 2 - 1, address=n.wallet.address)
 
     orphan_tx = Transaction(inputs=[orphan_utxo_input], outputs=[orphan_utxo_output1, orphan_utxo_output2])
 

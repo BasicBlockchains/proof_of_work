@@ -172,6 +172,25 @@ The utxo_pool contains all those UTXO_OUTPUTs which have not yet been consumed.
 Finally, the raw_block table contains the raw form of each Block, where the height of the Block corresponds to the row
 number plus one (accounting for genesis Block).
 
-### Transaction Validation
+## Validation
+
+In order for a Transaction to be valid, it must meet the following requirements:
+
+    -Every utxo output referenced in the inputs of the tx must exist in the database
+    -Every signature in a utxo_input has a cpk that resolves to the address in the referenced utxo_output
+    -The total input amount (total amount referenced by inputs) strictly exceeds total amount of the outputs
+
+In order for a MiningTransaction to be valid, it must meet the following requirements:
+
+    -The height of the mining tx must be equal to height of previous block + 1
+    -The block height in the mining_utxo in the mining tx must be equal to the height of the previous block + 1 + the mining delay amount
+    -The amount in the mining_utxo of the mining tx must be equal to the mining_tx reward + the mining_tx block_fees
+
+In order for a Block to be valid, it must meet the following requirements:
+
+    -The block.id integer is less than the block target
+    -The block target agrees with the blockchain target at that height
+    -The block previous_id must agree to the id of the previous block
+    -The height of the mining tx must equal the height of the previous block + 1
 
 ## Mining

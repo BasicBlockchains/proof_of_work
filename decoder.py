@@ -120,7 +120,6 @@ class Decoder:
 
         # Verify type/version
         type = int(hex_addy[:self.F.TYPE_CHARS], 16)
-        # version = hex_addy[self.F.TYPE_CHARS:self.F.TYPE_CHARS + self.F.VERSION_CHARS]
 
         try:
             assert type == self.F.ADDRESS_TYPE

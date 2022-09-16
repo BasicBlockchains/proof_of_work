@@ -470,10 +470,6 @@ def run_node_gui():
 
         if config_event:
             if config_event in '-confirm_config-':
-                # temp_desired_port = config_values['-enter_port-']
-                # temp_desired_width = config_values['-minimum_width-']
-                # temp_desired_height = config_values['-minimum_height-']
-
                 if config_values['-enter_port-'].isnumeric():
                     temp_desired_port = int(config_values['-enter_port-'])
                     if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
@@ -538,7 +534,6 @@ def run_node_gui():
     node = Node(port=desired_port, logger=gui_logger)
 
     # Formatter/Decoder
-    # f = Formatter()
     d = Decoder()
 
     # Run app with waitress
@@ -548,7 +543,6 @@ def run_node_gui():
     # Connect to network
     gui_logger.info('Connecting to network.')
     connecting_thread = threading.Thread(target=node.connect_to_network)
-    # node.connect_to_network()
     connecting_thread.start()
     download_window = create_download_window()
     download_window['-current_height-'].update(str(node.height))

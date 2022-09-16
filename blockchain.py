@@ -23,8 +23,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 731041  # Tuned to production values in Formatter
-    GENESIS_TIMESTAMP = 1664631000  # October 1st, 9:30 AM EST // 1:30 PM UTC
+    GENESIS_NONCE = 611190  # Tuned to production values in Formatter
+    GENESIS_TIMESTAMP = 1663939800  # September 23rd, 9:30 AM EST // 1:30 PM UTC
 
     # Directory defaults
     DIR_PATH = './data/'
@@ -131,8 +131,6 @@ class Blockchain():
         if block.mining_tx.mining_utxo.block_height < self.last_block.height + 1 + self.f.MINING_DELAY:
             # Logging
             self.logger.error('Block failed validation. Mining tx block height incorrect')
-            self.logger.debug(f'Mining utxo block height: {block.mining_tx.mining_utxo.block_height}')
-            self.logger.debug(f'Calculated blockchain height: {self.last_block.height + 1 + self.f.MINING_DELAY}')
             return False
 
         # Check fees + reward = amount in mining_utxo
@@ -147,6 +145,12 @@ class Blockchain():
         # if block.timestamp <= self.last_block.timestamp:
         #     # Logging
         #     self.logger.error('Block failed validation. Block time too early.')
+        #     return False
+        #
+        # # Make sure timestamp isn't too far ahead
+        # if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
+        #     # Logging
+        #     self.logger.error('Block timestamp too far ahead.')
         #     return False
 
         # Check each tx
@@ -190,7 +194,7 @@ class Blockchain():
             for output_utxo in tx.outputs:
                 output_amount += output_utxo.amount
 
-            # Check input_amount < output_amount
+            # Check input_amount >= output_amount
             if input_amount < output_amount:
                 # Logging
                 self.logger.error(
@@ -331,6 +335,11 @@ class Blockchain():
         # Remove block from db
         self.chain_db.delete_block(self.height)
 
+        # Insert block at height self.height - self.heartbeat if it exists
+        if len(self.chain) < self.heartbeat + 1 and self.height > self.heartbeat:
+            raw_block_dict = self.chain_db.get_raw_block(self.height - self.heartbeat)
+            self.chain.insert(1, self.d.raw_block(raw_block_dict['raw_block']))
+
         return True
 
     def create_genesis_block(self) -> Block:
@@ -440,13 +449,6 @@ class Blockchain():
         desired_time = self.heartbeat * self.heartbeat
         abs_diff = abs(elapsed_time - desired_time)
 
-        # # Use absolute difference to find adjust factor for target
-        # adjust_factor = 0
-        # interval = self.heartbeat
-        # while abs_diff > interval:
-        #     adjust_factor += 1
-        #     interval += self.heartbeat
-
         # Adjust either up or down
         if elapsed_time - desired_time > 0:  # Took longer than expected, lower target
             # Logging
@@ -465,16 +467,19 @@ class Blockchain():
     # Search methods
     def find_block_by_tx_id(self, tx_id: str):
         '''
-        Will return a Block if the tx_id is in its list. Otherwise return None
-        THIS IS EXPENSIVE
-        TODO: Change to search through memchain first then through db
+        Will return a Block if the tx_id is in its list. Otherwise, return None
+        Searches through db.
         '''
         temp_height = self.height
         block = None
         block_found = False
+
         while temp_height > 0 and not block_found:
+            # Search through database
             raw_block_dict = self.chain_db.get_raw_block(temp_height)
             temp_block = self.d.raw_block(raw_block_dict['raw_block'])
+
+            # Search for tx_id in Block
             if tx_id in temp_block.tx_ids:
                 block = temp_block
                 block_found = True
