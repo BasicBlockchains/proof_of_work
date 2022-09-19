@@ -112,45 +112,45 @@ class Blockchain():
         # Check previous id
         if block.prev_id != self.last_block.id:
             # Logging
-            self.logger.error('Block failed validation. Block.prev_id != last_block.id')
+            self.logger.warning('Block failed validation. Block.prev_id != last_block.id')
             return False
 
         # Check target
         if int(block.id, 16) > self.target:
             # Logging
-            self.logger.error('Block failed validation. Block id bigger than target')
+            self.logger.warning('Block failed validation. Block id bigger than target')
             return False
 
         # Check Mining Tx height
         if block.mining_tx.height != self.last_block.mining_tx.height + 1:
             # Logging
-            self.logger.error('Block failed validation. Mining_tx height incorrect')
+            self.logger.warning('Block failed validation. Mining_tx height incorrect')
             return False
 
         # Check Mining UTXO block_height
         if block.mining_tx.mining_utxo.block_height < self.last_block.height + 1 + self.f.MINING_DELAY:
             # Logging
-            self.logger.error('Block failed validation. Mining tx block height incorrect')
+            self.logger.warning('Block failed validation. Mining tx block height incorrect')
             return False
 
         # Check fees + reward = amount in mining_utxo
         block_total = block.mining_tx.block_fees + block.mining_tx.reward
         if block_total != block.mining_tx.mining_utxo.amount:
             # Logging
-            self.logger.error('Block failed validation. Block total incorrect')
+            self.logger.warning('Block failed validation. Block total incorrect')
             return False
 
         # TODO: Enable in production
         # # Make sure timestamp is increasing
         # if block.timestamp <= self.last_block.timestamp:
         #     # Logging
-        #     self.logger.error('Block failed validation. Block time too early.')
+        #     self.logger.warning('Block failed validation. Block time too early.')
         #     return False
         #
         # # Make sure timestamp isn't too far ahead
         # if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
         #     # Logging
-        #     self.logger.error('Block timestamp too far ahead.')
+        #     self.logger.warning('Block timestamp too far ahead.')
         #     return False
 
         # Check each tx
@@ -180,7 +180,7 @@ class Blockchain():
                 # Return False if dict is empty
                 if not utxo_dict:
                     # Logging
-                    self.logger.error(
+                    self.logger.warning(
                         f'Utxo output with tx_id {tx_id} and index {index} does not exist in the database.')
                     return False
 
@@ -189,14 +189,14 @@ class Blockchain():
                 temp_address = self.f.address(cpk)
                 if temp_address != utxo_address:
                     # Logging
-                    self.logger.error(
+                    self.logger.warning(
                         f'Address in utxo {utxo_address} does not match address generated from signature: {temp_address}')
                     return False
 
                 # Verify signature
                 if not self.curve.verify_signature(ecdsa_tuple, tx_id, self.curve.decompress_point(cpk)):
                     # Logging
-                    self.logger.error('Decoded signature fails to verify against cryptographic curve.')
+                    self.logger.warning('Decoded signature fails to verify against cryptographic curve.')
                     return False
 
                 # Update amount
@@ -216,7 +216,7 @@ class Blockchain():
             # Check input_amount >= output_amount
             if input_amount < output_amount:
                 # Logging
-                self.logger.error(
+                self.logger.warning(
                     f'Input amount in transactions {input_amount}; greater than output amount in transactions {output_amount}')
                 return False
 
@@ -225,7 +225,7 @@ class Blockchain():
         # Verify fees in block_transactions agrees with MiningTx
         if fees != block.mining_tx.block_fees:
             # Logging
-            self.logger.error(
+            self.logger.warning(
                 f'Validation fails. Block fees incorrect. Calculated fees{fees}; mining tx fees {block.mining_tx.block_fees}')
             return False
 
@@ -480,10 +480,10 @@ class Blockchain():
             latest_added = self.add_block(block)
             if latest_added:
                 # Add the popped block to forks and remove the other one
-                self.forks.remove({candidate_fork.mining_tx.height: candidate_fork})
+                self.forks.remove({candidate_fork.height: candidate_fork})
                 self.create_fork(popped_block)
                 # Logging
-                self.logger.info(f'Fork handled. Height: {block.mining_tx.height}, Block  id: {block.id}')
+                self.logger.info(f'Fork handled. Height: {block.height}, Block  id: {block.id}')
                 return True
             # Fail to add block, return to popped block
             else:
@@ -550,6 +550,11 @@ class Blockchain():
         # Get absolute difference between desired time
         desired_time = pow(self.heartbeat, 2)
         abs_diff = abs(elapsed_time - desired_time)
+
+        # Logging
+        self.logger.info(f'Total time (in seconds) between saving last {self.heartbeat} blocks: {elapsed_time}')
+        self.logger.info(f'Desired time (in seconds) to mine and save {self.heartbeat} blocks: {desired_time}')
+        self.logger.info(f'Difference in total and desired time: {elapsed_time - desired_time}')
 
         # Adjust either up or down
         if elapsed_time - desired_time > 0:  # Took longer than expected, lower target
