@@ -1,6 +1,8 @@
 '''
 REST API for the Blockchain
 '''
+import sqlite3
+
 import requests
 import waitress
 from flask import Flask, jsonify, request, Response, json
@@ -27,7 +29,15 @@ def create_app(node: Node):
 
     @app.route('/height/')
     def get_height():
-        return node.blockchain.chain_db.get_height()
+        height_returned = False
+        height = 0
+        while not height_returned:
+            try:
+                height = node.blockchain.chain_db.get_height()
+                height_returned = True
+            except sqlite3.OperationalError:
+                pass
+        return height
 
     @app.route('/is_connected/')
     def is_connected_endpoint():
@@ -160,7 +170,14 @@ def create_app(node: Node):
 
     @app.route('/block/<height>/', methods=['GET'])
     def get_block_by_height(height):
-        raw_block_dict = node.blockchain.chain_db.get_raw_block(int(height))
+        raw_block_returned = False
+        raw_block_dict = {}
+        while not raw_block_returned:
+            try:
+                raw_block_dict = node.blockchain.chain_db.get_raw_block(int(height))
+                raw_block_returned = True
+            except sqlite3.OperationalError:
+                pass
         if raw_block_dict:
             raw_block = raw_block_dict['raw_block']
             block = node.d.raw_block(raw_block)
@@ -170,15 +187,38 @@ def create_app(node: Node):
 
     @app.route('/block/ids/')
     def get_block_ids():
-        return node.blockchain.chain_db.get_block_ids()
+        ids_returned = False
+        block_id_dict = {}
+        while not ids_returned:
+            try:
+                block_id_dict = node.blockchain.chain_db.get_block_ids()
+                ids_returned = True
+            except sqlite3.OperationalError:
+                pass
+        return block_id_dict
 
     @app.route('/block/headers/')
     def get_last_block_headers():
-        return node.blockchain.chain_db.get_headers_by_height(node.height)
+        headers_returned = False
+        header_dict = {}
+        while not headers_returned:
+            try:
+                header_dict = node.blockchain.chain_db.get_headers_by_height(node.height)
+                headers_returned = True
+            except sqlite3.OperationalError:
+                pass
+        return header_dict
 
     @app.route('/block/headers/<height>')
     def get_headers_by_height(height):
-        header_dict = node.blockchain.chain_db.get_headers_by_height(int(height))
+        headers_returned = False
+        header_dict = {}
+        while not headers_returned:
+            try:
+                header_dict = node.blockchain.chain_db.get_headers_by_height(int(height))
+                headers_returned = True
+            except sqlite3.OperationalError:
+                pass
         if header_dict:
             return header_dict
         else:
@@ -188,7 +228,15 @@ def create_app(node: Node):
     def get_last_block_raw():
         # Return last block at this endpoint
         if request.method == 'GET':
-            return jsonify(node.blockchain.chain_db.get_raw_block(node.height))
+            last_block_returned = False
+            raw_block_dict = {}
+            while not last_block_returned:
+                try:
+                    raw_block_dict = node.blockchain.chain_db.get_raw_block(node.height)
+                    last_block_returned = True
+                except sqlite3.OperationalError:
+                    pass
+            return jsonify(raw_block_dict)
 
         # Add new block at this endpoint
         if request.method == 'POST':
@@ -212,7 +260,14 @@ def create_app(node: Node):
 
     @app.route('/raw_block/<height>')
     def get_raw_block_by_height(height):
-        raw_block_dict = node.blockchain.chain_db.get_raw_block(int(height))
+        block_returned = False
+        raw_block_dict = {}
+        while not block_returned:
+            try:
+                raw_block_dict = node.blockchain.chain_db.get_raw_block(int(height))
+                block_returned = True
+            except sqlite3.OperationalError:
+                pass
         if raw_block_dict:
             return raw_block_dict
         else:
@@ -225,19 +280,39 @@ def create_app(node: Node):
 
     @app.route('/utxo/<tx_id>')
     def get_utxos_by_tx_id(tx_id):
-        utxo_dict = node.blockchain.chain_db.get_utxos_by_tx_id(tx_id)
+        utxos_returned = False
+        utxo_dict = {}
+        while not utxos_returned:
+            try:
+                utxo_dict = node.blockchain.chain_db.get_utxos_by_tx_id(tx_id)
+                utxos_returned = True
+            except sqlite3.OperationalError:
+                pass
         return utxo_dict
 
     @app.route('/utxo/<tx_id>/<index>')
     def get_utxo(tx_id, index):
-        utxo_dict = node.blockchain.chain_db.get_utxo(tx_id, index)
+        utxos_returned = False
+        utxo_dict = {}
+        while not utxos_returned:
+            try:
+                utxo_dict = node.blockchain.chain_db.get_utxo(tx_id, index)
+                utxos_returned = True
+            except sqlite3.OperationalError:
+                pass
         return utxo_dict
 
     @app.route('/<address>')
     def get_utxo_by_address(address: str):
-        return jsonify(
-            node.blockchain.chain_db.get_utxos_by_address(address)
-        )
+        utxos_returned = False
+        utxo_dict = {}
+        while not utxos_returned:
+            try:
+                utxo_dict = node.blockchain.chain_db.get_utxos_by_address(address)
+                utxos_returned = True
+            except sqlite3.OperationalError:
+                pass
+        return jsonify(utxo_dict)
 
     return app
 
