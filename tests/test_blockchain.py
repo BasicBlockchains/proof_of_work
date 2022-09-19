@@ -34,7 +34,7 @@ def test_add_pop_block():
 
     # Create test logger
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('CRITICAL')
+    test_logger.setLevel('WARNING')
     test_logger.propagate = False
     sh = logging.StreamHandler()
     sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
@@ -124,7 +124,7 @@ def test_fork():
 
     # Create test logger
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('DEBUG')
+    test_logger.setLevel('WARNING')
     test_logger.propagate = False
     test_logger.addHandler(logging.StreamHandler())
 
@@ -236,7 +236,7 @@ def test_memchain():
 
     # Create test logger
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('ERROR')
+    test_logger.setLevel('WARNING')
     test_logger.propagate = False
     test_logger.addHandler(logging.StreamHandler())
 
