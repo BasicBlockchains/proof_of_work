@@ -1129,7 +1129,8 @@ def run_node_gui():
         if height % (Formatter.HEARTBEAT * 24) == 0 and height > 0:
             # Save logs
             log_file = f'logs_block{height - Formatter.HEARTBEAT * 24}--{height}.txt'
-            with open(log_file, 'w') as file:
+
+            with open(Path(node.dir_path, log_file).absolute().as_posix(), 'w') as file:
                 file.write(buffer)
 
             # Clear logs
