@@ -557,14 +557,14 @@ class Blockchain():
         self.logger.info(f'Difference in total and desired time: {elapsed_time - desired_time}')
 
         # Adjust either up or down
-        if elapsed_time - desired_time > 0:  # Took longer than expected, lower target
-            # Logging
-            self.logger.info(f'Updating target. Adjusting target down by {abs_diff}')
-            self.target = self.f.adjust_target_down(self.target, abs_diff)
-        elif elapsed_time - desired_time < 0:  # Took shorter than expected, raise target
+        if elapsed_time - desired_time > 0:  # Took longer than expected, raise target - higher target = easier
             # Logging
             self.logger.info(f'Updating target. Adjusting target up by {abs_diff}')
             self.target = self.f.adjust_target_up(self.target, abs_diff)
+        elif elapsed_time - desired_time < 0:  # Took shorter than expected, lower target - lower target = harder
+            # Logging
+            self.logger.info(f'Updating target. Adjusting target down by {abs_diff}')
+            self.target = self.f.adjust_target_down(self.target, abs_diff)
 
     def update_memchain(self):
         # Only keep last heartbeat blocks in mem chain and genesis block at index 0
