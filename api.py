@@ -27,7 +27,7 @@ def create_app(node: Node):
     def ping():
         return Response(status=200, mimetype='application/json')
 
-    @app.route('/data')
+    @app.route('/data/')
     def state_of_node():
         f = Formatter()
 
@@ -40,6 +40,16 @@ def create_app(node: Node):
             "last_block": json.loads(node.blockchain.last_block.to_json)
         }
         return jsonify(state_dict)
+
+    @app.route('/forks/')
+    def show_forks():
+        fork_dict = {}
+        fork_nums = len(node.blockchain.forks)
+        for x in range(fork_nums):
+            fork_dict.update(
+                {f'fork_{x + 1}': node.blockchain.forks[x]}
+            )
+        return jsonify(fork_dict)
 
     @app.route('/height/')
     def get_height():
