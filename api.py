@@ -6,7 +6,7 @@ import sqlite3
 import requests
 import waitress
 from flask import Flask, jsonify, request, Response, json
-
+from formatter import Formatter
 from node import Node
 
 
@@ -26,6 +26,20 @@ def create_app(node: Node):
     @app.route('/ping/')
     def ping():
         return Response(status=200, mimetype='application/json')
+
+    @app.route('/data')
+    def state_of_node():
+        f = Formatter()
+
+        state_dict = {
+            "height": node.blockchain.height,
+            "encoded_target": f.target_from_int(node.blockchain.target),
+            "hex_target": format(node.blockchain.target, f'0{f.HASH_CHARS}x'),
+            "mining_reward": node.blockchain.mining_reward,
+            "total_mine_amount": node.blockchain.total_mining_amount,
+            "last_block": json.loads(node.blockchain.last_block.to_json)
+        }
+        return jsonify(state_dict)
 
     @app.route('/height/')
     def get_height():
