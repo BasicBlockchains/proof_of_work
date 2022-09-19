@@ -548,7 +548,7 @@ class Blockchain():
         elapsed_time = last_block_time - first_block_time
 
         # Get absolute difference between desired time
-        desired_time = self.heartbeat * self.heartbeat
+        desired_time = pow(self.heartbeat, 2)
         abs_diff = abs(elapsed_time - desired_time)
 
         # Adjust either up or down

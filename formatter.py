@@ -81,7 +81,7 @@ class Formatter():
 
     # CONFIG
     HEARTBEAT = 60
-    MINING_DELAY = HEARTBEAT * HEARTBEAT
+    MINING_DELAY = HEARTBEAT * 24 * 7  # Delay of 1 week
     MAXIMUM_BIT_SIZE = 0x3e80  # 2Kb
     GOSSIP_NUMBER = 5
     FORK_HEIGHT = 3
