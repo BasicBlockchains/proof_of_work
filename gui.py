@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from tkinter import Tk
 import multiprocessing
+import webbrowser
 import PySimpleGUI as sg
 
 from api import run_app
@@ -1145,7 +1146,7 @@ def run_node_gui():
 
         # Open webserver
         if event == '-open_browser-':
-            os.system(f"open http://{node.ip}:{node.assigned_port}")
+            webbrowser.open(f"http://{node.ip}:{node.assigned_port}", new=2)
 
     # Cleanup
     if node.is_mining:
