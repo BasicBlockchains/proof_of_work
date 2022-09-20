@@ -3,6 +3,7 @@ Main File for GUI
 '''
 import _tkinter
 import logging
+import os
 import os.path
 import threading
 import time
@@ -223,6 +224,11 @@ def create_window(theme=DEFAULT_THEME):
          sg.Button('CLEAR', size=(10, 2), key='-clear-'),
          sg.Push()],
         [sg.HorizontalSeparator(pad=5, color='#000000')],
+        [
+            sg.Push(),
+            sg.Button('Open WebServer', key='-open_browser-', size=(20, 2)),
+            sg.Push()
+        ]
 
     ]
     node_table_headings = ['IP ADDRESS', 'PORT', 'PING (ms)', 'LAST CONTACT']
@@ -1136,6 +1142,11 @@ def run_node_gui():
 
                 # Clear logs
                 buffer = ''
+
+        # Open webserver
+        if event == '-open_browser-':
+            os.system(f"open http://{node.ip}:{node.assigned_port}")
+
     # Cleanup
     if node.is_mining:
         node.stop_miner()
