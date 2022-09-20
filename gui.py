@@ -1130,11 +1130,12 @@ def run_node_gui():
             # Save logs
             log_file = f'logs_block{height - Formatter.HEARTBEAT * 24}--{height}.txt'
 
-            with open(Path(node.dir_path, log_file).absolute().as_posix(), 'w') as file:
-                file.write(buffer)
+            if not Path(node.dir_path, log_file).exists():
+                with open(Path(node.dir_path, log_file).absolute().as_posix(), 'w') as file:
+                    file.write(buffer)
 
-            # Clear logs
-            buffer = ''
+                # Clear logs
+                buffer = ''
     # Cleanup
     if node.is_mining:
         node.stop_miner()
