@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Blockchains Homepage</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <script>
+        var userIp = '{{user_ip | tojson}}'
+        userIp = userIp.replaceAll('"', '')
+        var userPort = '{{user_port | tojson}}'
+        var webAddress = "http://" + userIp + ":" + userPort + "/"
+    </script>
+
+</head>
+
+<body>
+
+    <!--HEADER-->
+    <section class="header">
+
+        <!--NAV BAR-->
+        <nav>
+            <a href="index.html"><img src="/static/images/logo_icon.png"></a>
+            <div class="nav-links" id="nav-links">
+                <ul>
+                    <li><a href="#">ABOUT</a></li>
+                    <li><a href="#">CONTACT</a></li>
+                </ul>
+            </div>
+            <i class="fa fa-bars" onclick="showMenu()"></i>
+            
+        </nav>
+
+       <!-- WELCOME MESSAGE -->
+        <div class="text-box">
+            <h1>ENDPOINTS FOR WEBSERVER</h1>
+            <p id="web_address">
+            <script>
+                document.getElementById("web_address").innerHTML = webAddress
+            </script>
+            </p>
+        </div>    
+        
+
+    </section>
+
+    <!--ENDPOINTS-->
+    <section class="endpoints">
+
+
+        <!--DIRECT ENDPOINTS-->
+        <div class="endpoint_box">
+            <h1>DIRECT ENDPOINTS</h1>
+            <div class="button_group">
+                <button class="button" onclick="goToEndpoint('ping')">Ping</button>
+                <button class="button" onclick="goToEndpoint('data')">Data</button>
+                <button class="button" onclick="goToEndpoint('forks')">Forks</button>
+                <button class="button" onclick="goToEndpoint('is_connected')">Is Connected</button>
+                <button class="button" onclick="goToEndpoint('node_list')">Node List</button>
+            </div>
+        </div>
+
+        <!--TRANSACTION ENDPOINTS-->
+        <div class="endpoint_box">
+            <h1>TRANSACTION ENDPOINTS</h1>
+            <div class="tx_group">
+                <button class="button" onclick="goToEndpoint('transaction')">Transaction</button>
+            </div>
+        </div>
+
+
+
+    </section>
+
+
+
+
+    <!--FOOTER-->
+    <section class="footer">
+        <div class="container">
+            <div class="icons">
+                <i class="fa-brands fa-facebook"></i>
+                <i class="fa-brands fa-twitter"></i>
+                <i class="fa-brands fa-instagram"></i>
+                <i class="fa-brands fa-linkedin"></i>
+            </div>
+            <p>Made with <i class="fa-solid fa-heart"></i> by Basic Blockchains</p>
+            <p>Copyright (c) 2022.</p>
+        </div>
+    </section>
+
+
+
+    <!--JAVASCRIPT-->
+    <script>
+        var navLinks = document.getElementById("nav-links")
+
+        function showMenu() {
+            if (navLinks.style.visibility == 'visible') {
+                navLinks.style.visibility = 'hidden'
+            }
+            else {
+                navLinks.style.visibility = 'visible'
+            }
+        }
+
+        function goToEndpoint(endpoint){
+            let port = location.port;
+            if (port == ''){
+                port = 80
+            }
+            address = webAddress + endpoint;
+            window.open(address);
+        }
+
+
+
+
+    </script>
+
+</body>
+
+</html>

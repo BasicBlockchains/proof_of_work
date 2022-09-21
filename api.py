@@ -5,9 +5,10 @@ import sqlite3
 
 import requests
 import waitress
-from flask import Flask, jsonify, request, Response, json
+from flask import Flask, jsonify, request, Response, json, render_template
 from formatter import Formatter
 from node import Node
+from timestamp import utc_timestamp
 
 
 def create_app(node: Node):
@@ -18,14 +19,16 @@ def create_app(node: Node):
     @app.route('/')
     def hello_world():
 
-        return "Welcome to the BBPOW!"
+        # return "Welcome to the BBPOW!"
 
         # TODO: In prod enable the index page
-        # return render_template('index.html')
+        return render_template('index.html', user_ip=node.ip, user_port=node.assigned_port)
 
     @app.route('/ping/')
     def ping():
-        return Response(status=200, mimetype='application/json')
+        url = f'http://{node.ip}:{node.assigned_port}'
+        response_string = f'Successfully pinged {url} at {utc_timestamp()}'
+        return Response(response_string, status=200, mimetype='application/json')
 
     @app.route('/data/')
     def state_of_node():
@@ -43,8 +46,10 @@ def create_app(node: Node):
 
     @app.route('/forks/')
     def show_forks():
-        fork_dict = {}
         fork_nums = len(node.blockchain.forks)
+        fork_dict = {
+            "number_of_forks": fork_nums
+        }
         for x in range(fork_nums):
             fork_dict.update(
                 {f'fork_{x + 1}': node.blockchain.forks[x]}
@@ -65,10 +70,11 @@ def create_app(node: Node):
 
     @app.route('/is_connected/')
     def is_connected_endpoint():
+        connected_string = f'Node connected to network: {node.is_connected}'
         if node.is_connected:
-            return Response(status=200, mimetype='application/json')
+            return Response(connected_string, status=200, mimetype='application/json')
         else:
-            return Response(status=202, mimetype='application/json')
+            return Response(connected_string, status=202, mimetype='application/json')
 
     @app.route('/node_list/', methods=['GET', 'POST', 'DELETE'])
     def get_node_list():
