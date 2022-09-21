@@ -11,3 +11,4 @@ basicblockchains-ecc==2.1.0
     # via bb-pow (pyproject.toml)
 primefac==2.0.12
     # via basicblockchains-ecc
+waitress==2.1.2
