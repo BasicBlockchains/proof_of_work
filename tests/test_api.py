@@ -11,4 +11,5 @@ def test_ping():
     api_thread = threading.Thread(target=run_app, daemon=True, args=(n,))
     api_thread.start()
     n2 = Node()
-    assert n2.ping_node(n.node)
+    local_ip = n.get_local_ip()
+    assert n2.ping_node((local_ip, n.assigned_port))
