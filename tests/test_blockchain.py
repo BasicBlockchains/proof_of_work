@@ -135,9 +135,6 @@ def test_fork():
     # Modify target for testing
     test_chain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x1f)
 
-    # Create miner
-    # miner = Miner()
-
     # Verify chain is only genesis block
     assert test_chain.chain[0].id == genesis_block.id
 
@@ -156,11 +153,11 @@ def test_fork():
 
     # Add block - should end up in forks
     assert not test_chain.add_block(mined_fork)
-    assert test_chain.forks == [{1: mined_fork}]
+    assert test_chain.forks == [{1: mined_fork.raw_block}]
 
     # Add block again - forks should remain the same
     assert not test_chain.add_block(mined_fork)
-    assert test_chain.forks == [{1: mined_fork}]
+    assert test_chain.forks == [{1: mined_fork.raw_block}]
 
     # Create next block for fork
     unmined_fork2 = random_unmined_block(mined_fork.id, 2, test_chain.mining_reward,
@@ -170,52 +167,47 @@ def test_fork():
     # Asserts - mined_fork2 should get added to chain, mined_fork should get removed from forks and added to chain
     # mined_block1 should get added to forks
     assert test_chain.add_block(mined_fork2)
-    assert test_chain.forks == [{1: mined_block1}]
+    assert test_chain.forks == [{1: mined_block1.raw_block}]
     assert test_chain.chain[1].id == mined_fork.id
     assert test_chain.chain[2].id == mined_fork2.id
 
     # Create second block
     unmined_block2 = random_unmined_block(mined_block1.id, 2, test_chain.mining_reward, test_chain.target)
-    # mined_block2 = miner.mine_block(unmined_block2)
     mined_block2 = mine_a_block(unmined_block2)
 
     # Asserts - should add block to forks
     assert not test_chain.add_block(mined_block2)
-    assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}]
+    assert test_chain.forks == [{1: mined_block1.raw_block}, {2: mined_block2.raw_block}]
 
     # Create third block
     unmined_block3 = random_unmined_block(mined_block2.id, 3, test_chain.mining_reward, test_chain.target)
-    # mined_block3 = miner.mine_block(unmined_block3)
     mined_block3 = mine_a_block(unmined_block3)
 
     # Asserts - mined_block3 gets added, mined_block2 and mined_block1 get removed from forks and added
     # Asserts - mined_fork and mined_fork2 and in forks
     assert test_chain.add_block(mined_block3)
-    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
+    assert test_chain.forks == [{1: mined_fork.raw_block}, {2: mined_fork2.raw_block}]
     assert test_chain.chain[1].id == mined_block1.id
     assert test_chain.chain[2].id == mined_block2.id
     assert test_chain.chain[3].id == mined_block3.id
 
     # Create third malformed fork
     unmined_malformed_fork = random_unmined_block(mined_fork2.id, 4, test_chain.mining_reward, test_chain.target + 1)
-    # mined_malformed_fork = miner.mine_block(unmined_malformed_fork)
     mined_malformed_fork = mine_a_block(unmined_malformed_fork)
     assert not test_chain.add_block(mined_malformed_fork)
-    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}]
+    assert test_chain.forks == [{1: mined_fork.raw_block}, {2: mined_fork2.raw_block}]
 
     # Finally create third valid fork
     unmined_fork3 = random_unmined_block(mined_fork2.id, 3, test_chain.mining_reward, test_chain.target)
-    # mined_fork3 = miner.mine_block(unmined_fork3)
     mined_fork3 = mine_a_block(unmined_fork3)
     assert not test_chain.add_block(mined_fork3)
-    assert test_chain.forks == [{1: mined_fork}, {2: mined_fork2}, {3: mined_fork3}]
+    assert test_chain.forks == [{1: mined_fork.raw_block}, {2: mined_fork2.raw_block}, {3: mined_fork3.raw_block}]
 
     # Final recursive test
     unmined_fork4 = random_unmined_block(mined_fork3.id, 4, test_chain.mining_reward, test_chain.target)
-    # mined_fork4 = miner.mine_block(unmined_fork4)
     mined_fork4 = mine_a_block(unmined_fork4)
     assert test_chain.add_block(mined_fork4)
-    assert test_chain.forks == [{1: mined_block1}, {2: mined_block2}, {3: mined_block3}]
+    assert test_chain.forks == [{1: mined_block1.raw_block}, {2: mined_block2.raw_block}, {3: mined_block3.raw_block}]
 
 
 def test_memchain():

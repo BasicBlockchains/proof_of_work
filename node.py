@@ -48,7 +48,7 @@ class Node:
     request_header = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, port=DEFAULT_PORT, seed=None,
-                 logger=None):
+                 logger=None, gossipy=True):
         # Loggging
         if logger:
             self.logger = logger.getChild('Node')
@@ -61,6 +61,7 @@ class Node:
         # Set path and filename variables
         self.assigned_port = self.find_open_port(port)
         self.ip = self.get_ip()
+        self.local_ip = self.get_local_ip()
         self.node = (self.ip, self.assigned_port)
         self.dir_path = os.path.join(dir_path, str(self.assigned_port))
         self.db_file = db_file
@@ -95,11 +96,18 @@ class Node:
         # Create connected flag for network
         self.is_connected = False
 
+        # Create gossip flag for tests
+        self.is_gossipy = gossipy
+
         # Create network variables for gui
         self.percent_complete = 0
         self.network_height = 0
 
     # --- PROPERTIES --- #
+    @property
+    def local_node(self):
+        return (self.local_ip, self.assigned_port)
+
     @property
     def last_block(self):
         return self.blockchain.last_block
@@ -282,9 +290,10 @@ class Node:
             self.check_for_tx_parents(gossip)
 
             # Check if orphaned blocks are now valid
-            self.check_for_block_parents()
+            self.check_for_block_parents(gossip)
         elif block.height > self.height:
             self.orphaned_blocks.append(block)
+
         return added
 
     # --- ADD TRANSACTION --- #
@@ -422,15 +431,127 @@ class Node:
             block = self.orphaned_blocks.pop(0)
             self.add_block(block, gossip)
 
+    # -------------------- #
+    # --- CONSTRUCTION --- #
+
     # --- NETWORK --- #
+
+    def catchup_to_network(self):
+        # Get node list - remove own nodes
+        temp_nodes = self.node_list.copy()
+        if self.node in temp_nodes:
+            temp_nodes.remove(self.node)
+        if self.local_node in temp_nodes:
+            temp_nodes.remove(self.local_node)
+
+        # If temp_nodes not empty, try and catchup
+        if len(temp_nodes) > 0:
+            random_node = random.choice(temp_nodes)
+            self.network_height = self.get_height(random_node)
+            while self.height < self.network_height:
+                # Class variables for gui loading screen
+                self.percent_complete = int((self.height / self.network_height) * 100)
+
+                # Get random node
+                random_node = random.choice(temp_nodes)
+
+                # Get next raw block
+                next_raw_block = self.get_raw_block_from_node(random_node, block_index=self.height + 1)
+                if next_raw_block:
+                    next_block = self.d.raw_block(next_raw_block)
+                    added = self.add_block(next_block)
+                    if added:
+                        # Logging
+                        self.logger.info(f'Successfully added block at height {self.height} from {random_node}')
+                    else:
+                        # Logging
+                        self.logger.error(f'Unable to add block at height {self.height} from {random_node}')
+                        break
+                else:
+                    # Logging
+                    self.logger.error(f'Received NONE from get raw block request from {random_node}')
+                    break
+        self.logger.info('Node height equal to network height')
+
+    # --- PUT METHODS --- #
+    def connect_to_network(self, node=LEGACY_NODE, local=False) -> bool:
+        # Logging
+        self.logger.info(f'Attempting to connect to network through {node}.')
+
+        # Update connected status
+        self.is_connected = True
+
+        # Add own node to node list
+        if not local:
+            if self.node not in self.node_list:
+                self.node_list.append(self.node)
+        else:
+            if self.local_node not in self.node_list:
+                self.node_list.append(self.local_node)
+
+        # Return true if own node
+        if node in [self.node, self.local_node]:
+            return True
+
+        # POST self.node to node
+        initial_connection = self.connect_to_node(node, local)
+        if not initial_connection:
+            # Logger
+            self.logger.error(f'Unable to connect to {node} for network connection')
+            self.is_connected = False
+            return False
+
+        # Retrieve node list with put request
+        if not local:
+            data = {'ip': self.ip, 'port': self.assigned_port}
+        else:
+            data = {'ip': self.local_ip, 'port': self.assigned_port}
+        try:
+            r = requests.put(self.make_url(node, 'node_list'), data=json.dumps(data), headers=self.request_header)
+            node_list = r.json()
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.critical(f'Unable to connect to network through {node}')
+            self.is_connected = False
+            return False
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.critical(f'Unable to decode node list from {node}')
+            self.is_connected = False
+            return False
+
+        # Post address to every node in node_list
+        for list_tuple in node_list:
+            temp_node = (list_tuple[0], list_tuple[1])
+            if temp_node not in [self.node, self.local_node, node]:
+                connected = self.connect_to_node(temp_node, local)
+                if connected:
+                    # Logging
+                    self.logger.info(f'Successfully connected to {temp_node}')
+                else:
+                    # Logging
+                    self.logger.warning(f'Error connecting to {temp_node}')
+
+        # Catchup to network
+        self.catchup_to_network()
+
+        #
+        #     # Get validated txs
+        #     gossip_nodes = self.get_gossip_nodes()
+        #     for g_node in gossip_nodes:
+        #         self.request_validated_txs(g_node)
+        # else:
+        #     self.node_list = []
+        return True
+
+    # --- GET METHODS --- #
+
     def ping_node(self, node: tuple) -> bool:
         '''
         Ping endpoint for 200 response
         '''
-        ip, port = node
-        url = f'http://{ip}:{port}/ping'
         try:
-            r = requests.get(url, headers=self.request_header)
+            r = requests.get(self.make_url(node, 'ping'), headers=self.request_header)
         except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Error connecting to {node} for ping.')
@@ -438,86 +559,173 @@ class Node:
 
         return r.status_code == 200
 
-    def connect_to_node(self, node: tuple) -> bool:
-        ip, port = node
-        url = f'http://{ip}:{port}/node_list'
-        data = {'ip': self.ip, 'port': self.assigned_port}
+    def check_genesis(self, node: tuple) -> bool:
+        '''
+        We get the genesis block from the node and compare with ours. Return True if same, False if otherwise
+        '''
+        # Return true if it's our own node
+        if node in [self.node, self.local_node]:
+            return True
+
+        # Get genesis block from node at /genesis_block/ endpoint
         try:
-            r = requests.post(url, data=json.dumps(data), headers=self.request_header)
+            r = requests.get(self.make_url(node, 'genesis_block'), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.warning(f'Unable to get genesis block from {node}')
+            return False
+
+        # Decode
+        try:
+            raw_genesis = r.json()['raw_genesis']
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.critical(f'Unable to decode raw_genesis dict from {node}')
+            return False
+
+        # Verify
+        if raw_genesis != self.blockchain.chain[0].raw_block:
+            # Logging
+            self.logger.critical(f'Raw genesis block retrieved from {node} does not match local raw block.')
+            return False
+
+        return True
+
+    def check_connected_status(self, node: tuple) -> bool:
+        '''
+        Returns true if /is_connected endpoint on node returns 200
+        '''
+        # Get response from /is_connected/ endpoint
+        try:
+            r = requests.get(self.make_url(node, 'is_connected'), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.warning(f'Unable to get connection from {node}')
+            return False
+
+        # Return True if r.status_code == 200
+        return r.status_code == 200
+
+    def check_disconnected_status(self, node: tuple) -> bool:
+        '''
+        Returns true if node is still active but has disconnected status (used in network disconnection)
+        '''
+        # Get status
+        try:
+            r = requests.get(self.make_url(node, 'is_connected'), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.warning(f'Unable to get connection from {node}')
+            return False
+
+        # Return True if r.statis_code == 202
+        return r.status_code == 202
+
+    def get_height(self, node: tuple) -> int:
+        '''
+        Get height dict from /height/ endpoint from
+        '''
+        height = 0
+        try:
+            r = requests.get(self.make_url(node, 'height'), headers=self.request_header)
+            height = r.json()['height']
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.error(f'Unable to connect to {node} for height')
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.error(f'Unable to decode json response from {node} for height')
+        return height
+
+    def get_raw_block_from_node(self, node: tuple, block_index=None):
+        raw_block = None
+        url = self.make_url(node, 'raw_block')
+        if block_index is not None:
+            url += str(block_index)
+        try:
+            r = requests.get(url, headers=self.request_header)
+            raw_block_dict = r.json()
+            raw_block = raw_block_dict['raw_block']
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.error(f'Unable to connect to {node} for raw block')
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.error(f'Unable to decode raw_block dict from {node}')
+        except ValueError:
+            # Logging
+            self.logger.error(f'Malformed raw block dict from {node}')
+        return raw_block
+
+    # --- POST METHODS --- #
+
+    def connect_to_node(self, node: tuple, local=False) -> bool:
+        # Post self.node to node_list endpoint in node api
+        if not local:
+            data = {'ip': self.ip, 'port': self.assigned_port}
+        else:
+            data = {'ip': self.local_ip, 'port': self.assigned_port}
+        try:
+            r = requests.post(self.make_url(node, 'node_list'), data=json.dumps(data), headers=self.request_header)
         except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Could not connect to {node}')
             return False
-        if r.status_code == 200 and node not in self.node_list:
-            correct_genesis = self.check_genesis(node)
-            if correct_genesis:
-                self.node_list.append(node)
-                self.logger.info(f'Successfully connected to {node}')
+
+        # Success
+        if r.status_code == 200:
+            # Validate node
+            node_valid = self.check_genesis(node)
+
+            # Valid node
+            if node_valid:
+                # Add node if not in node_list
+                if node not in self.node_list:
+                    self.node_list.append(node)
+                    # Logging
+                    self.logger.info(f'Successfully connected to {node}')
+                else:
+                    # Logging
+                    self.logger.info(f'{node} already in node list')
                 return True
+
+            # Invalid node
             else:
                 # Logging
-                self.logger.critical(f'Genesis Block malformed in {node}. Not adding to node list.')
+                self.logger.critical(f'{node} has malformed genesis block. Removing from node list (if applicable).')
+                # Remove node if in node_list
+                if node in self.node_list:
+                    self.node_list.remove(node)
                 return False
-        elif r.status_code == 200:
+
+        # Already connected
+        elif r.status_code == 202:
             # Logging
-            self.logger.warning(f'Already connected to {node}')
+            self.logger.info(f'Already connected to {node}')
             return True
-        # Logging
-        self.logger.error(f'Error connecting to {node}. Status code: {r.status_code}')
-        return False
 
-    def connect_to_network(self, node=LEGACY_NODE):
-        # Logging
-        self.logger.info(f'Connecting to network through {node}')
+        # Failure
+        else:
+            # Logging
+            self.logger.error(
+                f'Error connecting to {node}.\n Status code: {r.status_code}.\n Response message: {r.content.decode()}.')
+            return False
 
-        # Start with empty list_of_nodes
-        list_of_nodes = None
-
-        # Append node to node list
-        self.node_list.append(self.node)
-
-        # Get node list from LEGACY_NODE
-        ip, port = node
-        url = f'http://{ip}:{port}/node_list'
+    def send_raw_block_to_node(self, raw_block: str, node: tuple) -> bool:
+        '''
+        Posting block at /raw_block/ endpoint of node api
+        '''
+        data = {'raw_block': raw_block}
         try:
-            r = requests.get(url, headers=self.request_header)
-            list_of_nodes = r.json()
+            r = requests.post(self.make_url(node, 'raw_block'), data=json.dumps(data), headers=self.request_header)
         except requests.exceptions.ConnectionError:
             # Logging
-            if node == self.LEGACY_NODE:
-                self.logger.critical('Unable to connect to legacy node. Manual connection necessary.')
-            else:
-                self.logger.error(f'Unable to connect to network through {node}.')
+            self.logger.warning(f'Unable to send raw block at height {self.d.raw_block(raw_block).height} to {node}')
+            return False
+        return r.status_code == 200
 
-        # If we get a node list, we've successfully connected
-        if list_of_nodes:
-            self.is_connected = True
-
-        # If connected
-        if self.is_connected:
-            # Connect to each node in node_list
-            for list_tuple in list_of_nodes:
-                ip, port = list_tuple
-                if (ip, port) != self.node:
-                    connected = self.connect_to_node((ip, port))
-                    if connected:
-                        # Logging
-                        self.logger.info(f'Successfully connected to {(ip, port)}')
-                    else:
-                        # Logging
-                        self.logger.warning(f'Error connecting to {(ip, port)}')
-
-            # Catchup to network
-            self.catchup_to_network()
-
-            # Get validated txs
-            gossip_nodes = self.get_gossip_nodes()
-            for g_node in gossip_nodes:
-                self.request_validated_txs(g_node)
-        else:
-            self.node_list = []
-
-    def disconnect_from_network(self):
+    # --- DELETE METHODS --- #
+    def disconnect_from_network(self, local=False):
         # Stop all mining
         if self.is_mining:
             self.stop_miner()
@@ -534,66 +742,34 @@ class Node:
             # Logging
             self.logger.warning(f'{self.node} already removed from node list.')
 
-        # Connect to remaining nodes and delete address
+        # Copy node list for indexing
         node_index = self.node_list.copy()
-        for node in node_index:
-            ip, port = node
-            url = f'http://{ip}:{port}/node_list'
+
+        # Self node for disconnect
+        if not local:
             data = {'ip': self.ip, 'port': self.assigned_port}
+        else:
+            data = {'ip': self.local_ip, 'port': self.assigned_port}
+        for node in node_index:
             try:
-                r = requests.delete(url, data=json.dumps(data), headers=self.request_header)
+                r = requests.delete(self.make_url(node, 'node_list'), data=json.dumps(data),
+                                    headers=self.request_header)
                 if r.status_code != 200:
                     # Logging
-                    self.logger.error(
-                        f'Did not receive 200 code from {node} for disconnect. Status code: {r.status_code}')
+                    self.logger.error(f'Received error code during DELETE request: {r.status_code} from {node}')
+                self.node_list.remove(node)
             except requests.exceptions.ConnectionError:
                 # Logging
                 self.logger.error(f'Error connecting to {node} for disconnect.')
+            except ValueError:
+                # Logging
+                self.logger.warning(f'{node} not found in node_list')
 
-            self.node_list.remove(node)
+        # Finish with empty node list
+        self.node_list = []
 
-    def catchup_to_network(self):
-        # Get node list
-        node_list_index = self.node_list.copy()
-
-        # Remove own node
-        if node_list_index:
-            node_list_index.remove(self.node)
-
-        # Iterate over nodes
-        if node_list_index != []:
-            # Get random node
-            random_node = random.choice(node_list_index)
-            # Network height class var for use in gui
-            self.network_height = self.request_height(random_node)
-
-            while self.height < self.network_height:
-                # Class variables for gui loading screen
-                self.percent_complete = int((self.height / self.network_height) * 100)
-
-                # Get random node and add next block
-                random_node = random.choice(node_list_index)
-                next_block = self.request_indexed_raw_block(self.height + 1, random_node)
-                added = self.add_block(next_block)
-                if added:
-                    # Logging
-                    self.logger.info(f'Successfully added block at height {self.height} from node {random_node}.')
-
-                else:
-                    # Logging
-                    self.logger.critical(f'Failed to add block at {self.height + 1} from node {random_node}.')
-            self.logger.info('Node height equal to network height')
-
-    def request_height(self, node: tuple) -> int:
-        ip, port = node
-        url = f'http://{ip}:{port}/height'
-        try:
-            r = requests.get(url, headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.error(f'Error connecting to {node} for height.')
-            return 0
-        return r.json()['height']
+    # --- CONSTRUCTION --- #
+    # -------------------- #
 
     def request_validated_txs(self, node: tuple):
         ip, port = node
@@ -617,32 +793,6 @@ class Node:
                 # Logging
                 self.logger.error(f'Error validating tx with id {tx.id} obtained from {node}')
 
-    def check_genesis(self, node: tuple) -> bool:
-        '''
-        We get the genesis block from the node and compare with ours. Return True if same, False if otherwise
-        '''
-        ip, port = node
-        url = f'http://{ip}:{port}/raw_block/0'
-        try:
-            r = requests.get(url, headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.critical(f'Unable to get genesis block from {node}')
-            return False
-        if r.status_code == 200:
-            try:
-                raw_genesis = r.json()['raw_block']
-                if raw_genesis == self.blockchain.chain[0].raw_block:
-                    return True
-                else:
-                    return False
-            except KeyError:
-                return False
-        else:
-            # Logging
-            self.logger.error(f'Received status code {r.status_code} from  {node}')
-            return False
-
     def send_tx_to_node(self, new_tx: Transaction, node: tuple) -> int:
         ip, port = node
         url = f'http://{ip}:{port}/transaction'
@@ -652,28 +802,6 @@ class Node:
         except requests.exceptions.ConnectionError:
             # Logging
             self.logger.warning(f'Unable to send tx with id {new_tx.id} to {node}')
-            return 0
-        return r.status_code
-
-    def send_block_to_node(self, block: Block, node: tuple) -> int:
-        ip, port = node
-        url = f'http://{ip}:{port}/block'
-        try:
-            r = requests.post(url, data=json.dumps(block.to_json), headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.warning(f'Unable to send block at height {block.height} to {node}')
-            return 0
-        return r.status_code
-
-    def send_raw_block_to_node(self, raw_block: str, node: tuple) -> int:
-        ip, port = node
-        url = f'http://{ip}:{port}/raw_block'
-        try:
-            r = requests.post(url, data=raw_block, headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.warning(f'Unable to send raw block at height {self.d.raw_block(raw_block).height} to {node}')
             return 0
         return r.status_code
 
@@ -715,6 +843,8 @@ class Node:
 
         return self.d.raw_block(block_dict['raw_block'])
 
+    # --- POST METHODS --- #
+
     # --- GOSSIP PROTOCOLS --- #
 
     def gossip_protocol_tx(self, tx: Transaction):
@@ -743,7 +873,7 @@ class Node:
             gossip_node = node_list_index.pop(secrets.randbelow(list_length))
             # Logging
             self.logger.info(f'Sending block with id {block.id} to {gossip_node}')
-            status_code = self.send_block_to_node(block, gossip_node)
+            status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
             if status_code == 200:
                 # Logging
                 self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
@@ -777,6 +907,10 @@ class Node:
         return gossip_list
 
     # --- NETWORKING TOOLS --- #
+    def make_url(self, node: tuple, endpoint: str):
+        ip, port = node
+        return f'http://{ip}:{port}/{endpoint}/'
+
     def find_open_port(self, desired_port=DEFAULT_PORT):
         port_found = False
         temp_port = desired_port
@@ -793,7 +927,8 @@ class Node:
             return 0
         return temp_port
 
-    def get_local_ip(self):
+    @staticmethod
+    def get_local_ip():
         '''
         Returns local ip address
         '''
@@ -809,7 +944,8 @@ class Node:
             s.close()
         return IP
 
-    def get_ip(self):
+    @staticmethod
+    def get_ip():
         ip = get('https://api.ipify.org').content.decode()
         return ip
 
