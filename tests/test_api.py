@@ -3,7 +3,7 @@ Testing the api - use local ip to avoid port forwarding
 '''
 
 from .context import Node, create_app, run_app, Formatter, DataBase, mine_a_block, MiningTransaction, Block, \
-    utc_to_seconds, Decoder
+    utc_to_seconds, Decoder, UTXO_OUTPUT, UTXO_INPUT, Transaction, Wallet
 from .helpers import random_unmined_block
 import threading
 import logging
@@ -49,7 +49,8 @@ def test_endpoints():
 
     # Add block to node1
     node1.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
-    mt = MiningTransaction(1, node1.mining_reward, 0, node1.wallet.address, 1 + Formatter.MINING_DELAY)
+    node1.blockchain.f.MINING_DELAY = 0
+    mt = MiningTransaction(1, node1.mining_reward, 0, node1.wallet.address, 1)
     unmined_block = Block(node1.last_block.id, node1.target, 0, utc_to_seconds(), mt, [])
     mined_block = mine_a_block(unmined_block)
     assert node1.add_block(mined_block, gossip=False)
@@ -58,6 +59,7 @@ def test_endpoints():
     # Create second node + api
     node2 = Node(dir_path, file_name, logger=test_logger)
     node2.blockchain.target = node1.blockchain.target
+    node2.blockchain.f.MINING_DELAY = 0
 
     n2_thread = threading.Thread(target=run_app, daemon=True, args=(node2,))
     n2_thread.start()
@@ -95,9 +97,25 @@ def test_endpoints():
     assert node1.send_raw_block_to_node(mined_block.raw_block, node2.local_node)
     assert node2.height == 1
 
+    # Verify block
+    assert node2.last_block.id == mined_block.id
+
     # Assert get indexed raw block
     assert node2.get_raw_block_from_node(node1.local_node, 0) == node2.blockchain.chain[0].raw_block
     assert node1.get_raw_block_from_node(node2.local_node) == node1.blockchain.chain[1].raw_block
+
+    # Create new transaction
+    last_block = node1.last_block
+    tx_id = last_block.mining_tx.id
+    tx_index = 0
+    signature = node1.wallet.sign_transaction(tx_id)
+
+    utxo_input = UTXO_INPUT(tx_id, tx_index, signature)
+    utxo_output1 = UTXO_OUTPUT(node1.mining_reward // 2 - 1, node1.wallet.address)
+    utxo_output2 = UTXO_OUTPUT(node1.mining_reward // 2 - 1, node2.wallet.address)
+    new_tx = Transaction(inputs=[utxo_input], outputs=[utxo_output1, utxo_output2])
+    assert node1.add_transaction(new_tx, gossip=False)
+    assert node1.send_raw_tx_to_node(new_tx.raw_tx, node2.local_node)
 
     # Verify disconnect
     node2.disconnect_from_network(local=True)

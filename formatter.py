@@ -43,7 +43,7 @@ class Formatter():
     # Address
     EPK_CHARS = 40
     CHECKSUM_CHARS = 8
-    ADDRESS_CHARS = TYPE_CHARS + VERSION_CHARS + EPK_CHARS + CHECKSUM_CHARS
+    ADDRESS_CHARS = TYPE_CHARS + EPK_CHARS + CHECKSUM_CHARS
 
     # UTXO FORMATTING
     # Input
@@ -163,7 +163,6 @@ class Formatter():
 
         # Prefix type
         type = format(self.ADDRESS_TYPE, f'0{self.TYPE_CHARS}x')
-        # version = self.VERSION
 
         # Address = type + epk + checksum (26 byte address)
         return self.int_to_base58(int(type + epk + checksum, 16))

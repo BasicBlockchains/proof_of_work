@@ -65,10 +65,15 @@ def create_app(node: Node):
         return jsonify(block_dict)
 
     @app.route('/block/<height>')
-    def block_height(height: int):
+    def block_height(height: str):
+        # Verify height var
+        if not height.isnumeric():
+            return Response(f'Invalid value {height} for height.', status=400, mimetype=mimetype)
+        height = int(height)
+
         # Check height
         if height > node.height or height < 0:
-            return Response(f'No block at height {height}', status=400, mimetype=mimetype)
+            return Response(f'No block at height {height}', status=404, mimetype=mimetype)
 
         # Return block dict
         raw_block_dict = json.loads(
@@ -196,7 +201,7 @@ def create_app(node: Node):
             else:
                 return Response(f'Failed to reconstruct raw block {raw_block}', status=400, mimetype=mimetype)
 
-    @app.route('/raw_block/<height>')
+    @app.route('/raw_block/<height>', methods=['GET'])
     def handle_indexed_raw_block(height: str):
         # Get height as integer
         if not height.isnumeric():
@@ -205,11 +210,42 @@ def create_app(node: Node):
 
         # Check height
         if height > node.height or height < 0:
-            return Response(f'No block at height {height}', status=400, mimetype=mimetype)
+            return Response(f'No block at height {height}', status=404, mimetype=mimetype)
 
         # Return block dict
         raw_block_dict = node.blockchain.chain_db.get_raw_block(height)
         return jsonify(raw_block_dict)
+
+    @app.route('/raw_tx/', methods=['POST'])
+    def handle_raw_tx():
+        # POST RAW TX
+        if request.method == 'POST':
+            # dict format = {'raw_tx': <raw_tx>}
+            try:
+                raw_tx_dict = request.get_json()
+                raw_tx = raw_tx_dict['raw_tx']
+            except requests.exceptions.JSONDecodeError:
+                return Response('JSON Decode error', status=400, mimetype=mimetype)
+            except KeyError:
+                return Response('Raw tx dict error', status=400, mimetype=mimetype)
+
+            # Verify raw_tx
+            new_tx = d.raw_transaction(raw_tx)
+            if new_tx:
+                added = node.add_transaction(new_tx)
+                if added:
+                    return Response(f'{node.node} received raw_tx with id {new_tx.id} successfully.', status=200,
+                                    mimetype=mimetype)
+                else:
+                    # raw_tx decoded but not added to node
+                    return Response(f'{node.node} received raw_tx with id {new_tx.id} but was unable to process it.',
+                                    status=406, mimetype=mimetype)
+            else:
+                # unable to decode raw_tx
+                return Response(f'Unable to decode raw_tx {raw_tx}', status=400, mimetype=mimetype)
+        else:
+            # method other than POST
+            return Response(f'{request.method} not allowed for /raw_tx/ endpoint', status=403, mimetype=mimetype)
 
     # --- QUALITY OF LIFE ENDPOINTS --- #
 

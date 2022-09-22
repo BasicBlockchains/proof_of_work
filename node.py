@@ -493,14 +493,6 @@ class Node:
         if node in [self.node, self.local_node]:
             return True
 
-        # POST self.node to node
-        initial_connection = self.connect_to_node(node, local)
-        if not initial_connection:
-            # Logger
-            self.logger.error(f'Unable to connect to {node} for network connection')
-            self.is_connected = False
-            return False
-
         # Retrieve node list with put request
         if not local:
             data = {'ip': self.ip, 'port': self.assigned_port}
@@ -523,7 +515,7 @@ class Node:
         # Post address to every node in node_list
         for list_tuple in node_list:
             temp_node = (list_tuple[0], list_tuple[1])
-            if temp_node not in [self.node, self.local_node, node]:
+            if temp_node not in [self.node, self.local_node]:
                 connected = self.connect_to_node(temp_node, local)
                 if connected:
                     # Logging
@@ -724,6 +716,19 @@ class Node:
             return False
         return r.status_code == 200
 
+    def send_raw_tx_to_node(self, raw_tx: str, node: tuple) -> bool:
+        '''
+        Posting tx at /raw_tx/ endpoint of node api
+        '''
+        data = {'raw_tx': raw_tx}
+        try:
+            r = requests.post(self.make_url(node, 'raw_tx'), data=json.dumps(data), headers=self.request_header)
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.warning(f'Unable to send raw tx with id {self.d.raw_transaction(raw_tx).id} to {node}')
+            return False
+        return r.status_code == 200
+
     # --- DELETE METHODS --- #
     def disconnect_from_network(self, local=False):
         # Stop all mining
@@ -768,9 +773,6 @@ class Node:
         # Finish with empty node list
         self.node_list = []
 
-    # --- CONSTRUCTION --- #
-    # -------------------- #
-
     def request_validated_txs(self, node: tuple):
         ip, port = node
         url = f'http://{ip}:{port}/transaction'
@@ -793,118 +795,72 @@ class Node:
                 # Logging
                 self.logger.error(f'Error validating tx with id {tx.id} obtained from {node}')
 
-    def send_tx_to_node(self, new_tx: Transaction, node: tuple) -> int:
-        ip, port = node
-        url = f'http://{ip}:{port}/transaction'
-        data = {'raw_tx': new_tx.raw_tx}
-        try:
-            r = requests.post(url, data=json.dumps(data), headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.warning(f'Unable to send tx with id {new_tx.id} to {node}')
-            return 0
-        return r.status_code
-
-    def request_indexed_block(self, block_index: int, node: tuple):
-        ip, port = node
-        url = f'http://{ip}:{port}/block/{block_index}'
-        try:
-            r = requests.get(url, headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.error(f'Error connecting to {node} for indexed block.')
-            return None
-
-        try:
-            block_dict = r.json()
-        except requests.exceptions.JSONDecodeError:
-            # Logging
-            self.logger.critical(f'Unable to decode request for index {block_index} from {node}')
-            return None
-
-        return self.d.block_from_dict(block_dict)
-
-    def request_indexed_raw_block(self, block_index: int, node: tuple):
-        ip, port = node
-        url = f'http://{ip}:{port}/raw_block/{block_index}'
-        try:
-            r = requests.get(url, headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.error(f'Error connecting to {node} for indexed block.')
-            return None
-
-        try:
-            block_dict = r.json()
-        except requests.exceptions.JSONDecodeError:
-            # Logging
-            self.logger.critical(f'Unable to decode request for index {block_index} from {node}')
-            return None
-
-        return self.d.raw_block(block_dict['raw_block'])
-
-    # --- POST METHODS --- #
-
     # --- GOSSIP PROTOCOLS --- #
 
     def gossip_protocol_tx(self, tx: Transaction):
         node_list_index = self.node_list.copy()
-        if node_list_index:
+        if self.node in node_list_index:
             node_list_index.remove(self.node)
+        if self.local_node in node_list_index:
+            node_list_index.remove(self.local_node)
         gossip_count = 0
         while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
             list_length = len(node_list_index)
             gossip_node = node_list_index.pop(secrets.randbelow(list_length))
             # Logging
             self.logger.info(f'Sending tx with id {tx.id} to {gossip_node}')
-            status_code = self.send_tx_to_node(tx, gossip_node)
+            status_code = self.send_raw_tx_to_node(tx.raw_tx, gossip_node)
             if status_code == 200:
                 # Logging
                 self.logger.info(f'Received 200 code from {gossip_node} for tx {tx.id}.')
                 gossip_count += 1
 
-    def gossip_protocol_block(self, block: Block):
-        node_list_index = self.node_list.copy()
-        if node_list_index:
-            node_list_index.remove(self.node)
-        gossip_count = 0
-        while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
-            list_length = len(node_list_index)
-            gossip_node = node_list_index.pop(secrets.randbelow(list_length))
-            # Logging
-            self.logger.info(f'Sending block with id {block.id} to {gossip_node}')
-            status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
-            if status_code == 200:
-                # Logging
-                self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
-                gossip_count += 1
+    #
+    # def gossip_protocol_block(self, block: Block):
+    #     node_list_index = self.node_list.copy()
+    #     if node_list_index:
+    #         node_list_index.remove(self.node)
+    #     gossip_count = 0
+    #     while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
+    #         list_length = len(node_list_index)
+    #         gossip_node = node_list_index.pop(secrets.randbelow(list_length))
+    #         # Logging
+    #         self.logger.info(f'Sending block with id {block.id} to {gossip_node}')
+    #         status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
+    #         if status_code == 200:
+    #             # Logging
+    #             self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
+    #             gossip_count += 1
+    #
+    # def gossip_protocol_raw_block(self, block: Block):
+    #     node_list_index = self.node_list.copy()
+    #     if node_list_index:
+    #         node_list_index.remove(self.node)
+    #     gossip_count = 0
+    #     while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
+    #         list_length = len(node_list_index)
+    #         gossip_node = node_list_index.pop(secrets.randbelow(list_length))
+    #         # Logging
+    #         self.logger.info(f'Sending raw block with id {block.id} to {gossip_node}')
+    #         status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
+    #         if status_code == 200:
+    #             self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
+    #             gossip_count += 1
+    #
+    # def get_gossip_nodes(self):
+    #     # Get gossip nodes
+    #     node_list_index = self.node_list.copy()
+    #     if node_list_index:
+    #         node_list_index.remove(self.node)
+    #     gossip_list = []
+    #     while len(gossip_list) < self.f.GOSSIP_NUMBER and node_list_index != []:
+    #         random_node = random.choice(node_list_index)
+    #         gossip_list.append(random_node)
+    #         node_list_index.remove(random_node)
+    #     return gossip_list
 
-    def gossip_protocol_raw_block(self, block: Block):
-        node_list_index = self.node_list.copy()
-        if node_list_index:
-            node_list_index.remove(self.node)
-        gossip_count = 0
-        while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
-            list_length = len(node_list_index)
-            gossip_node = node_list_index.pop(secrets.randbelow(list_length))
-            # Logging
-            self.logger.info(f'Sending raw block with id {block.id} to {gossip_node}')
-            status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
-            if status_code == 200:
-                self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
-                gossip_count += 1
-
-    def get_gossip_nodes(self):
-        # Get gossip nodes
-        node_list_index = self.node_list.copy()
-        if node_list_index:
-            node_list_index.remove(self.node)
-        gossip_list = []
-        while len(gossip_list) < self.f.GOSSIP_NUMBER and node_list_index != []:
-            random_node = random.choice(node_list_index)
-            gossip_list.append(random_node)
-            node_list_index.remove(random_node)
-        return gossip_list
+    # --- CONSTRUCTION --- #
+    # -------------------- #
 
     # --- NETWORKING TOOLS --- #
     def make_url(self, node: tuple, endpoint: str):
