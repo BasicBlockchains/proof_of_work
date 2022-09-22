@@ -1108,7 +1108,7 @@ def run_node_gui():
                     # Logging
                     gui_logger.info(f'New transaction created with id {new_tx.id}.')
                     if new_tx:
-                        tx_sent = node.send_tx_to_node(new_tx, node.node)  # Triggers gossip protocol
+                        tx_sent = node.send_raw_tx_to_node(new_tx.raw_tx, node.node)  # Triggers gossip protocol
                         # Logging
                         gui_logger.info(f'Transaction with id {new_tx.id} sent to network. Received: {tx_sent}.')
                         node.wallet.update_utxos_from_pending_transactions()

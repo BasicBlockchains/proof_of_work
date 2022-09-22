@@ -76,9 +76,7 @@ def create_app(node: Node):
             return Response(f'No block at height {height}', status=404, mimetype=mimetype)
 
         # Return block dict
-        raw_block_dict = json.loads(
-            node.blockchain.chain_db.get_raw_block(height)
-        )
+        raw_block_dict = node.blockchain.chain_db.get_raw_block(height)
         if raw_block_dict:
             raw_block = raw_block_dict['raw_block']
             temp_block = d.raw_block(raw_block)
@@ -119,17 +117,19 @@ def create_app(node: Node):
                             mimetype=mimetype)
 
     @app.route('/transactions/<tx_id>')
-    def tx_id(tx_id: str):
+    def find_tx_id(tx_id: str):
         '''
-        Will search for tx_id if it's saved in the chain
+        Will return True/False dict
         '''
-        block_dict = {}
         tx_block = node.blockchain.find_block_by_tx_id(tx_id)
+        tx_dict = {
+            'in_chain': tx_block is not None
+        }
         if tx_block:
-            block_dict.update({
-                'saved_block': json.loads(tx_block.to_json)
+            tx_dict.update({
+                'in_block': tx_block.height
             })
-        return jsonify(block_dict)
+        return jsonify(tx_dict)
 
     @app.route('/<address>/')
     def address(address: str):
@@ -295,6 +295,33 @@ def create_app(node: Node):
         else:
             # method other than POST
             return Response(f'{request.method} not allowed for /raw_tx/ endpoint', status=403, mimetype=mimetype)
+
+    @app.route('/wallet/', methods=['PUT'])
+    def handle_wallet():
+        '''
+        Wallet will sign the genesis_tx in order to validate.
+        If valid, return node list
+        '''
+        if request.method == 'PUT':
+            # dict format {'signature': <signature>}
+            try:
+                signature_dict = request.get_json()
+                signature = signature_dict['signature']
+            except requests.exceptions.JSONDecodeError:
+                return Response('JSON Decode error', status=400, mimetype=mimetype)
+            except KeyError:
+                return Response('Signature dict error', status=400, mimetype=mimetype)
+
+            genesis_id = node.blockchain.chain[0].id
+
+            if d.verify_signature(signature, genesis_id):
+                # Return node_list
+                return jsonify(node.node_list)
+            else:
+                return Response(f'Unable to validated signature {signature} for genesis_tx', status=401,
+                                mimetype=mimetype)
+        else:
+            return Response(f'{request.method} method invalid for /wallet/ endpoint', status=400, mimetype=mimetype)
 
     # --- QUALITY OF LIFE ENDPOINTS --- #
 

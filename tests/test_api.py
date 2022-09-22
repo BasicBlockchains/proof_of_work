@@ -117,6 +117,11 @@ def test_endpoints():
     assert node1.add_transaction(new_tx, gossip=False)
     assert node1.send_raw_tx_to_node(new_tx.raw_tx, node2.local_node)
 
+    # Check wallet functions
+    assert node1.wallet.get_node_list(node2.local_node)
+    assert node1.local_node in node1.wallet.node_list
+    assert node2.local_node in node1.wallet.node_list
+
     # Verify disconnect
     node2.disconnect_from_network(local=True)
     assert node1.node_list == [node1.local_node]

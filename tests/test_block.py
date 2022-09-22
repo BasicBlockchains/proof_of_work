@@ -2,6 +2,7 @@
 We test the Block class and related functions
 '''
 import secrets
+import json
 from hashlib import sha256
 
 from .context import Block, calc_merkle_root, merkle_proof, utc_to_seconds, Decoder

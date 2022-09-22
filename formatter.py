@@ -56,7 +56,7 @@ class Formatter():
 
     # TRANSACTION FORMATTING
     COUNT_CHARS = 2
-    REWARD_CHARS = 11
+    REWARD_CHARS = 16
 
     # BLOCK FORMATTING
     NONCE_CHARS = 16
@@ -173,13 +173,12 @@ class Formatter():
             return temp_hex
         else:
             t = temp_hex[:self.TYPE_CHARS]
-            v = temp_hex[self.TYPE_CHARS:self.TYPE_CHARS + self.VERSION_CHARS]
-            s_index = self.TYPE_CHARS + self.VERSION_CHARS
+            s_index = self.TYPE_CHARS
             epk = temp_hex[s_index: -self.CHECKSUM_CHARS]
             checksum = temp_hex[-self.CHECKSUM_CHARS:]
             while len(epk) != self.EPK_CHARS:
                 epk = '0' + epk
-            return t + v + epk + checksum
+            return t + epk + checksum
 
     def signature(self, private_key: int, tx_id: str):
         # Get curve
