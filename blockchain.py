@@ -329,6 +329,7 @@ class Blockchain():
 
             # Cleanup forks
             self.cleanup_forks()
+
             return True
 
         else:
@@ -446,7 +447,7 @@ class Blockchain():
     # Fork methods
 
     def create_fork(self, block: Block):
-        fork_dict = {block.height: block}
+        fork_dict = {block.height: block.raw_block}
         if fork_dict not in self.forks:
             self.forks.append(fork_dict)
             # Logging
@@ -464,7 +465,7 @@ class Blockchain():
         candidate_fork = None
         for dict in forks_list:
             if self.height in dict.keys():
-                temp_block = dict[self.height]
+                temp_block = self.d.raw_block(dict[self.height])
                 if temp_block.id == block.prev_id:
                     candidate_fork = temp_block
 
@@ -480,7 +481,7 @@ class Blockchain():
             latest_added = self.add_block(block)
             if latest_added:
                 # Add the popped block to forks and remove the other one
-                self.forks.remove({candidate_fork.height: candidate_fork})
+                self.forks.remove({candidate_fork.height: candidate_fork.raw_block})
                 self.create_fork(popped_block)
                 # Logging
                 self.logger.info(f'Fork handled. Height: {block.height}, Block  id: {block.id}')

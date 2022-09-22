@@ -16,7 +16,8 @@ class Block():
         -target
         -nonce
         -timestamp (in UNIX seconds from epoch)
-        -transaction list
+        -mining_tx
+        -list of transactions
 
     The Merkle Root for the transaction list will be calculated automatically
     '''
@@ -106,6 +107,7 @@ class Block():
 
         # Block
         block_dict = {
+            "id": self.id,
             "header": json.loads(self.header.to_json),
             "transactions": tx_dict
         }

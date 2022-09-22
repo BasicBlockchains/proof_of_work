@@ -43,7 +43,7 @@ class Formatter():
     # Address
     EPK_CHARS = 40
     CHECKSUM_CHARS = 8
-    ADDRESS_CHARS = TYPE_CHARS + VERSION_CHARS + EPK_CHARS + CHECKSUM_CHARS
+    ADDRESS_CHARS = TYPE_CHARS + EPK_CHARS + CHECKSUM_CHARS
 
     # UTXO FORMATTING
     # Input
@@ -56,7 +56,7 @@ class Formatter():
 
     # TRANSACTION FORMATTING
     COUNT_CHARS = 2
-    REWARD_CHARS = 11
+    REWARD_CHARS = 16
 
     # BLOCK FORMATTING
     NONCE_CHARS = 16
@@ -81,7 +81,7 @@ class Formatter():
 
     # CONFIG
     HEARTBEAT = 60
-    MINING_DELAY = HEARTBEAT * 24 * 7  # Delay of 1 week
+    MINING_DELAY = 5  # TESTING HEARTBEAT * 24 * 7  # Delay of 1 week
     MAXIMUM_BIT_SIZE = 0x3e80  # 2Kb
     GOSSIP_NUMBER = 5
     FORK_HEIGHT = 3
@@ -163,7 +163,6 @@ class Formatter():
 
         # Prefix type
         type = format(self.ADDRESS_TYPE, f'0{self.TYPE_CHARS}x')
-        # version = self.VERSION
 
         # Address = type + epk + checksum (26 byte address)
         return self.int_to_base58(int(type + epk + checksum, 16))
@@ -174,13 +173,12 @@ class Formatter():
             return temp_hex
         else:
             t = temp_hex[:self.TYPE_CHARS]
-            v = temp_hex[self.TYPE_CHARS:self.TYPE_CHARS + self.VERSION_CHARS]
-            s_index = self.TYPE_CHARS + self.VERSION_CHARS
+            s_index = self.TYPE_CHARS
             epk = temp_hex[s_index: -self.CHECKSUM_CHARS]
             checksum = temp_hex[-self.CHECKSUM_CHARS:]
             while len(epk) != self.EPK_CHARS:
                 epk = '0' + epk
-            return t + v + epk + checksum
+            return t + epk + checksum
 
     def signature(self, private_key: int, tx_id: str):
         # Get curve

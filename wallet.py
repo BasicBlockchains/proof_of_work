@@ -189,9 +189,10 @@ class Wallet():
         utxo_pool = self.utxos.copy()
 
         # Get latest height
-        if len(self.node_list) < 1:
-            self.get_node_list()
-        self.get_latest_height(random.choice(self.node_list))
+        # if len(self.node_list) < 1:
+        #     self.get_node_list()
+        # self.get_latest_height(random.choice(self.node_list))
+        self.get_latest_height()
 
         # Remove utxos with incorrect blockheight
         utxo_pool.drop(utxo_pool[utxo_pool['block_height'] > self.height].index, inplace=True)
@@ -229,9 +230,32 @@ class Wallet():
 
     # --- NETWORK METHODS --- #
 
+    def get_genesis_block(self, node=LEGACY_NODE):
+        ip, port = node
+        url = f'http://{ip}:{port}/genesis_block/'
+        try:
+            r = requests.get(url, headers=self.request_header)
+            raw_genesis_dict = r.json()
+            raw_genesis = raw_genesis_dict['raw_genesis']
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.error(f'Unable to connect to {node} to get genesis block')
+            return None
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.error(f'Unable to decode gensis dict from {node} for genesis block')
+            return None
+        except ValueError:
+            # Logging
+            self.logger.error(f'Unable to get raw_genesis from genesis dict obtained from {node}')
+            return None
+
+        return self.D.raw_block(raw_genesis)
+        # return raw_genesis
+
     def post_transaction_to_node(self, tx: Transaction, node=LEGACY_NODE) -> bool:
         ip, port = node
-        url = f'http://{ip}:{port}/transaction/'
+        url = f'http://{ip}:{port}/raw_tx/'
         data = {'raw_tx': tx.raw_tx}
         try:
             r = requests.post(url, data=json.dumps(data), headers=self.request_header)
@@ -240,7 +264,7 @@ class Wallet():
             self.logger.warning(f'Unable to post tx to {node}.')
             return False
 
-        if r.status_code in [201, 202]:
+        if r.status_code == 200:
             # Logging
             self.logger.info(f'New tx sent to {node}')
             return True
@@ -250,17 +274,23 @@ class Wallet():
             return False
 
     def get_node_list(self, node=LEGACY_NODE) -> bool:
+        gb = self.get_genesis_block(node)
+        if gb is None:
+            # Logger
+            self.logger.error(f'Unable to obtain genesis block from {node} for signature.')
+            return False
+
+        tx_id = gb.id
         ip, port = node
-        url = f'http://{ip}:{port}/node_list'
+        url = f'http://{ip}:{port}/wallet'
+        data = {'signature': self.sign_transaction(tx_id)}
         try:
-            r = requests.get(url, headers=self.request_header)
+            r = requests.put(url, data=json.dumps(data), headers=self.request_header)
+            list_of_nodes = r.json()
         except requests.exceptions.ConnectionError:
             # Logging
             self.logger.warning(f'Unable to connect to {node} for node list')
             return False
-
-        try:
-            list_of_nodes = r.json()
         except requests.exceptions.JSONDecodeError:
             # Logging
             self.logger.warning(f'Unable to decode json response from {node} for node list.')
@@ -301,9 +331,11 @@ class Wallet():
             self.logger.warning(f'Unable to connect to {node}. Update node list.')
 
     def confirm_tx_by_id(self, tx_id: str) -> bool:
+        if self.node_list == []:
+            self.get_node_list()
         node = random.choice(self.node_list)
         ip, port = node
-        url = f'http://{ip}:{port}/transaction/{tx_id}'
+        url = f'http://{ip}:{port}/transactions/{tx_id}'
         try:
             r = requests.get(url, headers=self.request_header)
             tx_dict = r.json()

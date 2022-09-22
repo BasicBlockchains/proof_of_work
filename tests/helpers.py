@@ -47,32 +47,32 @@ def random_signature(tx_id: str):
 
 # Random index for utxo_input
 def random_index():
-    return secrets.randbits(f.INDEX_CHARS * 4)
+    return secrets.randbelow(pow(16, f.INDEX_CHARS))
 
 
 # Random amount
 def random_amount():
-    return secrets.randbits(f.AMOUNT_CHARS * 4)
+    return secrets.randbelow(pow(16, f.AMOUNT_CHARS))
 
 
 # Random nonce
 def random_nonce():
-    return secrets.randbits(f.NONCE_CHARS * 4)
+    return secrets.randbelow(pow(16, f.NONCE_CHARS))
 
 
 # Random reward
 def random_reward():
-    return secrets.randbits(f.REWARD_CHARS * 4)
+    return secrets.randbelow(pow(16, f.REWARD_CHARS))
 
 
 # Random block fees
 def random_block_fees():
-    return secrets.randbits(f.AMOUNT_CHARS * 4)
+    return secrets.randbelow(pow(16, f.AMOUNT_CHARS))
 
 
 # Random height
 def random_height():
-    return secrets.randbits(f.HEIGHT_CHARS * 4)
+    return secrets.randbelow(pow(16, f.HEIGHT_CHARS))
 
 
 # Address from private key
@@ -127,6 +127,10 @@ def random_mining_tx():
     address = random_address()
     block_height = random_height()
 
+    while reward + block_fees > pow(16, f.REWARD_CHARS):
+        block_fees = int(block_fees // 2)
+        reward = int(reward // 2)
+
     return MiningTransaction(height, reward, block_fees, address, block_height)
 
 
@@ -151,7 +155,7 @@ def random_header():
     prev_id = random_hash()
     merkle_root = random_hash()
     target = random_target()
-    nonce = secrets.randbits(f.NONCE_CHARS * 4)
+    nonce = random_nonce()
     timestamp = utc_to_seconds()
 
     return Header(prev_id, merkle_root, target, nonce, timestamp)
@@ -161,7 +165,7 @@ def random_header():
 def random_header_with_merkle_root(merkle_root: str):
     prev_id = random_hash()
     target = random_target()
-    nonce = secrets.randbits(f.NONCE_CHARS * 4)
+    nonce = random_nonce()
     timestamp = utc_to_seconds()
 
     return Header(prev_id, merkle_root, target, nonce, timestamp)
