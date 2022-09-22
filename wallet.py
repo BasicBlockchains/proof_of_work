@@ -189,9 +189,10 @@ class Wallet():
         utxo_pool = self.utxos.copy()
 
         # Get latest height
-        if len(self.node_list) < 1:
-            self.get_node_list()
-        self.get_latest_height(random.choice(self.node_list))
+        # if len(self.node_list) < 1:
+        #     self.get_node_list()
+        # self.get_latest_height(random.choice(self.node_list))
+        self.get_latest_height()
 
         # Remove utxos with incorrect blockheight
         utxo_pool.drop(utxo_pool[utxo_pool['block_height'] > self.height].index, inplace=True)
@@ -231,7 +232,7 @@ class Wallet():
 
     def post_transaction_to_node(self, tx: Transaction, node=LEGACY_NODE) -> bool:
         ip, port = node
-        url = f'http://{ip}:{port}/transaction/'
+        url = f'http://{ip}:{port}/raw_tx/'
         data = {'raw_tx': tx.raw_tx}
         try:
             r = requests.post(url, data=json.dumps(data), headers=self.request_header)
@@ -240,7 +241,7 @@ class Wallet():
             self.logger.warning(f'Unable to post tx to {node}.')
             return False
 
-        if r.status_code in [201, 202]:
+        if r.status_code == 200:
             # Logging
             self.logger.info(f'New tx sent to {node}')
             return True

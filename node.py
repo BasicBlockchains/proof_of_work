@@ -527,13 +527,9 @@ class Node:
         # Catchup to network
         self.catchup_to_network()
 
-        #
-        #     # Get validated txs
-        #     gossip_nodes = self.get_gossip_nodes()
-        #     for g_node in gossip_nodes:
-        #         self.request_validated_txs(g_node)
-        # else:
-        #     self.node_list = []
+        # Get validated txs
+        self.get_validated_txs_from_node(node)
+
         return True
 
     # --- GET METHODS --- #
@@ -648,6 +644,32 @@ class Node:
             # Logging
             self.logger.error(f'Malformed raw block dict from {node}')
         return raw_block
+
+    def get_validated_txs_from_node(self, node: tuple) -> bool:
+        try:
+            r = requests.get(self.make_url(node, 'transactions'), headers=self.request_header)
+            validated_tx_dict = r.json()
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.error(f'Error connecting to {node} for validated txs.')
+            return False
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.error(f'Error decoding tx dict from {node} for validated txs')
+            return False
+
+        tx_num = validated_tx_dict['validated_txs']
+        for x in range(tx_num):
+            tx_dict = validated_tx_dict[f'valid_tx_{x + 1}']
+            tx = self.d.transaction_from_dict(tx_dict)
+            tx_added = self.add_transaction(tx, gossip=False)
+            if tx_added:
+                # Logging
+                self.logger.info(f'Successfully validated tx with id {tx.id} obtained from {node}')
+            else:
+                # Logging
+                self.logger.warning(f'Error validating tx with id {tx.id} obtained from {node}')
+        return True
 
     # --- POST METHODS --- #
 
@@ -773,28 +795,6 @@ class Node:
         # Finish with empty node list
         self.node_list = []
 
-    def request_validated_txs(self, node: tuple):
-        ip, port = node
-        url = f'http://{ip}:{port}/transaction'
-        try:
-            r = requests.get(url, headers=self.request_header)
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.error(f'Error connecting to {node} for validated txs.')
-            return
-        validated_tx_dict = r.json()
-        tx_num = validated_tx_dict['validated_txs']
-        for x in range(tx_num):
-            tx_dict = validated_tx_dict[f'tx_{x}']
-            tx = self.d.transaction_from_dict(tx_dict)
-            tx_added = self.add_transaction(tx, gossip=False)
-            if tx_added:
-                # Logging
-                self.logger.info(f'Successfully validated tx with id {tx.id} obtained from {node}')
-            else:
-                # Logging
-                self.logger.error(f'Error validating tx with id {tx.id} obtained from {node}')
-
     # --- GOSSIP PROTOCOLS --- #
 
     def gossip_protocol_tx(self, tx: Transaction):
@@ -815,49 +815,20 @@ class Node:
                 self.logger.info(f'Received 200 code from {gossip_node} for tx {tx.id}.')
                 gossip_count += 1
 
-    #
-    # def gossip_protocol_block(self, block: Block):
-    #     node_list_index = self.node_list.copy()
-    #     if node_list_index:
-    #         node_list_index.remove(self.node)
-    #     gossip_count = 0
-    #     while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
-    #         list_length = len(node_list_index)
-    #         gossip_node = node_list_index.pop(secrets.randbelow(list_length))
-    #         # Logging
-    #         self.logger.info(f'Sending block with id {block.id} to {gossip_node}')
-    #         status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
-    #         if status_code == 200:
-    #             # Logging
-    #             self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
-    #             gossip_count += 1
-    #
-    # def gossip_protocol_raw_block(self, block: Block):
-    #     node_list_index = self.node_list.copy()
-    #     if node_list_index:
-    #         node_list_index.remove(self.node)
-    #     gossip_count = 0
-    #     while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
-    #         list_length = len(node_list_index)
-    #         gossip_node = node_list_index.pop(secrets.randbelow(list_length))
-    #         # Logging
-    #         self.logger.info(f'Sending raw block with id {block.id} to {gossip_node}')
-    #         status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
-    #         if status_code == 200:
-    #             self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
-    #             gossip_count += 1
-    #
-    # def get_gossip_nodes(self):
-    #     # Get gossip nodes
-    #     node_list_index = self.node_list.copy()
-    #     if node_list_index:
-    #         node_list_index.remove(self.node)
-    #     gossip_list = []
-    #     while len(gossip_list) < self.f.GOSSIP_NUMBER and node_list_index != []:
-    #         random_node = random.choice(node_list_index)
-    #         gossip_list.append(random_node)
-    #         node_list_index.remove(random_node)
-    #     return gossip_list
+    def gossip_protocol_raw_block(self, block: Block):
+        node_list_index = self.node_list.copy()
+        if node_list_index:
+            node_list_index.remove(self.node)
+        gossip_count = 0
+        while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
+            list_length = len(node_list_index)
+            gossip_node = node_list_index.pop(secrets.randbelow(list_length))
+            # Logging
+            self.logger.info(f'Sending raw block with id {block.id} to {gossip_node}')
+            status_code = self.send_raw_block_to_node(block.raw_block, gossip_node)
+            if status_code == 200:
+                self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
+                gossip_count += 1
 
     # --- CONSTRUCTION --- #
     # -------------------- #

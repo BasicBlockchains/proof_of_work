@@ -90,6 +90,55 @@ def create_app(node: Node):
         else:
             return Response(f'No block retrieved at height {height}', status=500, mimetype=mimetype)
 
+    @app.route('/transactions/')
+    def transactions():
+        if request.method == 'GET':
+            num_valid = len(node.validated_transactions)
+            num_orphaned = len(node.orphaned_transactions)
+
+            # Validated txs
+            tx_dict = {
+                'validated_txs': num_valid
+            }
+            for x in range(num_valid):
+                tx_dict.update({
+                    f'valid_tx_{x + 1}': json.loads(node.validated_transactions[x].tojson)
+                })
+
+            # Orphaned txs
+            tx_dict.update({
+                'orphaned_txs': num_orphaned
+            })
+            for y in range(num_orphaned):
+                tx_dict.update({
+                    f'orphan_tx_{y + 1}': json.loads(node.orphaned_transactions[y].tojson)
+                })
+            return jsonify(tx_dict)
+        else:
+            return Response(f'{request.method} method not allowed at /transactions/ endpoint', status=400,
+                            mimetype=mimetype)
+
+    @app.route('/transactions/<tx_id>')
+    def tx_id(tx_id: str):
+        '''
+        Will search for tx_id if it's saved in the chain
+        '''
+        block_dict = {}
+        tx_block = node.blockchain.find_block_by_tx_id(tx_id)
+        if tx_block:
+            block_dict.update({
+                'saved_block': json.loads(tx_block.to_json)
+            })
+        return jsonify(block_dict)
+
+    @app.route('/<address>/')
+    def address(address: str):
+        '''
+        Returns dict of utxos for this address
+        '''
+        utxo_dict = node.blockchain.chain_db.get_utxos_by_address(address)
+        return jsonify(utxo_dict)
+
     # --- DYNAMIC ENDPOINTS --- #
     @app.route('/node_list/', methods=['PUT', 'POST', 'DELETE'])
     def handle_node():
