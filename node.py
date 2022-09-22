@@ -516,14 +516,7 @@ class Node:
         for list_tuple in node_list:
             temp_node = (list_tuple[0], list_tuple[1])
             if temp_node not in [self.node, self.local_node]:
-                connected = self.connect_to_node(temp_node, local)
-                if connected:
-                    # Logging
-                    self.logger.info(f'Successfully connected to {temp_node}')
-                else:
-                    # Logging
-                    self.logger.warning(f'Error connecting to {temp_node}')
-
+                self.connect_to_node(temp_node, local)
         # Catchup to network
         self.catchup_to_network()
 

@@ -1,17 +1,16 @@
 '''
 REST API for the Blockchain
 '''
-import sqlite3
 
 import flask
 import requests
 import waitress
 from flask import Flask, jsonify, request, Response, json, render_template
+
+from decoder import Decoder
 from formatter import Formatter
 from node import Node
 from timestamp import utc_timestamp
-from decoder import Decoder
-from hashlib import sha256
 
 
 def create_app(node: Node):
@@ -19,7 +18,6 @@ def create_app(node: Node):
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     app.config['JSON_SORT_KEYS'] = False
     mimetype = 'application/json'
-    f = Formatter()
     d = Decoder()
 
     @app.route('/')
@@ -36,9 +34,7 @@ def create_app(node: Node):
 
     @app.route('/genesis_block/')
     def genesis_block():
-        genesis_dict = {
-            'raw_genesis': node.blockchain.chain[0].raw_block
-        }
+        genesis_dict = {'raw_genesis': node.blockchain.chain[0].raw_block}
         return jsonify(genesis_dict)
 
     @app.route('/is_connected/')
@@ -51,17 +47,13 @@ def create_app(node: Node):
 
     @app.route('/height/')
     def height():
-        height_dict = {
-            'height': node.height
-        }
+        height_dict = {'height': node.height}
         return jsonify(height_dict)
 
     @app.route('/block/')
     def block():
         block_dict = json.loads(node.last_block.to_json)
-        block_dict.update({
-            'raw_block': node.last_block.raw_block
-        })
+        block_dict.update({'raw_block': node.last_block.raw_block})
         return jsonify(block_dict)
 
     @app.route('/block/<height>')
@@ -95,22 +87,14 @@ def create_app(node: Node):
             num_orphaned = len(node.orphaned_transactions)
 
             # Validated txs
-            tx_dict = {
-                'validated_txs': num_valid
-            }
+            tx_dict = {'validated_txs': num_valid}
             for x in range(num_valid):
-                tx_dict.update({
-                    f'valid_tx_{x + 1}': json.loads(node.validated_transactions[x].tojson)
-                })
+                tx_dict.update({f'valid_tx_{x + 1}': json.loads(node.validated_transactions[x].to_json)})
 
             # Orphaned txs
-            tx_dict.update({
-                'orphaned_txs': num_orphaned
-            })
+            tx_dict.update({'orphaned_txs': num_orphaned})
             for y in range(num_orphaned):
-                tx_dict.update({
-                    f'orphan_tx_{y + 1}': json.loads(node.orphaned_transactions[y].tojson)
-                })
+                tx_dict.update({f'orphan_tx_{y + 1}': json.loads(node.orphaned_transactions[y].to_json)})
             return jsonify(tx_dict)
         else:
             return Response(f'{request.method} method not allowed at /transactions/ endpoint', status=400,
