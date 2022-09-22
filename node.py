@@ -181,7 +181,7 @@ class Node:
                     # Logging
                     self.logger.info(f'Successfully mined block at height {next_block.height}')
                     if gossip:
-                        self.gossip_protocol_raw_block(next_block)
+                        self.gossip_protocol_block(next_block)
                 else:
                     # Logging
                     self.logger.warning(
@@ -430,9 +430,6 @@ class Node:
         for x in range(0, len(orphan_index)):
             block = self.orphaned_blocks.pop(0)
             self.add_block(block, gossip)
-
-    # -------------------- #
-    # --- CONSTRUCTION --- #
 
     # --- NETWORK --- #
 
@@ -808,10 +805,12 @@ class Node:
                 self.logger.info(f'Received 200 code from {gossip_node} for tx {tx.id}.')
                 gossip_count += 1
 
-    def gossip_protocol_raw_block(self, block: Block):
+    def gossip_protocol_block(self, block: Block):
         node_list_index = self.node_list.copy()
-        if node_list_index:
+        if self.node in node_list_index:
             node_list_index.remove(self.node)
+        if self.local_node in node_list_index:
+            node_list_index.remove(self.local_node)
         gossip_count = 0
         while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
             list_length = len(node_list_index)
@@ -822,9 +821,6 @@ class Node:
             if status_code == 200:
                 self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
                 gossip_count += 1
-
-    # --- CONSTRUCTION --- #
-    # -------------------- #
 
     # --- NETWORKING TOOLS --- #
     def make_url(self, node: tuple, endpoint: str):
