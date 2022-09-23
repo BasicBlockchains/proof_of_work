@@ -48,7 +48,7 @@ class Node:
     request_header = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
     def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, wallet_file=WALLET_FILE, port=DEFAULT_PORT, seed=None,
-                 logger=None, gossipy=True):
+                 logger=None, local=False):
         # Loggging
         if logger:
             self.logger = logger.getChild('Node')
@@ -62,7 +62,10 @@ class Node:
         self.assigned_port = self.find_open_port(port)
         self.ip = self.get_ip()
         self.local_ip = self.get_local_ip()
-        self.node = (self.ip, self.assigned_port)
+        if local:
+            self.node = (self.local_ip, self.assigned_port)
+        else:
+            self.node = (self.ip, self.assigned_port)
         self.dir_path = os.path.join(dir_path, str(self.assigned_port))
         self.db_file = db_file
         self.wallet_file = wallet_file
@@ -96,18 +99,11 @@ class Node:
         # Create connected flag for network
         self.is_connected = False
 
-        # Create gossip flag for tests
-        self.is_gossipy = gossipy
-
         # Create network variables for gui
         self.percent_complete = 0
         self.network_height = 0
 
     # --- PROPERTIES --- #
-    @property
-    def local_node(self):
-        return (self.local_ip, self.assigned_port)
-
     @property
     def last_block(self):
         return self.blockchain.last_block
@@ -129,7 +125,7 @@ class Node:
         return self.blockchain.total_mining_amount
 
     # --- MINER --- #
-    def start_miner(self, gossip=True):
+    def start_miner(self):
         '''
         Turn on mining thread
         set is_mining to True
@@ -140,7 +136,7 @@ class Node:
         if self.is_connected:
             if not self.is_mining:
                 self.is_mining = True
-                self.mining_thread = threading.Thread(target=self.mining_monitor, args=(gossip,))
+                self.mining_thread = threading.Thread(target=self.mining_monitor)
                 self.logger.info('Starting mining thread.')
                 self.mining_thread.start()
 
@@ -151,7 +147,7 @@ class Node:
             # Logging
             self.logger.warning('Must be connected to network to start miner.')
 
-    def mining_monitor(self, gossip: bool):
+    def mining_monitor(self):
         self.logger.info('Mining monitor running')
         while self.is_mining and self.is_connected:
             unmined_block = self.create_next_block()
@@ -176,12 +172,11 @@ class Node:
                         self.logger.info('Mining interrupt received.')
                         mining = False
             if next_block:
-                added = self.add_block(next_block, gossip)
+                added = self.add_block(next_block)
                 if added:
                     # Logging
                     self.logger.info(f'Successfully mined block at height {next_block.height}')
-                    if gossip:
-                        self.gossip_protocol_block(next_block)
+                    self.gossip_protocol_block(next_block)
                 else:
                     # Logging
                     self.logger.warning(
@@ -269,7 +264,7 @@ class Node:
         return max(0, total_input_amount - total_output_amount)
 
     # --- ADD BLOCK --- #
-    def add_block(self, block: Block, gossip=True) -> bool:
+    def add_block(self, block: Block) -> bool:
         added = self.blockchain.add_block(block)
         if added:
             # Logging
@@ -287,10 +282,10 @@ class Node:
                             self.consumed_utxos.remove(input_tuple)
 
             # Check if orphaned transactions are now valid
-            self.check_for_tx_parents(gossip)
+            self.check_for_tx_parents()
 
             # Check if orphaned blocks are now valid
-            self.check_for_block_parents(gossip)
+            self.check_for_block_parents()
         elif block.height > self.height:
             self.orphaned_blocks.append(block)
 
@@ -298,7 +293,7 @@ class Node:
 
     # --- ADD TRANSACTION --- #
 
-    def add_transaction(self, transaction: Transaction, gossip=True) -> bool:
+    def add_transaction(self, transaction: Transaction) -> bool:
         # Make sure tx is not in chain
         existing_tx = self.blockchain.get_tx_by_id(transaction.id)
         if existing_tx:
@@ -402,8 +397,7 @@ class Node:
             self.validated_transactions.append(transaction)
 
             # Send tx to network
-            if gossip:
-                self.gossip_protocol_tx(transaction)
+            self.gossip_protocol_tx(transaction)
 
         # Flagged for orphaned. Add to orphan pool
         else:
@@ -413,7 +407,7 @@ class Node:
 
     # --- ORPHANS --- #
 
-    def check_for_tx_parents(self, gossip=True):
+    def check_for_tx_parents(self):
         '''
         After a Block is saved, we iterate over all orphaned transactions to see if their parent UTXOs were saved.
         However, when validating a transaction, we check if it's raw_tx is already in the validated_transactions and
@@ -423,13 +417,13 @@ class Node:
         orphan_index = self.orphaned_transactions.copy()
         for x in range(0, len(orphan_index)):
             tx = self.orphaned_transactions.pop(0)
-            self.add_transaction(tx, gossip)
+            self.add_transaction(tx)
 
-    def check_for_block_parents(self, gossip=True):
+    def check_for_block_parents(self):
         orphan_index = self.orphaned_blocks.copy()
         for x in range(0, len(orphan_index)):
             block = self.orphaned_blocks.pop(0)
-            self.add_block(block, gossip)
+            self.add_block(block)
 
     # --- NETWORK --- #
 
@@ -438,8 +432,6 @@ class Node:
         temp_nodes = self.node_list.copy()
         if self.node in temp_nodes:
             temp_nodes.remove(self.node)
-        if self.local_node in temp_nodes:
-            temp_nodes.remove(self.local_node)
 
         # If temp_nodes not empty, try and catchup
         if len(temp_nodes) > 0:
@@ -471,7 +463,7 @@ class Node:
         self.logger.info('Node height equal to network height')
 
     # --- PUT METHODS --- #
-    def connect_to_network(self, node=LEGACY_NODE, local=False) -> bool:
+    def connect_to_network(self, node=LEGACY_NODE) -> bool:
         # Logging
         self.logger.info(f'Attempting to connect to network through {node}.')
 
@@ -479,22 +471,16 @@ class Node:
         self.is_connected = True
 
         # Add own node to node list
-        if not local:
-            if self.node not in self.node_list:
-                self.node_list.append(self.node)
-        else:
-            if self.local_node not in self.node_list:
-                self.node_list.append(self.local_node)
+        if self.node not in self.node_list:
+            self.node_list.append(self.node)
 
         # Return true if own node
-        if node in [self.node, self.local_node]:
+        if node == self.node:
             return True
 
         # Retrieve node list with put request
-        if not local:
-            data = {'ip': self.ip, 'port': self.assigned_port}
-        else:
-            data = {'ip': self.local_ip, 'port': self.assigned_port}
+        node_ip, node_port = self.node
+        data = {'ip': node_ip, 'port': node_port}
         try:
             r = requests.put(self.make_url(node, 'node_list'), data=json.dumps(data), headers=self.request_header)
             node_list = r.json()
@@ -512,8 +498,9 @@ class Node:
         # Post address to every node in node_list
         for list_tuple in node_list:
             temp_node = (list_tuple[0], list_tuple[1])
-            if temp_node not in [self.node, self.local_node]:
-                self.connect_to_node(temp_node, local)
+            if temp_node != self.node:
+                self.connect_to_node(temp_node)
+
         # Catchup to network
         self.catchup_to_network()
 
@@ -542,7 +529,7 @@ class Node:
         We get the genesis block from the node and compare with ours. Return True if same, False if otherwise
         '''
         # Return true if it's our own node
-        if node in [self.node, self.local_node]:
+        if node == self.node:
             return True
 
         # Get genesis block from node at /genesis_block/ endpoint
@@ -652,7 +639,7 @@ class Node:
         for x in range(tx_num):
             tx_dict = validated_tx_dict[f'valid_tx_{x + 1}']
             tx = self.d.transaction_from_dict(tx_dict)
-            tx_added = self.add_transaction(tx, gossip=False)
+            tx_added = self.add_transaction(tx)
             if tx_added:
                 # Logging
                 self.logger.info(f'Successfully validated tx with id {tx.id} obtained from {node}')
@@ -663,12 +650,10 @@ class Node:
 
     # --- POST METHODS --- #
 
-    def connect_to_node(self, node: tuple, local=False) -> bool:
+    def connect_to_node(self, node: tuple) -> bool:
         # Post self.node to node_list endpoint in node api
-        if not local:
-            data = {'ip': self.ip, 'port': self.assigned_port}
-        else:
-            data = {'ip': self.local_ip, 'port': self.assigned_port}
+        node_ip, node_port = self.node
+        data = {'ip': node_ip, 'port': node_port}
         try:
             r = requests.post(self.make_url(node, 'node_list'), data=json.dumps(data), headers=self.request_header)
         except requests.exceptions.ConnectionError:
@@ -742,7 +727,7 @@ class Node:
         return r.status_code == 200
 
     # --- DELETE METHODS --- #
-    def disconnect_from_network(self, local=False):
+    def disconnect_from_network(self):
         # Stop all mining
         if self.is_mining:
             self.stop_miner()
@@ -763,10 +748,8 @@ class Node:
         node_index = self.node_list.copy()
 
         # Self node for disconnect
-        if not local:
-            data = {'ip': self.ip, 'port': self.assigned_port}
-        else:
-            data = {'ip': self.local_ip, 'port': self.assigned_port}
+        node_ip, node_port = self.node
+        data = {'ip': node_ip, 'port': node_port}
         for node in node_index:
             try:
                 r = requests.delete(self.make_url(node, 'node_list'), data=json.dumps(data),
@@ -791,8 +774,6 @@ class Node:
         node_list_index = self.node_list.copy()
         if self.node in node_list_index:
             node_list_index.remove(self.node)
-        if self.local_node in node_list_index:
-            node_list_index.remove(self.local_node)
         gossip_count = 0
         while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
             list_length = len(node_list_index)
@@ -809,8 +790,6 @@ class Node:
         node_list_index = self.node_list.copy()
         if self.node in node_list_index:
             node_list_index.remove(self.node)
-        if self.local_node in node_list_index:
-            node_list_index.remove(self.local_node)
         gossip_count = 0
         while gossip_count < self.f.GOSSIP_NUMBER and node_list_index != []:
             list_length = len(node_list_index)

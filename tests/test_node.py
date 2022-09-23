@@ -72,7 +72,7 @@ def test_add_transaction():
     # Mine necessary Block
     block1 = create_test_node_block(n)
     mined_block1 = mine_a_block(block1)
-    assert n.add_block(mined_block1, gossip=False)
+    assert n.add_block(mined_block1)
 
     # UTXO_INPUT
     tx_id = n.last_block.mining_tx.id
@@ -101,15 +101,15 @@ def test_add_transaction():
     orphan_tx = Transaction(inputs=[orphan_utxo_input], outputs=[orphan_utxo_output1, orphan_utxo_output2])
 
     # Add Transactions
-    assert n.add_transaction(new_tx, gossip=False)
-    assert n.add_transaction(orphan_tx, gossip=False)
+    assert n.add_transaction(new_tx)
+    assert n.add_transaction(orphan_tx)
     assert n.validated_transactions[0].raw_tx == new_tx.raw_tx
     assert n.orphaned_transactions[0].raw_tx == orphan_tx.raw_tx
 
     # Mine next Block
     block2 = n.create_next_block()
     mined_block2 = mine_a_block(block2)
-    assert n.add_block(mined_block2, gossip=False)
+    assert n.add_block(mined_block2)
 
     # Check tx got mined and orphan is validated
     assert n.orphaned_transactions == []
