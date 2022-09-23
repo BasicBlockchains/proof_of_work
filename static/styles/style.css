@@ -88,72 +88,39 @@ nav {
 
 /*** ENDPOINTS ***/
 
-/* .endpoints{
-    border: 2px solid #000;
-    border-radius: 5px;
-}
-
-.endpoints h1{
-    font-size: 36px;
-    color: #000;
+.endpoints{
+    border: 3px solid #000;
     text-align: center;
     display: block;
-    padding: 16px 0;
-    background-color: #ac92ec;
-} */
-
-.endpoint_box{
-    border: 2px solid #000;
-    border-radius: 5px;
-}
-
-.endpoint_box h1{
-    font-size: 36px;
-    color: #000;
-    text-align: center;
-    display: block;
-    padding: 16px 0;
     background-color: #ac92ec;
 }
 
-.button_group{
-    width: 100%;
+.endpoint_table{
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2px 5px;
+    width: 95%;
+    table-layout: fixed;
+    border: 2px solid #000;
+    background-color: #fff;
+
 }
 
-.button{
-    background-color: #000;
+tr, td {
+    padding: 5px 15px;
     border: 1px solid #000;
-    color: #fff;
-    padding: 10px 24px;
+}
+
+
+.clickable{
     cursor: pointer;
-    float: left;
-    font-size: 25px;
 }
 
-.button_group button{
-    width: 20.0%; 
-}
-
-.tx_group{
-    width: 100%;
+.variable{
+    color: red;
 }
 
 
-/* Clear floats (clearfix hack) */
-.button:after {
-    content: "";
-    clear: both;
-    display: table;
-  }
-/* Prevent double borders */
-  .button:not(:last-child) {
-    border-right: none; 
-  }
-  
-  /* Add a background color on hover */
-  .button:hover {
-    background-color: #ac92ec;
-  }
 
 
 
@@ -170,6 +137,7 @@ nav {
 .footer p {
     padding: 5px 0;
 }
+
 
 .icons .fa-brands {
     margin: 0 10px;
