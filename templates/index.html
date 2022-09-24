@@ -110,9 +110,15 @@
                     <td></td>
                 </tr>
                 <tr>
-                    <td>/node_list/</td>
-                    <td>Used by Node to connect and disconnect to Node network. PUT will obtain node_list. POST will add own Node address to external Node. DELETE will remove own Node address from external Node.</td>
-                    <td>PUT, POST, DELETE</td>
+                    <td>/<i class="clickable" onclick="goToEndpoint('node_list')"">node_list</i>/</td>
+                    <td>Returns random list of up to 60 connected nodes</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>/node/</td>
+                    <td>Used by Node to connect and disconnect to Node network. Receiving Node will validate sending Node through /genesis_block/ endpoint.</td>
+                    <td>POST, DELETE</td>
                     <td>{"ip":<i class="variable">ip</i>, "port":<i class="variable">port</i>}</td>
                 </tr>
                 <tr>
@@ -132,12 +138,6 @@
                     <td>Used to POST new transactions. Must be sent using raw transaction in appropriate dictionary format. </td>
                     <td>POST</td>
                     <td>{"raw_tx":<i class="variable">raw_tx</i>}</td>
-                </tr>
-                <tr>
-                    <td>/wallet/</td>
-                    <td>Used by Wallet object to get a node list. Must PUT a valid signature using the genesis_block id as tx_id in the signature. </td>
-                    <td>PUT</td>
-                    <td>{"signature":<i class="variable">genesis_block signature</i>}</td>
                 </tr>
             </table>
         </div>
