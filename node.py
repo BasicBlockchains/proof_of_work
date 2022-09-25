@@ -242,9 +242,9 @@ class Node:
         for utxo_input in tx.inputs:
             tx_id = utxo_input.tx_id
             tx_index = utxo_input.index
-            utxo_exists = self.blockchain.chain_db.get_utxo(tx_id, tx_index)
-            if utxo_exists:
-                total_input_amount += utxo_exists['output']['amount']
+            utxo_dict = self.blockchain.chain_db.get_utxo(tx_id, tx_index)
+            if utxo_dict:
+                total_input_amount += utxo_dict['amount']
             # If utxo has been consumed, look for it in the chain
             else:
                 temp_tx = self.blockchain.get_tx_by_id(tx_id)
@@ -325,23 +325,36 @@ class Node:
             tx_id = i.tx_id
             tx_index = i.index
 
-            # Get values from db
-            amount_dict = self.blockchain.chain_db.get_amount_by_utxo(tx_id, tx_index)
-            address_dict = self.blockchain.chain_db.get_address_by_utxo(tx_id, tx_index)
-            block_height_dict = self.blockchain.chain_db.get_block_height_by_utxo(tx_id, tx_index)
+            # -- CONSTRUCTION -- #
 
-            # If values are empty lists mark for orphan
-            if amount_dict == {} or address_dict == {} or block_height_dict == {}:
-                # Logging
+            # Get UTXO
+            utxo_output_dict = self.blockchain.chain_db.get_utxo(tx_id, tx_index)
+
+            if utxo_output_dict == {}:
                 self.logger.warning(f'Unable to find utxo with id {tx_id} and index {tx_index}. Orphan transaction.')
                 orphan = True
+
+            # # Get values from db
+            # amount_dict = self.blockchain.chain_db.get_amount_by_utxo(tx_id, tx_index)
+            # address_dict = self.blockchain.chain_db.get_address_by_utxo(tx_id, tx_index)
+            # block_height_dict = self.blockchain.chain_db.get_block_height_by_utxo(tx_id, tx_index)
+            # --- CONSTRUCTION
+
+            # # If values are empty lists mark for orphan
+            # if amount_dict == {} or address_dict == {} or block_height_dict == {}:
+            #     # Logging
+            #     self.logger.warning(f'Unable to find utxo with id {tx_id} and index {tx_index}. Orphan transaction.')
+            #     orphan = True
 
             # Validate the referenced output utxo
             else:
                 # Get values
-                amount = amount_dict['amount']
-                address = address_dict['address']
-                block_height = block_height_dict['block_height']
+                amount = utxo_output_dict['amount']
+                address = utxo_output_dict['address']
+                block_height = utxo_output_dict['block_height']
+                # amount = amount_dict['amount']
+                # address = address_dict['address']
+                # block_height = block_height_dict['block_height']
 
                 # Validate the block_height
                 if block_height > self.height:

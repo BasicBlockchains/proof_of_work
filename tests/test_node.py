@@ -41,11 +41,9 @@ def test_add_transaction():
         dir_path = './tests/data/test_node/'
     file_name = 'test_add_transaction.db'
 
-    # Wipe db if it exists
-    db_exsts = Path(dir_path, file_name).exists()
+    # Start with empty db
     db = DataBase(dir_path, file_name)
-    if db_exsts:
-        db.wipe_db()
+    db.wipe_db()
     db.create_db()
 
     # Logging

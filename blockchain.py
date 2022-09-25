@@ -34,7 +34,7 @@ class Blockchain():
     d = Decoder()
     f = Formatter()
 
-    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None, log_level=None):
+    def __init__(self, dir_path=DIR_PATH, db_file=DB_FILE, logger=None):
         # Logging
         if logger:
             self.logger = logger.getChild('Blockchain')
@@ -43,18 +43,19 @@ class Blockchain():
             self.logger.setLevel('DEBUG')
             self.logger.addHandler(logging.StreamHandler())
 
-        if log_level:
-            self.logger.setLevel(log_level)
         self.logger.debug(f'Logger instantiated in blockchain with name: {self.logger.name}')
 
         # Curve for cryptography
         self.curve = secp256k1()
 
-        # Initial values
+        # Fixed heartbeat for Blockchain
+        self.heartbeat = self.f.HEARTBEAT
+
+        # --- Initial dynamic Blockchain values --- #
         self.total_mining_amount = self.f.TOTAL_MINING_AMOUNT
         self.mining_reward = 0
         self.target = self.f.target_from_parts(self.f.STARTING_TARGET_COEFFICIENT, self.f.STARTING_TARGET_EXPONENT)
-        self.heartbeat = self.f.HEARTBEAT
+        self.height = -1
 
         # Create chain list to hold last HEARTBEAT blocks
         self.chain = []
@@ -62,52 +63,31 @@ class Blockchain():
         # Create fork list to index forked blocks
         self.forks = []
 
+        # --- CONSTRUCTION ----#
+
         # Set path and filename variables
         self.dir_path = dir_path
         self.db_file = db_file
 
-        # Check for db
-        db_exists = Path(self.dir_path, self.db_file).exists()
-
-        # Create loading counter
-        self.load_count = -1
-
         # Create db - Database will create file in the given dir_path even if it doesn't exist
         self.chain_db = DataBase(self.dir_path, self.db_file)
-        if not db_exists:
-            self.chain_db.create_db()
 
-        # If file exists but is empty, change db_exists to false
-        if self.chain_db.is_empty():
-            db_exists = False
-
-        # Create genesis block
-        self.add_block(self.create_genesis_block(), loading=db_exists)
-
-        # Load db if it exists
-        if db_exists and self.height > 0:
+        # Start new chain or load from db
+        db_height = self.chain_db.get_height()['height']
+        if db_height == -1:
+            self.add_block(self.create_genesis_block(), loading=False)
+        else:
+            self.add_block(self.create_genesis_block(), loading=True)
             self.load_chain()
 
-    # Properties
-    @property
-    def height(self):
-        retrieved_height = False
-        height = 0
-        while not retrieved_height:
-            try:
-                height = self.chain_db.get_height()['height']
-                retrieved_height = True
-            except sqlite3.OperationalError:
-                # Logging
-                self.logger.warning('DB is locked.')
-                pass
-        return height
+    # --- PROPERTIES --- #
 
     @property
     def last_block(self):
         return self.chain[-1]
 
-    # Block methods
+    # --- BLOCK METHODS --- #
+
     def validate_block(self, block: Block) -> bool:
         # Check previous id
         if block.prev_id != self.last_block.id:
@@ -174,7 +154,7 @@ class Blockchain():
                         utxo_returned = True
                     except sqlite3.OperationalError:
                         # Logging
-                        self.logger.warning('Db is locked while looking for')
+                        self.logger.warning('Db is locked while looking for UTXO')
                         pass
 
                 # Return False if dict is empty
@@ -185,7 +165,7 @@ class Blockchain():
                     return False
 
                 # Verify address
-                utxo_address = utxo_dict['output']['address']
+                utxo_address = utxo_dict['address']
                 temp_address = self.f.address(cpk)
                 if temp_address != utxo_address:
                     # Logging
@@ -203,7 +183,7 @@ class Blockchain():
                 input_adjusted = False
                 while not input_adjusted:
                     try:
-                        input_amount += self.chain_db.get_amount_by_utxo(tx_id, index)['amount']
+                        input_amount += utxo_dict['amount']
                         input_adjusted = True
                     except sqlite3.OperationalError:
                         # Logging
@@ -305,19 +285,15 @@ class Blockchain():
             # Save block to mem_chain
             self.chain.append(block)
 
+            # Adjust height
+            self.height += 1
+
             # Adjust total_mining_amount
             self.total_mining_amount -= block.mining_tx.reward
 
             # Update reward
-            # When loading
-            if loading:
-                self.load_count += 1
-                if self.load_count % self.f.HALVING_NUMBER == 0:
-                    self.update_reward()
-            else:
-                # When running
-                if self.height % self.f.HALVING_NUMBER == 0 or self.mining_reward > self.total_mining_amount:
-                    self.update_reward()
+            if self.height % self.f.HALVING_NUMBER == 0 or self.mining_reward > self.total_mining_amount:
+                self.update_reward()
 
             # Update target
             # Adjust target every heartbeat blocks
@@ -347,6 +323,9 @@ class Blockchain():
         # Don't pop the genesis block
         if self.height == 0:
             return False
+
+        # Adjust height
+        self.height -= 1
 
         # Remove top most block from mem
         removed_block = self.chain.pop(-1)
@@ -392,16 +371,11 @@ class Blockchain():
                 else:
                     utxo_output = temp_tx.outputs[tx_index]
 
-                # Add utxo_output
-                amount = utxo_output.amount
-                address = utxo_output.address
-                block_height = utxo_output.block_height
-
                 # Database
                 utxo_added = False
                 while not utxo_added:
                     try:
-                        self.chain_db.post_utxo(tx_id, tx_index, UTXO_OUTPUT(amount, address, block_height))
+                        self.chain_db.post_utxo(tx_id, tx_index, utxo_output)
                         utxo_added = True
                     except sqlite3.OperationalError:
                         # Logging
@@ -412,7 +386,7 @@ class Blockchain():
         block_deleted = False
         while not block_deleted:
             try:
-                self.chain_db.delete_block(self.height)
+                self.chain_db.delete_block()
                 block_deleted = True
             except sqlite3.OperationalError:
                 # Logging
@@ -434,6 +408,8 @@ class Blockchain():
             if raw_block_dict:
                 self.chain.insert(1, self.d.raw_block(raw_block_dict['raw_block']))
 
+        # Logging
+        self.logger.debug(f'Successfully removed block at height {self.height + 1}')
         return True
 
     def create_genesis_block(self) -> Block:
@@ -444,7 +420,7 @@ class Blockchain():
 
         return genesis_block
 
-    # Fork methods
+    # --- FORK METHODS --- #
 
     def create_fork(self, block: Block):
         fork_dict = {block.height: block.raw_block}
@@ -504,7 +480,7 @@ class Blockchain():
             if fork_height + self.heartbeat < self.height:
                 self.forks.remove(fork_dict)
 
-    # Updates
+    # --- UPDATES --- #
     def update_reward(self):
         # Genesis
         if self.mining_reward == 0:
@@ -528,7 +504,7 @@ class Blockchain():
             next_amount = 0
             while not amount_obtained:
                 try:
-                    next_amount = self.chain_db.get_total_amount_greater_than_block_height(next_height)
+                    next_amount = self.chain_db.get_invested_amount(next_height)
                     amount_obtained = True
                 except sqlite3.OperationalError:
                     # Logging
@@ -572,7 +548,7 @@ class Blockchain():
         while len(self.chain) > self.heartbeat + 1:
             self.chain.pop(1)
 
-    # Search methods
+    # --- SEARCH METHODS --- #
     def find_block_by_tx_id(self, tx_id: str):
         '''
         Will return a Block if the tx_id is in its list. Otherwise, return None
@@ -594,7 +570,11 @@ class Blockchain():
                     # Logging
                     self.logger.warning('DB locked while looking for raw block')
                     pass
-            temp_block = self.d.raw_block(raw_block_dict['raw_block'])
+            if raw_block_dict != {}:
+                temp_block = self.d.raw_block(raw_block_dict['raw_block'])
+            else:
+                # Return None if no block is at that height
+                return None
 
             # Search for tx_id in Block
             if tx_id in temp_block.tx_ids:
@@ -618,28 +598,27 @@ class Blockchain():
                 tx = temp_block.transactions[tx_index]
         return tx
 
-    # Load chain
+    # --- LOAD CHAIN --- #
     def load_chain(self):
-        self.logger.info(f'Loading blockchain from database. Blockchain saved at height {self.height}.')
-        # Load rest of chain if it exists
-        temp_height = len(self.chain) - 1
-        while temp_height != self.height:
-            block_returned = False
-            temp_block_dict = {}
-            while not block_returned:
-                try:
-                    temp_block_dict = self.chain_db.get_raw_block(temp_height + 1)
-                    block_returned = True
-                except sqlite3.OperationalError:
+        '''
+        If we are loading the chain, then the db is not available to be written to yet. Hence, we are not concerned
+        with any DB locking operational errors, so db statements are not enclosed in a try/catch block.
+        '''
+        self.logger.info(f'Loading blockchain from database.')
+
+        # Get height
+        db_height = self.chain_db.get_height()['height']
+
+        while self.height < db_height:
+            raw_block_dict = self.chain_db.get_raw_block(self.height + 1)
+            if raw_block_dict:
+                added = self.add_block(self.d.raw_block(raw_block_dict['raw_block']), loading=True)
+                if not added:
                     # Logging
-                    self.logger.warning('DB locked while loading raw block')
-                    pass
-            if temp_block_dict:
-                temp_block = self.d.raw_block(temp_block_dict['raw_block'])
-                if self.add_block(temp_block, loading=True):
-                    temp_height += 1
-                else:
-                    # Logging
-                    self.logger.error('Error loading blocks from chain_db')
+                    self.logger.critical(f'Error loading raw block from db at height {self.height + 1}')
                     break
-        self.logger.info('Successfully loaded Blockchain from database.')
+            else:
+                self.logger.critical(f'No raw block returned at height {self.height + 1}')
+                break
+
+        self.logger.info(f'Successfully loaded Blockchain from database. Current height: {self.height}')
