@@ -230,29 +230,6 @@ class Wallet():
 
     # --- NETWORK METHODS --- #
 
-    def get_genesis_block(self, node=LEGACY_NODE):
-        ip, port = node
-        url = f'http://{ip}:{port}/genesis_block/'
-        try:
-            r = requests.get(url, headers=self.request_header)
-            raw_genesis_dict = r.json()
-            raw_genesis = raw_genesis_dict['raw_genesis']
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.error(f'Unable to connect to {node} to get genesis block')
-            return None
-        except requests.exceptions.JSONDecodeError:
-            # Logging
-            self.logger.error(f'Unable to decode gensis dict from {node} for genesis block')
-            return None
-        except ValueError:
-            # Logging
-            self.logger.error(f'Unable to get raw_genesis from genesis dict obtained from {node}')
-            return None
-
-        return self.D.raw_block(raw_genesis)
-        # return raw_genesis
-
     def post_transaction_to_node(self, tx: Transaction, node=LEGACY_NODE) -> bool:
         ip, port = node
         url = f'http://{ip}:{port}/raw_tx/'
@@ -274,18 +251,10 @@ class Wallet():
             return False
 
     def get_node_list(self, node=LEGACY_NODE) -> bool:
-        gb = self.get_genesis_block(node)
-        if gb is None:
-            # Logger
-            self.logger.error(f'Unable to obtain genesis block from {node} for signature.')
-            return False
-
-        tx_id = gb.id
         ip, port = node
-        url = f'http://{ip}:{port}/wallet'
-        data = {'signature': self.sign_transaction(tx_id)}
+        url = f'http://{ip}:{port}/node_list'
         try:
-            r = requests.put(url, data=json.dumps(data), headers=self.request_header)
+            r = requests.get(url, headers=self.request_header)
             list_of_nodes = r.json()
         except requests.exceptions.ConnectionError:
             # Logging

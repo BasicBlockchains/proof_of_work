@@ -582,7 +582,7 @@ class Blockchain():
         block = None
         block_found = False
 
-        while temp_height > 0 and not block_found:
+        while temp_height > -1 and not block_found:
             # Search through database
             dict_returned = False
             raw_block_dict = {}

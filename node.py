@@ -60,12 +60,11 @@ class Node:
 
         # Set path and filename variables
         self.assigned_port = self.find_open_port(port)
-        self.ip = self.get_ip()
-        self.local_ip = self.get_local_ip()
         if local:
-            self.node = (self.local_ip, self.assigned_port)
+            self.ip = self.get_local_ip()
         else:
-            self.node = (self.ip, self.assigned_port)
+            self.ip = self.get_ip()
+        self.node = (self.ip, self.assigned_port)
         self.dir_path = os.path.join(dir_path, str(self.assigned_port))
         self.db_file = db_file
         self.wallet_file = wallet_file
@@ -478,28 +477,26 @@ class Node:
         if node == self.node:
             return True
 
-        # Retrieve node list with put request
-        node_ip, node_port = self.node
-        data = {'ip': node_ip, 'port': node_port}
-        try:
-            r = requests.put(self.make_url(node, 'node_list'), data=json.dumps(data), headers=self.request_header)
-            node_list = r.json()
-        except requests.exceptions.ConnectionError:
-            # Logging
-            self.logger.critical(f'Unable to connect to network through {node}')
-            self.is_connected = False
-            return False
-        except requests.exceptions.JSONDecodeError:
-            # Logging
-            self.logger.critical(f'Unable to decode node list from {node}')
-            self.is_connected = False
-            return False
+        # Retrieve formatted node list
+        initial_node_list = self.get_node_list(node)
 
-        # Post address to every node in node_list
-        for list_tuple in node_list:
-            temp_node = (list_tuple[0], list_tuple[1])
-            if temp_node != self.node:
-                self.connect_to_node(temp_node)
+        # Connect to every node in node list
+        for n in initial_node_list:
+            self.connect_to_node(n)
+
+        # Get remaining nodes
+        all_nodes = False
+        current_nodes = self.node_list.copy()
+        current_nodes.remove(node)
+        current_nodes.remove(self.node)
+        while not all_nodes and current_nodes != []:
+            all_nodes = True
+            random_node = random.choice(current_nodes)
+            another_node_list = self.get_node_list(random_node)
+            for check_node in another_node_list:
+                if check_node not in self.node_list:
+                    all_nodes = False
+                    self.node_list.append(check_node)
 
         # Catchup to network
         self.catchup_to_network()
@@ -602,6 +599,32 @@ class Node:
             self.logger.error(f'Unable to decode json response from {node} for height')
         return height
 
+    def get_node_list(self, node: tuple) -> list:
+        try:
+            r = requests.get(self.make_url(node, 'node_list'), headers=self.request_header)
+            node_list = r.json()
+        except requests.exceptions.ConnectionError:
+            # Logging
+            self.logger.critical(f'Unable to connect to network through {node}')
+            self.is_connected = False
+            return []
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.critical(f'Unable to decode node list from {node}')
+            self.is_connected = False
+            return []
+
+        if node_list:
+            formatted_node_list = []
+            for list_tuple in node_list:
+                temp_node = (list_tuple[0], list_tuple[1])
+                formatted_node_list.append(temp_node)
+            return formatted_node_list
+        else:
+            # Logging
+            self.logger.error(f'Retrieved empty node list from {node}')
+            return []
+
     def get_raw_block_from_node(self, node: tuple, block_index=None):
         raw_block = None
         url = self.make_url(node, 'raw_block')
@@ -652,10 +675,9 @@ class Node:
 
     def connect_to_node(self, node: tuple) -> bool:
         # Post self.node to node_list endpoint in node api
-        node_ip, node_port = self.node
-        data = {'ip': node_ip, 'port': node_port}
+        data = {'ip': self.ip, 'port': self.assigned_port}
         try:
-            r = requests.post(self.make_url(node, 'node_list'), data=json.dumps(data), headers=self.request_header)
+            r = requests.post(self.make_url(node, 'node'), data=json.dumps(data), headers=self.request_header)
         except requests.exceptions.ConnectionError:
             # Logging
             self.logger.error(f'Could not connect to {node}')
@@ -748,11 +770,10 @@ class Node:
         node_index = self.node_list.copy()
 
         # Self node for disconnect
-        node_ip, node_port = self.node
-        data = {'ip': node_ip, 'port': node_port}
+        data = {'ip': self.ip, 'port': self.assigned_port}
         for node in node_index:
             try:
-                r = requests.delete(self.make_url(node, 'node_list'), data=json.dumps(data),
+                r = requests.delete(self.make_url(node, 'node'), data=json.dumps(data),
                                     headers=self.request_header)
                 if r.status_code != 200:
                     # Logging

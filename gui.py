@@ -1156,5 +1156,6 @@ def run_node_gui():
 
 
 if __name__ == '__main__':
+    # Spawn method works on Windows, Linux and MacOS
     multiprocessing.set_start_method('spawn')
     run_node_gui()

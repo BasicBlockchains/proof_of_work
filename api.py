@@ -1,6 +1,8 @@
 '''
 REST API for the Blockchain
 '''
+import random
+import secrets
 
 import flask
 import requests
@@ -123,10 +125,23 @@ def create_app(node: Node):
         utxo_dict = node.blockchain.chain_db.get_utxos_by_address(address)
         return jsonify(utxo_dict)
 
+    @app.route('/node_list/')
+    def node_list():
+        if request.method == 'GET':
+            random_node_list = []
+            node_list_index = node.node_list.copy()
+            while len(random_node_list) < Formatter.HEARTBEAT and node_list_index != []:
+                # Add random nodes to list until we have HEARTBEAT or we empty the node_list_index
+                random_node_list.append(node_list_index.pop(secrets.randbelow(len(node_list_index))))
+            return jsonify(random_node_list)
+        else:
+            return Response(f'{request.method} method not allowed at /node_list/ endpoint', status=400,
+                            mimetype=mimetype)
+
     # --- DYNAMIC ENDPOINTS --- #
-    @app.route('/node_list/', methods=['PUT', 'POST', 'DELETE'])
+    @app.route('/node/', methods=['POST', 'DELETE'])
     def handle_node():
-        if request.method in ['PUT', 'POST', 'DELETE']:
+        if request.method in ['POST', 'DELETE']:
             # dict format = {'ip':<ip>, 'port':<port>}
             try:
                 client_node_dict = request.get_json()
@@ -145,11 +160,6 @@ def create_app(node: Node):
                 critical_message = f'Received {request.method} request from invalid client {client_node}'
                 node.logger.critical(critical_message)
                 return Response(critical_message, status=401, mimetype=mimetype)
-
-            # PUT - RETURN NODE LIST
-            if request.method == 'PUT':
-                # Return node_list
-                return jsonify(node.node_list)
 
             # POST - NEW CONNECTION
             if request.method == 'POST':
@@ -279,33 +289,6 @@ def create_app(node: Node):
         else:
             # method other than POST
             return Response(f'{request.method} not allowed for /raw_tx/ endpoint', status=403, mimetype=mimetype)
-
-    @app.route('/wallet/', methods=['PUT'])
-    def handle_wallet():
-        '''
-        Wallet will sign the genesis_tx in order to validate.
-        If valid, return node list
-        '''
-        if request.method == 'PUT':
-            # dict format {'signature': <signature>}
-            try:
-                signature_dict = request.get_json()
-                signature = signature_dict['signature']
-            except requests.exceptions.JSONDecodeError:
-                return Response('JSON Decode error', status=400, mimetype=mimetype)
-            except KeyError:
-                return Response('Signature dict error', status=400, mimetype=mimetype)
-
-            genesis_id = node.blockchain.chain[0].id
-
-            if d.verify_signature(signature, genesis_id):
-                # Return node_list
-                return jsonify(node.node_list)
-            else:
-                return Response(f'Unable to validated signature {signature} for genesis_tx', status=401,
-                                mimetype=mimetype)
-        else:
-            return Response(f'{request.method} method invalid for /wallet/ endpoint', status=400, mimetype=mimetype)
 
     return app
 

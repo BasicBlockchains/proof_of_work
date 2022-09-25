@@ -35,7 +35,7 @@
 
        <!-- WELCOME MESSAGE -->
         <div class="text-box">
-            <h1>ENDPOINTS FOR WEBSERVER</h1>
+            <h1>WELCOME THE BB POW!</h1>
             <p id="web_address">
             <script>
                 document.getElementById("web_address").innerHTML = webAddress
@@ -48,27 +48,100 @@
 
     <!--ENDPOINTS-->
     <section class="endpoints">
-
-
-        <!--DIRECT ENDPOINTS-->
-        <div class="endpoint_box">
-            <h1>DIRECT ENDPOINTS</h1>
-            <div class="button_group">
-                <button class="button" onclick="goToEndpoint('ping')">Ping</button>
-                <button class="button" onclick="goToEndpoint('data')">Data</button>
-                <button class="button" onclick="goToEndpoint('forks')">Forks</button>
-                <button class="button" onclick="goToEndpoint('is_connected')">Is Connected</button>
-                <button class="button" onclick="goToEndpoint('node_list')">Node List</button>
-            </div>
+            <table class="endpoint_table">
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Purpose</th>
+                    <th>Methods</th>
+                    <th>Format</th>
+                </tr>
+                <tr>
+                    <td class="clickable" onclick="goToEndpoint('ping')">/ping/</td>
+                    <td>Used in GUI</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="clickable" onclick="goToEndpoint('genesis_block')">/genesis_block/</td>
+                    <td>Used by Node to validate incoming Node requests.</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="clickable" onclick="goToEndpoint('is_connected')">/is_connected/</td>
+                    <td>Used by Node to validate incoming connect/disconnect requests.</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="clickable" onclick="goToEndpoint('height')">/height/</td>
+                    <td>Used by Node to validate incoming connect/disconnect requests.</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="clickable" onclick="goToEndpoint('block')">/block/</td>
+                    <td>Returns last block saved to blockchain.</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>/block/<i class="variable">height</i></td>
+                    <td>Returns block at specified <i class="variable">height</i> if it exists.</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="clickable" onclick="goToEndpoint('transactions')">/transactions/</td>
+                    <td>Returns validated and orphaned transactions in node</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>/transactions/<i class="variable">tx_id</i></td>
+                    <td>Returns true/false whether or not the transaction with id <i class="variable">tx_id</i> is saved to the chain</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>/<i class="variable">address</i>/</td>
+                    <td>Returns all utxos saved to the chain for <i class="variable">address</i></td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>/<i class="clickable" onclick="goToEndpoint('node_list')"">node_list</i>/</td>
+                    <td>Returns random list of up to 60 connected nodes</td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>/node/</td>
+                    <td>Used by Node to connect and disconnect to Node network. Receiving Node will validate sending Node through /genesis_block/ endpoint.</td>
+                    <td>POST, DELETE</td>
+                    <td>{"ip":<i class="variable">ip</i>, "port":<i class="variable">port</i>}</td>
+                </tr>
+                <tr>
+                    <td class="clickable" onclick="goToEndpoint('raw_block')">/raw_block/</td>
+                    <td>GET method will return last block saved to chain in raw form. POST will be used to add a new block to the chain.</td>
+                    <td>GET, POST</td>
+                    <td> {"raw_block":<i class="variable">raw_block</i>}</td>
+                </tr>
+                <tr>
+                    <td>/raw_block/<i class="variable">height</i></td>
+                    <td>Will return raw_block at <i class="variable">height</i>, if it exists. </td>
+                    <td>GET</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>/raw_tx/</td>
+                    <td>Used to POST new transactions. Must be sent using raw transaction in appropriate dictionary format. </td>
+                    <td>POST</td>
+                    <td>{"raw_tx":<i class="variable">raw_tx</i>}</td>
+                </tr>
+            </table>
         </div>
 
-        <!--TRANSACTION ENDPOINTS-->
-        <div class="endpoint_box">
-            <h1>TRANSACTION ENDPOINTS</h1>
-            <div class="tx_group">
-                <button class="button" onclick="goToEndpoint('transaction')">Transaction</button>
-            </div>
-        </div>
 
 
 
@@ -81,10 +154,10 @@
     <section class="footer">
         <div class="container">
             <div class="icons">
-                <i class="fa-brands fa-facebook"></i>
-                <i class="fa-brands fa-twitter"></i>
-                <i class="fa-brands fa-instagram"></i>
-                <i class="fa-brands fa-linkedin"></i>
+                <!-- <i class="fa-brands fa-facebook"></i> -->
+                <i class="fa-brands fa-twitter" onclick="openTwitter()"></i>
+                <!-- <i class="fa-brands fa-instagram"></i> -->
+                <!-- <i class="fa-brands fa-linkedin"></i> -->
             </div>
             <p>Made with <i class="fa-solid fa-heart"></i> by Basic Blockchains</p>
             <p>Copyright (c) 2022.</p>
@@ -113,6 +186,11 @@
             }
             address = webAddress + endpoint;
             window.open(address);
+        }
+
+        function openTwitter(){
+            twitterAddress = 'https://twitter.com/BChainBasics'
+            window.open(twitterAddress)
         }
 
 
