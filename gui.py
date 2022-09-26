@@ -9,6 +9,7 @@ import threading
 import time
 from pathlib import Path
 from tkinter import Tk
+import json
 import multiprocessing
 import webbrowser
 import PySimpleGUI as sg
@@ -23,7 +24,7 @@ from wallet import Wallet
 
 # --- CONSTANTS --- #
 DEFAULT_THEME = 'SystemDefault'
-DEFAULT_WINDOW_SIZE = (800, 600)
+DEFAULT_WINDOW_SIZE = (1200, 600)
 
 IMAGE_DIR = './images'
 LOGO_FILE = 'logo_icon.png'
@@ -57,7 +58,14 @@ def create_about_window(theme=DEFAULT_THEME):
     return sg.Window('ABOUT', main_layout, resizable=False, finalize=True)
 
 
-# --- PORT WINDOW --- #
+# --- ADDRESS BOOK WINDOW --- #
+
+
+# --- TARGET CALCULATOR WINDOW --- #
+
+
+# --- CONFIG WINDOW --- #
+# TODO: Add cancel button - or x_out cancels
 def create_config_window(theme=DEFAULT_THEME):
     sg.theme(theme)
     sg.set_global_icon(LOGO_PATH.absolute().as_posix())
@@ -138,37 +146,85 @@ def create_download_window(theme=DEFAULT_THEME):
 
 
 # --- MAIN GUI WINDOW --- #
-def create_window(theme=DEFAULT_THEME):
+def create_window(theme=DEFAULT_THEME, size=DEFAULT_WINDOW_SIZE):
     sg.theme(theme)
     sg.set_global_icon(LOGO_PATH.absolute().as_posix())
     sg.set_options(font='Ubuntu 12')
 
     # -- Right Click Menu --- #
+    # TODO: Change to: 'Copy', 'Paste', '---', 'Select', 'Clear'
     right_click_menu = [
-        ['Right', ['Clear', 'Copy', 'Paste']]
+        ['Right', ['Copy', 'Paste', '---', 'Select', 'Clear']]
     ]
 
     # --- Main Menu --- #
     menu_layout = [
         ['&File',
-         ['&Open Blockchain', 'Open &Wallet', '---', '&Save Blockchain', 'Save Wallet', '---', 'E&xit']],
-        ['&Endpoints',
-         ['height', 'node_list', 'transaction', 'block',
-          ['<height>', 'ids', 'headers',
-           ['<height>']
-           ], 'raw_block',
-          ['<height>'], 'utxo',
-          ['<tx_id>',
-           ['<index>']
-           ]
-          ]
-         ],
+         ['&Open Blockchain', 'Open &Wallet', '---', '&Save Blockchain', 'Sa&ve Wallet', '---', 'E&xit']],
+        ['&Addresses',
+         ['Open Address Book']],
+        ['&Target',
+         ['Target &Calculator']],
         ['&Help', ['Abo&ut BB POW']]
     ]
 
-    # --- Status Tab --- #
+    # --- BLOCKCHAIN TAB --- #
 
-    status_tab_layout = [
+    blockchain_column_1 = [
+        [
+            sg.Push(),
+            sg.Text('Blockchain Stats'),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Text('Height :', justification='right', size=(12, 1)),
+            sg.InputText(key='-height-', disabled=True, use_readonly_for_disable=True, size=(23, 1),
+                         justification='left', border_width=0),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Text('Target :', justification='right', size=(12, 1)),
+            sg.InputText(key='-target-', disabled=True, use_readonly_for_disable=True, size=(23, 1),
+                         justification='left', border_width=0),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Text('Reward :', justification='right', size=(12, 1)),
+            sg.InputText(key='-reward-', disabled=True, use_readonly_for_disable=True, size=(23, 1),
+                         justification='left', border_width=0),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Text('Mine Amount :', justification='right', size=(12, 1)),
+            sg.InputText(key='-mine_amount-', disabled=True, use_readonly_for_disable=True, size=(23, 1),
+                         justification='left', border_width=0),
+            sg.Push()
+        ]
+    ]
+    blockchain_column_2 = [
+        [
+            sg.Push(),
+            sg.Text('LOGS'),
+            sg.Push()
+        ],
+        [
+            sg.Multiline(key='-logs-', pad=10, expand_x=True, expand_y=True, disabled=True, background_color='#FFFFFF',
+                         right_click_menu=right_click_menu[0], autoscroll=True, enable_events=True)
+        ],
+        [
+            sg.Push(),
+            sg.Button('Disable Logging', key='-toggle_logging-'),
+            sg.Button('Clear Logs', key='-clear_logs-'),
+            sg.Button('Save Logs', key='-save_logs-'),
+            sg.Push()
+        ]
+    ]
+
+    blockchain_tab_layout = [
         [
             sg.Push(),
             sg.Text("Welcome to the BB POW!", justification='center', auto_size_text=False, size=(48, 1),
@@ -178,34 +234,98 @@ def create_window(theme=DEFAULT_THEME):
 
         [sg.Push(), sg.Image(LOGO_PATH.absolute().as_posix(), enable_events=True, key='-logo-'), sg.Push()],
         [sg.HorizontalSeparator(pad=10, color='#000000')],
-        [sg.Push(),
-         sg.Text('CURRENT HEIGHT:', justification='right', auto_size_text=False, size=(18, 1)),
-         sg.InputText(key='-height-', disabled=True, use_readonly_for_disable=True, border_width=0, size=(12, 1)),
-         sg.Text('BLOCK ID:', justification='right', auto_size_text=False, size=(12, 1)),
-         sg.InputText(key='-prev_id-', disabled=True, use_readonly_for_disable=True, border_width=0, size=(64, 1)),
-         sg.Push(), ],
-        [sg.HorizontalSeparator(pad=10, color='#000000')],
         [
-            sg.Multiline(key='-logs-', pad=10, expand_x=True, expand_y=True, disabled=True, background_color='#FFFFFF',
-                         right_click_menu=right_click_menu[0], autoscroll=True, enable_events=True)
+            sg.Column(blockchain_column_1, vertical_alignment='top'),
+            sg.Column(blockchain_column_2, expand_x=True, expand_y=True)
+        ]
+
+    ]
+
+    # --- WALLET TAB --- #
+
+    wallet_sub_column_1 = [
+        [
+            sg.Push(),
+            sg.Text('Wallet Info'),
+            sg.Push()
+        ],
+        [sg.Text('Available :', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText('0', key='-available-', size=(40, 1), disabled=True, use_readonly_for_disable=True,
+                      border_width=0)],
+        [sg.Text('Locked :', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText('0', key='-locked-', size=(40, 1), disabled=True, use_readonly_for_disable=True,
+                      border_width=0)],
+        [sg.Text('Balance :', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText('0', key='-balance-', size=(40, 1), disabled=True, use_readonly_for_disable=True,
+                      border_width=0)],
+
+    ]
+    wallet_sub_column_2 = [
+        [
+            sg.Push(),
+            sg.Text('Send Funds'),
+            sg.Push()
+        ],
+        [sg.Text('Send to:', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText(size=(40, 1), justification='right', key='-wallet_sendto-',
+                      right_click_menu=right_click_menu[0])],
+        [sg.Text('Amount:', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText(size=(40, 1), justification='right', key='-wallet_amount-',
+                      right_click_menu=right_click_menu[0])],
+        [sg.Text('Fees:', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText('0', size=(40, 1), justification='right', key='-wallet_fees-',
+                      right_click_menu=right_click_menu[0])],
+        [sg.Text('Block Height:', justification='right', auto_size_text=False, size=(12, 1)),
+         sg.InputText('0', size=(40, 1), justification='right', key='-wallet_block_height-',
+                      right_click_menu=right_click_menu[0])]
+
+    ]
+    wallet_column_1 = [
+        [
+            sg.Push(),
+            sg.Column(wallet_sub_column_1),
+            sg.Push()
         ],
         [
             sg.Push(),
-            sg.Button('Save Logs', size=(10, 2), key='-save_logs-'),
-            sg.Button('Clear Logs', size=(10, 2), key='-clear_logs-'),
+            sg.Column(wallet_sub_column_2),
+            sg.Push()
+        ],
+        [
+            sg.Push(),
+            sg.Button('Send Funds', key='-wallet_send_funds-', size=(20, 3), button_color='#00AA00'),
+            sg.Button('Cancel', key='-wallet_cancel-', size=(20, 3), button_color='#FF0000'),
             sg.Push()
         ]
     ]
 
-    # --- Node Tab --- #
-
-    node_column = [
+    address_table_headers = ['Alias', 'Address']
+    address_table_column_widths = [12, 40]
+    wallet_column_2 = [
         [
-            sg.Text('Web Server:', justification='left', auto_size_text=False, size=(10, 1)),
-            sg.InputText(key='-webserver-', justification='center', disabled=True, use_readonly_for_disable=True,
-                         size=(24, 1), enable_events=True, border_width=0, right_click_menu=right_click_menu[0])
+            sg.Table(values=[], key='-address_table-', background_color='#ffffff', expand_x=True, expand_y=True,
+                     headings=address_table_headers, col_widths=address_table_column_widths, auto_size_columns=False)
+        ]
+    ]
+
+    wallet_tab_layout = [
+        [
+            sg.Push(),
+            sg.Text('ADDRESS :', font='Ubuntu 18', justification='right'),
+            sg.InputText(key='-address-', disabled=True, use_readonly_for_disable=True, size=(40, 2), font='Ubuntu 18',
+                         border_width=0, justification='left'),
+            sg.Push()
         ],
-        [sg.HorizontalSeparator(pad=5, color='#000000')],
+        [sg.HorizontalSeparator(color='#000000')],
+        [
+            sg.Column(wallet_column_1),
+            sg.Column(wallet_column_2, expand_x=True, expand_y=True)
+        ]
+    ]
+
+    # --- NETWORK TAB --- #
+
+    network_column_1 = [
         [sg.Text('NODE IP:', justification='right', auto_size_text=False, size=(16, 1)),
          sg.InputText(key='-node_ip-', justification='left', size=(16, 1), disabled=True,
                       use_readonly_for_disable=True, enable_events=True, border_width=0,
@@ -214,192 +334,62 @@ def create_window(theme=DEFAULT_THEME):
          sg.InputText(key='-node_port-', justification='left', size=(16, 1), disabled=True,
                       use_readonly_for_disable=True, enable_events=True, border_width=0,
                       right_click_menu=right_click_menu[0])],
-        [sg.HorizontalSeparator(pad=5, color='#000000')],
+        [sg.HorizontalSeparator(pad=10, color='#000000')],
+        [
+            sg.Push(),
+            sg.Text('MANUAL CONNECTION'),
+            sg.Push()
+        ],
         [sg.Text('SELECTED IP:', justification='right', auto_size_text=False, size=(16, 1)),
          sg.InputText(justification='left', size=(16, 1), background_color='#FFFFFF', key='-selected_ip-',
                       right_click_menu=right_click_menu[0])],
         [sg.Text('SELECTED PORT:', justification='right', auto_size_text=False, size=(16, 1)),
          sg.InputText(justification='left', size=(16, 1), background_color='#FFFFFF', key='-selected_port-',
                       right_click_menu=right_click_menu[0])],
-        [sg.Push(), sg.Button('PING', size=(10, 2), key='-ping-', tooltip='Ping selected node'),
-         sg.Button('CLEAR', size=(10, 2), key='-clear-'),
-         sg.Push()],
-        [sg.HorizontalSeparator(pad=5, color='#000000')],
+        [sg.HorizontalSeparator(pad=10, color='#000000')],
         [
             sg.Push(),
-            sg.Button('Open WebServer', key='-open_browser-', size=(20, 2)),
-            sg.Push()
-        ]
-
-    ]
-    node_table_headings = ['IP ADDRESS', 'PORT', 'PING (ms)', 'LAST CONTACT']
-    node_table_column_widths = [len(node_heading) + 2 for node_heading in node_table_headings]
-    node_table_column = [
-        [
-            sg.Push(),
-            sg.Text('Node List'),
+            sg.Button('CONNECT TO NETWORK', size=(16, 2), button_color='#00AA00', tooltip='Connect to selected node.',
+                      key='-connect-'),
+            sg.Button('DISCONNECT FROM NETWORK', size=(16, 2), button_color='#FF0000', key='-disconnect-'),
             sg.Push()
         ],
-        [sg.Table(values=[], headings=node_table_headings, expand_y=True, expand_x=True, auto_size_columns=False,
-                  col_widths=node_table_column_widths, key='-node_list_table-', bind_return_key=True)],
-        [sg.Push(),
-         sg.Button('CONNECT', button_color='#00AA00', size=(10, 2), tooltip='Connect to network', key='-connect-'),
-         sg.Button('DISCONNECT', button_color='#FF0000', size=(10, 2), key='-disconnect-',
-                   tooltip='Disconnect from network'), sg.Push()],
+
     ]
-    node_tab_layout = [
-        [sg.Column(node_column, vertical_alignment='center', pad=50, expand_y=True),
-         sg.Column(node_table_column, expand_x=True, expand_y=True)
+
+    node_table_headings = ['IP ADDRESS', 'PORT', 'LAST CONTACT', 'LATENCY']
+
+    network_column_2 = [
+        [
+            sg.Push(),
+            sg.Text('NODE LIST'),
+            sg.Push()
+        ],
+        [
+            sg.Table(values=[], key='-node_list_table-', expand_y=True, expand_x=True, headings=node_table_headings,
+                     enable_events=True, enable_click_events=True, bind_return_key=True)
+        ],
+        [
+            sg.Push(),
+            sg.Button('PING NODE', size=(16, 2), button_color='#564976', key='-ping_node-'),
+            sg.Button('VALIDATE NODE', size=(16, 2), button_color='#564976', key='-validate_node-'),
+            sg.Push()
+        ]
+    ]
+
+    network_tab_layout = [
+        [sg.Column(network_column_1, vertical_alignment='center', pad=50, expand_y=True),
+         sg.Column(network_column_2, expand_x=True, expand_y=True)
          ]
     ]
 
-    # --- Mining Tab --- #
-
-    mining_info_labels = [
-        [sg.Text('Block Target:', justification='right', auto_size_text=False, size=(18, 1))],
-        [sg.Text('Mining Reward:', justification='right', auto_size_text=False, size=(18, 1))],
-        [sg.Text('Mine Amount Left:', justification='right', auto_size_text=False, size=(18, 1))]
-    ]
-    mining_info_values = [
-        [sg.InputText(key='-miner_target-', disabled=True, use_readonly_for_disable=True, size=(64, 1),
-                      justification='left', border_width=0)],
-        [sg.InputText(key='-miner_reward-', disabled=True, use_readonly_for_disable=True, size=(64, 1),
-                      justification='left', border_width=0)],
-        [sg.InputText(key='-total_mining_amount-', disabled=True, use_readonly_for_disable=True, size=(64, 1),
-                      justification='left', border_width=0)]
-
-    ]
-    mining_tx_headers = ['Transaction ID']
-    mining_tx_column_widths = [48]
-    validated_tx_column = [
-        [
-            sg.Push(),
-            sg.Text('Validated Transactions'),
-            sg.Push()
-        ],
-        [
-            sg.Table(key='-validated_tx_table-', headings=mining_tx_headers, auto_size_columns=False,
-                     col_widths=mining_tx_column_widths, values=[], expand_y=True, expand_x=True)
-        ],
-        [
-            sg.Push(),
-            sg.Text('Current Fees:'),
-            sg.InputText(key='-current_fees-', disabled=True, use_readonly_for_disable=True, size=(24, 1)),
-            sg.Push()
-        ],
-        [sg.HorizontalSeparator(color='#000000')],
-        [
-            sg.Push(),
-            sg.Text('Orphaned Transactions'),
-            sg.Push()
-        ],
-        [
-            sg.Table(key='-orphaned_tx_table-', headings=mining_tx_headers, auto_size_columns=False,
-                     col_widths=mining_tx_column_widths, values=[], expand_y=True, expand_x=True)
-        ]
-    ]
-    block_tx_column = [
-        [
-            sg.Push(),
-            sg.Text('Transactions being Mined'),
-            sg.Push()
-        ],
-        [
-            sg.Table(key='-block_tx_table-', headings=mining_tx_headers, auto_size_columns=False,
-                     col_widths=mining_tx_column_widths, values=[], expand_x=True, expand_y=True)
-        ],
-        [
-            sg.Push(),
-            sg.Text('Block Fees:'),
-            sg.InputText(key='-block_fees-', disabled=True, use_readonly_for_disable=True, size=(24, 1)),
-            sg.Push()
-        ]
-    ]
-    # Metadata for buttons used for tracking button presses
-    # Metadata for target = currently_encoded and currently_hex
-    # Metadata for bb2b = currently_bbs, currently_basic
-    mining_tab_layout = [
-        [
-            sg.Push(),
-            sg.Column(mining_info_labels),
-            sg.Column(mining_info_values),
-            sg.Button("Hex Target", size=(10, 3), key='-target_button-', metadata='currently_encoded'),
-            sg.Button("BBs to Basic", size=(10, 3), key='-bb2b_button-', metadata='currently_bbs'),
-            sg.Push()
-        ],
-        [sg.HorizontalSeparator(color='#000000')],
-        [
-            sg.Column(validated_tx_column, expand_y=True, expand_x=True),
-            sg.VerticalSeparator(color='#000000'),
-            sg.Column(block_tx_column, expand_y=True, expand_x=True),
-        ]
-    ]
-
-    # --- Wallet Tab --- #
-
-    funds_column = [
-        [sg.Text('Available:', justification='right', auto_size_text=False, size=(10, 1)),
-         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(20, 1),
-                      key='-wallet_available-', right_click_menu=right_click_menu[0])],
-        [sg.Text('Locked:', justification='right', auto_size_text=False, size=(10, 1)),
-         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(20, 1),
-                      key='-wallet_locked-', right_click_menu=right_click_menu[0])],
-        [sg.Text('Balance:', justification='right', auto_size_text=False, size=(10, 1)),
-         sg.InputText('0', disabled=True, use_readonly_for_disable=True, justification='right', size=(20, 1),
-                      key='-wallet_balance-', right_click_menu=right_click_menu[0])],
-
-    ]
-    send_column = [
-        [sg.Text('Send to:', justification='right', auto_size_text=False, size=(12, 1)),
-         sg.InputText(size=(40, 1), justification='right', key='-wallet_sendto-',
-                      right_click_menu=right_click_menu[0])],
-        [sg.Text('Amount:', justification='right', auto_size_text=False, size=(12, 1)),
-         sg.InputText(size=(40, 1), justification='right', key='-wallet_amount-',
-                      right_click_menu=right_click_menu[0])],
-        [sg.Text('Fees:', justification='right', auto_size_text=False, size=(12, 1)),
-         sg.InputText(size=(40, 1), justification='right', key='-wallet_fees-', right_click_menu=right_click_menu[0])],
-        [sg.Text('Block Height:', justification='right', auto_size_text=False, size=(12, 1)),
-         sg.InputText(size=(40, 1), justification='right', key='-wallet_block_height-',
-                      right_click_menu=right_click_menu[0])]
-
-    ]
-    button_column = [
-        [sg.Button('Send Funds', key='-wallet_send_funds-', size=(20, 3), button_color='#00AA00'), ],
-        [sg.Button('Cancel', key='-wallet_cancel-', size=(20, 1), button_color='#FF0000'), ]
-    ]
-    wallet_utxo_table_headers = ['tx_id', 'tx_index', 'amount', 'block_height']
-    wallet_utxo_column_widths = [len(header) + 2 for header in wallet_utxo_table_headers]
-    wallet_tab_layout = [
-        [
-            sg.Push(),
-            sg.Text('ADDRESS:'),
-            sg.InputText(key='-wallet_address-', disabled=True, use_readonly_for_disable=True, size=(44, 1),
-                         justification='center', border_width=0, right_click_menu=right_click_menu[0]),
-            sg.Push()
-        ],
-        [
-            sg.Push(),
-            sg.Column(funds_column), sg.Column(send_column), sg.Column(button_column),
-            sg.Push()
-        ],
-        # [sg.Push(), sg.Button('Send Funds', key='-wallet_send_funds-'), sg.Push()],
-        [sg.HorizontalSeparator(color='#000000')],
-        [
-            sg.Table(values=[], headings=wallet_utxo_table_headers, auto_size_columns=False,
-                     col_widths=wallet_utxo_column_widths, expand_y=True, expand_x=True, pad=10, key='-utxo_table-'),
-
-        ]
-
-    ]
-
-    # --- Tab Group --- #
+    # --- TAB GROUP --- #
     tab_group = [
         [
             sg.TabGroup(
-                [[sg.Tab('Status', status_tab_layout, key='-status_tab-'),
-                  sg.Tab('Node', node_tab_layout, key='-node_tab-'),
-                  sg.Tab('Miner', mining_tab_layout, key='-miner_tab-'),
-                  sg.Tab('Wallet', wallet_tab_layout, key='-wallet_tab-')
+                [[sg.Tab('Blockchain', blockchain_tab_layout, key='-blockchain_tab-'),
+                  sg.Tab('Wallet', wallet_tab_layout, key='-wallet_tab-'),
+                  sg.Tab('Network', network_tab_layout, key='-node_tab-')
                   ]],
                 tab_location='topleft', border_width=5, expand_x=True, expand_y=True, key='-tab_group-',
                 enable_events=True
@@ -407,9 +397,9 @@ def create_window(theme=DEFAULT_THEME):
         ]
     ]
 
-    # --- Main Layout --- #
+    # --- MAIN LAYOUT --- #
 
-    layout = [
+    main_layout = [
         [sg.Menu(menu_layout)],
         [
             sg.Push(),
@@ -421,8 +411,11 @@ def create_window(theme=DEFAULT_THEME):
             sg.Image(RED_CIRCLE_PATH.absolute().as_posix(), key='-mining_icon-'),
             sg.Push(),
             sg.Button('START MINER', auto_size_button=False, size=(12, 2), key='-start_miner-', button_color='#00AA00'),
-            sg.Button('STOP MINER', auto_size_button=False, size=(12, 2), key='-stop_miner-', button_color='#FF0000',
-                      disabled=True),
+            sg.Button('STOP MINER', auto_size_button=False, size=(12, 2), key='-stop_miner-', button_color='#FF0000'),
+            sg.Button('OPEN WEBSERVER', auto_size_button=False, size=(12, 2), key='-open_browser-',
+                      button_color='#564976'),
+            sg.Button('CONVERT DENOMINATION', auto_size_button=False, size=(12, 2), key='-convert-',
+                      button_color='#564976'),
             sg.Push()
         ],
         [
@@ -435,7 +428,7 @@ def create_window(theme=DEFAULT_THEME):
         ]
     ]
 
-    return sg.Window('BB POW', layout, size=DEFAULT_WINDOW_SIZE, resizable=True, finalize=True)
+    return sg.Window('BB POW', size=size, layout=main_layout, resizable=True, finalize=True)
 
 
 # --- HANDLER FOR LOGGING WINDOW --- #
@@ -455,172 +448,102 @@ class Handler(logging.StreamHandler):
 
 
 def run_node_gui():
-    # Get port first
-    desired_port = Node.DEFAULT_PORT
-    desired_width = 1200
-    desired_height = 800
-    port_confirmed = False
-    size_confirmed = False
-    config_window = create_config_window()
+    '''
+    The GUI will run in stages.
 
-    # Bind enter key in port_window
-    config_window.bind("<Return>", "_Enter")
-    config_window.bind("<KP_Enter>", "_Enter")
+    Stage 1: Open Config Window
+    Stage 2: Create Main Window
+    Stage 3: Initialize Node and API
+    Stage 4: Update initial variables
+    Stage 5: Connect to Network
+    Stage 6: Run GUI
+    '''
 
-    while not port_confirmed and not size_confirmed:
-        config_event, config_values = config_window.read(timeout=10)
+    # Decoder/Formatter
+    d = Decoder()
+    f = Formatter()
 
-        if config_window.is_closed():
-            config_window = create_config_window()
-            config_window.bind("<Return>", "_Enter")
-            config_window.bind("<KP_Enter>", "_Enter")
+    # Timeout Constants
+    PING_TIMEOUT = 300
 
-        if config_event:
-            if config_event in '-confirm_config-':
-                if config_values['-enter_port-'].isnumeric():
-                    temp_desired_port = int(config_values['-enter_port-'])
-                    if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
-                        desired_port = temp_desired_port
-                        port_confirmed = True
-
-                if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
-                    temp_width = int(config_values['-minimum_width-'])
-                    temp_height = int(config_values['-minimum_height-'])
-                    if 200 <= temp_width <= 1200:
-                        desired_width = temp_width
-                    if 200 <= temp_height <= 800:
-                        desired_height = temp_height
-                    size_confirmed = True
-            if config_event == '-accept_defaults-':
-                desired_port = Node.DEFAULT_PORT
-                desired_width = 1200
-                desired_height = 800
-                port_confirmed = True
-                size_confirmed = True
-
-            if config_event == '_Enter':
-                if config_values['-enter_port-'].isnumeric():
-                    temp_desired_port = int(config_values['-enter_port-'])
-                    if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
-                        desired_port = temp_desired_port
-                        port_confirmed = True
-                else:
-                    desired_port = Node.DEFAULT_PORT
-                    port_confirmed = True
-
-                if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
-                    temp_width = int(config_values['-minimum_width-'])
-                    temp_height = int(config_values['-minimum_height-'])
-                    if 200 <= temp_width <= 1200:
-                        desired_width = temp_width
-                    if 200 <= temp_height <= 800:
-                        desired_height = temp_height
-                    size_confirmed = True
-                else:
-                    desired_width = 1200
-                    desired_height = 800
-                    size_confirmed = True
-
-    config_window.close()
-
-    # -- MAIN WINDOW -- #
-
-    # Setup Window
-    window = create_window()
-    window.set_min_size((desired_width, desired_height))
-
-    # # Logger
+    # --- STAGE 0: Configure Logger for GUI use --- #
     gui_logger = logging.getLogger('GUI')
-    gui_logger.setLevel('INFO')
+    gui_logger.setLevel('DEBUG')
     gui_logger.addHandler(Handler())
     gui_logger.propagate = False
     global buffer
 
-    # Start Node
-    gui_logger.info('Starting Node. May take a few minutes')
+    # --- STAGE 1: Open Config Window --- #
+    desired_port = Node.DEFAULT_PORT
+
+    # --- STAGE 2:  Create Main Window--- #
+    window = create_window()
+    window.set_min_size((1084, 600))
+
+    # --- STAGE 3:  Initialize Node and API--- #
     node = Node(port=desired_port, logger=gui_logger)
-
-    # Formatter/Decoder
-    d = Decoder()
-
-    # Run app with waitress
     app_thread = threading.Thread(target=run_app, daemon=True, args=(node,))
     app_thread.start()
 
-    # Connect to network
-    gui_logger.info('Connecting to network.')
-    connecting_thread = threading.Thread(target=node.connect_to_network)
-    connecting_thread.start()
-    download_window = create_download_window()
-    download_window['-current_height-'].update(str(node.height))
-    download_window['-network_height-'].update(str(node.network_height))
-
-    # Update node wallet
-    node.wallet.get_latest_height(node.node)
-    node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
-
-    # Set fixed variables
-    ip = node.ip
-    port = node.assigned_port
-    url = f'http://{ip}:{port}/'
-
-    window['-node_ip-'].update(ip)
-    window['-node_port-'].update(port)
-    window['-webserver-'].update(url)
-    window['-wallet_address-'].update(node.wallet.address)
-
+    # --- STAGE 4: Update initial variables and logs --- #
     # Verify webserver is running
     if app_thread.is_alive():
         window['-server_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
 
-    # Verify connection to network
-    if node.is_connected:
-        window['-network_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
+    # Create initial values
+    # Blockchain
+    window['-height-'].update(str(node.height))
+    window['-target-'].update(f.target_from_int(node.blockchain.target))
+    window['-reward-'].update(str(node.blockchain.mining_reward))
+    window['-mine_amount-'].update(str(node.blockchain.total_mining_amount))
+
+    # Wallet
+    window['-address-'].update(node.wallet.address)
+
+    # Node
+    window['-node_ip-'].update(node.ip)
+    window['-node_port-'].update(str(node.assigned_port))
+
+    # --- STAGE 5: Connect to Network --- #
+    node.connect_to_network()
+
+    # connecting_thread = threading.Thread(target=node.connect_to_network)
+    # connecting_thread.start()
+
+    # --- STAGE 6: Run GUI --- #
 
     # Bind Keys
-    window['-node_list_table-'].bind("<Return>", "_Enter")
-    window['-node_list_table-'].bind("<KP_Enter>", "_Enter")
-    window['-wallet_amount-'].bind("<Return>", "_Enter")
-    window['-wallet_amount-'].bind("<KP_Enter>", "_Enter")
-    window['-wallet_sendto-'].bind("<Return>", "_Enter")
-    window['-wallet_sendto-'].bind("<KP_Enter>", "_Enter")
-    window['-wallet_fees-'].bind("<Return>", "_Enter")
-    window['-wallet_fees-'].bind("<KP_Enter>", "_Enter")
-
-    # Bind Mouse Clicks
     window.bind("<Button-1>", "-left_click-")
+    window.bind("<Double-Button-1>", "-double_click-")
     window.bind("<Button-3>", "-right_click-")
 
-    # GUI keys which allow paste function
-    needs_paste_keys = [
-        '-selected_ip',
-        '-selected_port',
-        '-wallet_sendto-',
-        '-wallet_amount-',
-        '-wallet_fees-',
-        '-wallet_block_height-',
-
-    ]
-
-    # Set variables for loop
-    height = -1
-    prev_id = 'prev_id'
+    # Icon variables
     mining = node.is_mining
-    connected = node.is_connected
-    node_list = []
-    ping_list = []
-    contact_dict = {}
+    connected = False
+
+    # Blockchain tab variables
+    height = -1
     target = ''
     reward = -1
     total_mine_amount = -1
+
+    # Wallet tab variables
+    available_funds = -1
+    block_locked = -1
+    balance = -1
+
+    # --- CONSTRUCTION --- #
+
+    node_list = []
+    ping_list = []
+    contact_dict = {}
+
     validated_tx_list = None
     block_tx_list = None
     orphaned_tx_list = None
 
     # Wallet
-    available_funds = -1
-    block_locked = -1
-    balance = -1
+
     utxo_list = []
 
     # Download
@@ -628,75 +551,168 @@ def run_node_gui():
     network_height = -1
     percent_complete = -1
 
-    # Logstring for log window
+    # --- CONSTRUCTION --- #
+
+    # Logs
     log_string = ''
+    logs_enabled = True
 
-    # Download blocks
-    while connecting_thread.is_alive():
+    # Denomination
+    use_subunit = True
 
-        dl_event, dl_values = download_window.read(timeout=100)
-        if download_window.is_closed():
-            download_window = create_download_window()
-            network_height = -1
+    # Get port first
+    # port_confirmed = False
+    # size_confirmed = False
+    # config_window = create_config_window()
+    #
+    # # Bind enter key in port_window
+    # config_window.bind("<Return>", "_Enter")
+    # config_window.bind("<KP_Enter>", "_Enter")
+    #
+    # while not port_confirmed and not size_confirmed:
+    #     config_event, config_values = config_window.read(timeout=10)
+    #
+    #     if config_window.is_closed():
+    #         config_window = create_config_window()
+    #         config_window.bind("<Return>", "_Enter")
+    #         config_window.bind("<KP_Enter>", "_Enter")
+    #
+    #     if config_event:
+    #         if config_event in '-confirm_config-':
+    #             if config_values['-enter_port-'].isnumeric():
+    #                 temp_desired_port = int(config_values['-enter_port-'])
+    #                 if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
+    #                     desired_port = temp_desired_port
+    #                     port_confirmed = True
+    #
+    #             if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
+    #                 temp_width = int(config_values['-minimum_width-'])
+    #                 temp_height = int(config_values['-minimum_height-'])
+    #                 if 200 <= temp_width <= 1200:
+    #                     desired_width = temp_width
+    #                 if 200 <= temp_height <= 800:
+    #                     desired_height = temp_height
+    #                 size_confirmed = True
+    #         if config_event == '-accept_defaults-':
+    #             desired_port = Node.DEFAULT_PORT
+    #             desired_width = 1200
+    #             desired_height = 800
+    #             port_confirmed = True
+    #             size_confirmed = True
+    #
+    #         if config_event == '_Enter':
+    #             if config_values['-enter_port-'].isnumeric():
+    #                 temp_desired_port = int(config_values['-enter_port-'])
+    #                 if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
+    #                     desired_port = temp_desired_port
+    #                     port_confirmed = True
+    #             else:
+    #                 desired_port = Node.DEFAULT_PORT
+    #                 port_confirmed = True
+    #
+    #             if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
+    #                 temp_width = int(config_values['-minimum_width-'])
+    #                 temp_height = int(config_values['-minimum_height-'])
+    #                 if 200 <= temp_width <= 1200:
+    #                     desired_width = temp_width
+    #                 if 200 <= temp_height <= 800:
+    #                     desired_height = temp_height
+    #                 size_confirmed = True
+    #             else:
+    #                 desired_width = 1200
+    #                 desired_height = 800
+    #                 size_confirmed = True
+    #
+    # config_window.close()
 
-        if current_height != node.height:
-            current_height = node.height
-            download_window['-current_height-'].update(str(current_height))
+    # -- MAIN WINDOW -- #
 
-        if network_height != node.network_height:
-            network_height = node.network_height
-            download_window['-network_height-'].update(str(network_height))
+    # Setup Window
 
-        if percent_complete != node.percent_complete:
-            percent_complete = node.percent_complete
-            download_window['-pct_complete-'].update(percent_complete)
+    # # Connect to network
+    # gui_logger.info('Connecting to network.')
+    # connecting_thread = threading.Thread(target=node.connect_to_network)
+    # connecting_thread.start()
+    # download_window = create_download_window()
+    # download_window['-current_height-'].update(str(node.height))
+    # download_window['-network_height-'].update(str(node.network_height))
 
-        # Update logs
-        if log_string != buffer:
-            log_string = buffer
-            window['-logs-'].update(buffer)
+    # # Update node wallet
+    # node.wallet.get_latest_height(node.node)
+    # node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
 
-    download_window.close()
+    # Set fixed variables
+    # ip = node.ip
+    # port = node.assigned_port
+    # url = f'http://{ip}:{port}/'
+
+    # window['-node_ip-'].update(ip)
+    # window['-node_port-'].update(port)
+    # window['-webserver-'].update(url)
+    # window['-wallet_address-'].update(node.wallet.address)
+
+    # Bind Keys
+    # window['-node_list_table-'].bind("<Return>", "_Enter")
+    # window['-node_list_table-'].bind("<KP_Enter>", "_Enter")
+    # window['-wallet_amount-'].bind("<Return>", "_Enter")
+    # window['-wallet_amount-'].bind("<KP_Enter>", "_Enter")
+    # window['-wallet_sendto-'].bind("<Return>", "_Enter")
+    # window['-wallet_sendto-'].bind("<KP_Enter>", "_Enter")
+    # window['-wallet_fees-'].bind("<Return>", "_Enter")
+    # window['-wallet_fees-'].bind("<KP_Enter>", "_Enter")
+
+    # Bind Mouse Clicks
+
+    # GUI keys which allow paste function
+    # needs_paste_keys = [
+    #     '-selected_ip',
+    #     '-selected_port',
+    #     '-wallet_sendto-',
+    #     '-wallet_amount-',
+    #     '-wallet_fees-',
+    #     '-wallet_block_height-',
+    #
+    # ]
+
+    # # Download blocks
+    # while connecting_thread.is_alive():
+    #
+    #     dl_event, dl_values = download_window.read(timeout=100)
+    #     if download_window.is_closed():
+    #         download_window = create_download_window()
+    #         network_height = -1
+    #
+    #     if current_height != node.height:
+    #         current_height = node.height
+    #         download_window['-current_height-'].update(str(current_height))
+    #
+    #     if network_height != node.network_height:
+    #         network_height = node.network_height
+    #         download_window['-network_height-'].update(str(network_height))
+    #
+    #     if percent_complete != node.percent_complete:
+    #         percent_complete = node.percent_complete
+    #         download_window['-pct_complete-'].update(percent_complete)
+    #
+    #     # Update logs
+    #     if log_string != buffer:
+    #         log_string = buffer
+    #         window['-logs-'].update(buffer)
+    #
+    # download_window.close()
 
     # GUI LOOP
     while True:
         event, values = window.read(timeout=10)
 
-        # Exit conditions
+        # --- EXIT CONDITIONS --- #
         if event in [sg.WIN_CLOSED, 'Exit']:
             break
 
-        # Update logs
-        if log_string != buffer:
-            log_string = buffer
-            window['-logs-'].update(buffer)
-
-        # Save logs
-        if event == '-save_logs-':
-            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True,
-                                          initial_folder=node.dir_path,
-                                          file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
-            if file_path:
-                dir_path, file_name = os.path.split(file_path)
-                if file_name.endswith('.txt'):
-                    with open(file_path, 'w') as f:
-                        f.write(buffer)
-                else:
-                    gui_logger.warning('Logs must have .txt extension.')
-
-        # Clear Logs
-        if event == '-clear_logs-':
-            buffer = ''
-
-        # Tab Groups
-        if event == '-tab_group-' and values[event] == '-status_tab-':
-            window['-height-'].Widget.select_clear()
-        if event == '-tab_group-' and values[event] == '-node_tab-':
-            window['-webserver-'].Widget.select_clear()
-        if event == '-tab_group-' and values[event] == '-miner_tab-':
-            window['-miner_target-'].Widget.select_clear()
-        if event == '-tab_group-' and values[event] == '-wallet_tab-':
-            window['-wallet_address-'].Widget.select_clear()
+        # --- DELECT ELEMENTS WHEN OPENING NEW TAB --- #
+        if event == '-tab_group-' and values[event] == '-blockchain_tab-': window['-height-'].Widget.select_clear()
+        if event == '-tab_group-' and values[event] == '-wallet_tab-': window['-address-'].Widget.select_clear()
+        if event == '-tab_group-' and values[event] == '-node_tab-': window['-node_ip-'].Widget.select_clear()
 
         # --- SAVE/LOAD --- #
         # Load Blockchain
@@ -709,7 +725,7 @@ def run_node_gui():
                 dir_path, file_name = os.path.split(file_path)
                 if '.db' in file_name:
                     try:
-                        node.blockchain = Blockchain(dir_path, file_name)
+                        node.blockchain = Blockchain(dir_path, file_name, logger=gui_logger)
                         node.dir_path = dir_path
                         node.db_file = file_name
                     except Exception as e:
@@ -718,7 +734,6 @@ def run_node_gui():
                 else:
                     # Logging
                     gui_logger.warning('Select a database file')
-
         # Load Wallet
         if event == 'Open Wallet':
             file_path = sg.popup_get_file('Load Wallet', no_window=True,
@@ -730,7 +745,7 @@ def run_node_gui():
                 if '.dat' in file_name:
                     try:
                         node.wallet = Wallet(dir_path=dir_path, file_name=file_name, logger=gui_logger)
-                        window['-wallet_address-'].update(node.wallet.address)
+                        window['-address-'].update(node.wallet.address)
                         # Update node wallet
                         node.wallet.get_latest_height(node.node)
                         node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
@@ -740,7 +755,6 @@ def run_node_gui():
                 else:
                     # Logging
                     gui_logger.warning('Select a wallet file')
-
         # Save Blockchain
         if event == 'Save Blockchain':
             file_path = sg.popup_get_file('Save Blockchain', no_window=True, save_as=True,
@@ -757,7 +771,7 @@ def run_node_gui():
                         # Delete file if it already exists - will overwrite
                         Path(dir_path, file_name).unlink(missing_ok=True)
 
-                        new_chain = Blockchain(dir_path, file_name)
+                        new_chain = Blockchain(dir_path, file_name, logger=gui_logger)
                         for x in range(1, node.height + 1):
                             new_chain.add_block(d.raw_block(
                                 db.get_raw_block(x)['raw_block']
@@ -771,7 +785,6 @@ def run_node_gui():
                 else:
                     # Logging
                     gui_logger.warning('Database file must have .db extension.')
-
         # Save Wallet
         if event == 'Save Wallet':
             file_path = sg.popup_get_file('Save Wallet', no_window=True, save_as=True,
@@ -792,24 +805,72 @@ def run_node_gui():
                     # Logging
                     gui_logger.warning('Wallet file must have .dat extension.')
 
-        # --- INFO BAR --- #
+        # --- ICONS --- #
+        # Server Icon
+        if not app_thread.is_alive():
+            window['-server_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
+            gui_logger.critical('Webserver thread failed. Stopping GUI')
+            window['-logs-'].update(buffer)
+            break
+        # Network Icon
+        if connected != node.is_connected:
+            connected = node.is_connected
+            if connected:
+                window['-network_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
+            else:
+                window['-network_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
         # Mining Icon
         if mining != node.is_mining:
             mining = node.is_mining
             if mining:
                 window['-mining_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
-                window['-start_miner-'].update(disabled=True)
-                window['-stop_miner-'].update(disabled=False)
             else:
                 window['-mining_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
-                window['-start_miner-'].update(disabled=False)
-                window['-stop_miner-'].update(disabled=True)
 
-        # If Server fails
-        if not app_thread.is_alive():
-            window['-server_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
+        # --- LOGS --- #
+        # Update Logs
+        if log_string != buffer and logs_enabled:
+            log_string = buffer
+            window['-logs-'].update(buffer)
+        # Disable Logging
+        if event == '-toggle_logging-':
+            if logs_enabled:
+                window['-toggle_logging-'].update(text='Enable Logging')
+                gui_logger.disabled = True
+            else:
+                window['-toggle_logging-'].update(text='Disable Logging')
+                gui_logger.disabled = False
+            logs_enabled = not logs_enabled
+        # Clear logs
+        if event == '-clear_logs-':
+            buffer = ''
+            window['-logs-'].update(buffer)
+        # Save Logs
+        if event == '-save_logs-':
+            file_path = sg.popup_get_file('Save Logs', no_window=True, default_extension='.txt', save_as=True,
+                                          initial_folder=node.dir_path,
+                                          file_types=(('Text Files', '*.txt'), ('All Files', '*.*')))
+            if file_path:
+                dir_path, file_name = os.path.split(file_path)
+                if file_name.endswith('.txt'):
+                    with open(file_path, 'w') as f:
+                        f.write(buffer)
+                else:
+                    gui_logger.warning('Logs must have .txt extension.')
 
-        # Height
+        # --- MINING --- #
+        if event == '-start_miner-': node.start_miner()
+        if event == '-stop_miner-': node.stop_miner()
+
+        # --- WEBSERVER BUTTON --- #
+        if event == '-open_browser-': webbrowser.open(f"http://{node.ip}:{node.assigned_port}", new=2)
+
+        # --- CONVERT DENOMINATION --- #
+        if event == '-convert-':
+            use_subunit = not use_subunit
+            print(f'USE SUBUNIT: {use_subunit}')
+
+        # --- UPDATE BLOCKCHAIN FIELDS --- #
         if height != node.height:
             height = node.height
             window['-height-'].update(str(height))
@@ -817,268 +878,37 @@ def run_node_gui():
             node.wallet.get_latest_height(node.node)
             node.wallet.update_utxo_df(node.wallet.get_utxos_from_node(node.node))
             node.wallet.update_utxos_from_pending_transactions()
-
-        # Prev_id
-        if prev_id != node.last_block.id:
-            prev_id = node.last_block.id
-            window['-prev_id-'].update(prev_id)
-
-        # --- NODE TAB --- #
-        # Connect
-        if event == '-connect-' and not connected:
-            # Get ip and port values
-            temp_ip = values['-selected_ip-']
-            temp_port = values['-selected_port-']
-
-            # Create node for connecting
-            if temp_ip and temp_port and temp_port.isnumeric():
-                temp_node = (temp_ip, int(temp_port))
-            else:
-                temp_node = node.LEGACY_NODE
-
-            # Create connecting thread
-            download_window = create_download_window()
-            connecting_thread = threading.Thread(target=node.connect_to_network, args=(temp_node,))
-            connecting_thread.start()
-
-            # Download blocks
-            while connecting_thread.is_alive():
-
-                dl_event, dl_values = download_window.read(timeout=100)
-                if download_window.is_closed():
-                    download_window = create_download_window()
-                    network_height = -1
-
-                if current_height != node.height:
-                    current_height = node.height
-                    download_window['-current_height-'].update(str(current_height))
-
-                if network_height != node.network_height:
-                    network_height = node.network_height
-                    download_window['-network_height-'].update(str(network_height))
-
-                if percent_complete != node.percent_complete:
-                    percent_complete = node.percent_complete
-                    download_window['-pct_complete-'].update(percent_complete)
-
-                # Update logs
-                if log_string != buffer:
-                    log_string = buffer
-                    window['-logs-'].update(buffer)
-
-            download_window.close()
-
-        # Disconnect
-        if event == '-disconnect-' and connected:
-            node.disconnect_from_network()
-            window['-node_list_table-'].update(values=[])
-            ping_list = []
-
-        # Connected Icon
-        if connected != node.is_connected:
-            connected = node.is_connected
-            if connected:
-                window['-network_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
-            else:
-                window['-network_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
-
-        # Node List Table
-        if node_list != node.node_list:
-            # Remove Stale Pings
-            ping_list_index = ping_list.copy()
-            for t in ping_list_index:
-                t_ip, t_port, _, _ = t
-                if (t_ip, t_port) not in node.node_list:
-                    ping_list.remove(t)
-
-            # Ping new nodes if connected
-            if connected:
-                new_nodes = [n for n in node.node_list if n not in node_list]
-                for n in new_nodes:
-                    start_time = time.time()
-                    pinged = node.ping_node(n)
-                    if pinged:
-                        ping_time = int((time.time() - start_time) * 1000)
-                        contact_dict.update({n: utc_to_seconds()})
-                        ping_list.append(n + (str(ping_time), seconds_to_utc(contact_dict[n])))
-
-            node_list = node.node_list.copy()
-            window['-node_list_table-'].update(values=ping_list)
-
-        if event == '-node_list_table-' or event == '-node_list_table-' + '_Enter':
-            try:
-                selected_index = values['-node_list_table-'][0]
-                temp_ip, temp_port = node.node_list[selected_index]
-                window['-selected_ip-'].update(temp_ip)
-                window['-selected_port-'].update(str(temp_port))
-            except IndexError:
-                pass
-
-        if event == '-ping-':
-            ip = values['-selected_ip-']
-            port = values['-selected_port-']
-            if ip and port and port.isnumeric():
-                port = int(port)
-                try:
-                    pt = [pt for pt in ping_list if pt[0] == ip and pt[1] == port][0]
-                    start_time = time.time()
-                    pinged = node.ping_node((ip, port))
-                    if pinged:
-                        ping_time = int((time.time() - start_time) * 1000)
-                        contact_dict.update({(ip, port): utc_to_seconds()})
-                        ping_list.remove(pt)
-                        ping_list.append((ip, port, str(ping_time), seconds_to_utc(contact_dict[(ip, port)])))
-                        window['-node_list_table-'].update(ping_list)
-                except IndexError:
-                    # Logging
-                    gui_logger.error(f'No node in list with ip {ip} and port {port}')
-
-        if event == '-clear-':
-            window['-selected_ip-'].update('')
-            window['-selected_port-'].update('')
-
-        if event == 'Copy':
-            element = window.FindElementWithFocus()
-            if element:
-                window_key = element.Key
-                copy_text = None
-                try:
-                    copy_text = window[window_key].Widget.selection_get()
-                except _tkinter.TclError:
-                    pass
-                if copy_text:
-                    cb = Tk()
-                    cb.clipboard_clear()
-                    cb.clipboard_append(copy_text)
-                    cb.update()
-                    cb.destroy()
-
-        if event == 'Paste':
-            element = window.FindElementWithFocus()
-            if element:
-                window_key = element.Key
-                if window_key in needs_paste_keys:
-                    cb = Tk()
-                    paste_text = cb.clipboard_get()
-                    cb.update()
-                    cb.destroy()
-                    try:
-                        window[window_key].update(paste_text)
-                    except Exception as e:
-                        # Logging
-                        gui_logger.error(f'Encountered exception when copying: {e}')
-
-        if event == 'Clear':
-            element = window.FindElementWithFocus()
-            if element:
-                window_key = element.Key
-                selected_text = None
-                try:
-                    selected_text = window[window_key].Widget.selection_get()
-                except _tkinter.TclError:
-                    pass
-                if selected_text:
-                    window[window_key].Widget.selection_clear()
-                    if window_key in [
-                        '-selected_ip-', '-selected_port-',
-                        '-wallet_sendto-', '-wallet_amount-', '-wallet_fees-'
-                    ]:
-                        temp_text = values[window_key]
-                        updated_text = temp_text.replace(selected_text, '')
-                        window[window_key].update(updated_text)
-
-        # --- MINER TAB --- #
-
-        # Stop/Start Miner
-        if event == '-start_miner-':
-            node.start_miner()
-        if event == '-stop_miner-':
-            node.stop_miner()
-
-        # Miner values
-        if event == '-target_button-':
-            if window['-target_button-'].metadata == 'currently_encoded':
-                window['-target_button-'].update("Encode Target")
-                window['-target_button-'].metadata = 'currently_hex'
-            else:
-                window['-target_button-'].update("Hex Target")
-                window['-target_button-'].metadata = 'currently_encoded'
-        if event == '-bb2b_button-':
-            if window['-bb2b_button-'].metadata == 'currently_bbs':
-                window['-bb2b_button-'].update("Basic to BBs")
-                window['-bb2b_button-'].metadata = 'currently_basic'
-            else:
-                window['-bb2b_button-'].update("BBs to Basic")
-                window['-bb2b_button-'].metadata = 'currently_bbs'
-
-        if target != node.f.target_from_int(node.target) and window['-target_button-'].metadata == 'currently_encoded':
-            target = node.f.target_from_int(node.target)
-            window['-miner_target-'].update(target)
-        if target != hex(node.target) and window['-target_button-'].metadata == 'currently_hex':
-            target = hex(node.target)
-            window['-miner_target-'].update(target)
-        if reward != node.mining_reward and window['-bb2b_button-'].metadata == 'currently_bbs':
+        if target != f.target_from_int(node.target):
+            target = f.target_from_int(node.target)
+            window['-target-'].update(target)
+        if reward != node.mining_reward:
             reward = node.mining_reward
-            window['-miner_reward-'].update(str(reward) + " BBs")
-        if reward != node.mining_reward // node.f.BASIC_TO_BBS and window[
-            '-bb2b_button-'].metadata == 'currently_basic':
-            reward = node.mining_reward // node.f.BASIC_TO_BBS
-            window['-miner_reward-'].update(str(reward) + " BasiCoins")
-        if total_mine_amount != node.total_mining_amount and window['-bb2b_button-'].metadata == 'currently_bbs':
+            window['-reward-'].update(str(reward) + ' BBs')
+        if total_mine_amount != node.total_mining_amount:
             total_mine_amount = node.total_mining_amount
-            window['-total_mining_amount-'].update(str(total_mine_amount) + " BBs")
-        if total_mine_amount != node.total_mining_amount // node.f.BASIC_TO_BBS and window[
-            '-bb2b_button-'].metadata == 'currently_basic':
-            total_mine_amount = node.total_mining_amount // node.f.BASIC_TO_BBS
-            window['-total_mining_amount-'].update(str(total_mine_amount) + " BasiCoins")
+            window['-mine_amount-'].update(str(total_mine_amount) + ' BBs')
 
-        # TX tables
-        if validated_tx_list != node.validated_transactions:
-            validated_tx_list = node.validated_transactions.copy()
-            temp_list = []
-            temp_fees = 0
-            for tx in validated_tx_list:
-                temp_fees += node.get_fees(tx)
-                temp_list.append(tx.id)
-            window['-validated_tx_table-'].update(values=temp_list)
-            window['-current_fees-'].update(str(temp_fees))
-        if block_tx_list != node.block_transactions:
-            block_tx_list = node.block_transactions.copy()
-            temp_list = []
-            temp_fees = 0
-            for tx in block_tx_list:
-                temp_fees += node.get_fees(tx)
-                temp_list.append(tx.id)
-            window['-block_tx_table-'].update(values=temp_list)
-            window['-block_fees-'].update(str(temp_fees))
-        if orphaned_tx_list != node.orphaned_transactions:
-            orphaned_tx_list = node.orphaned_transactions.copy()
-            temp_list = []
-            for tx in orphaned_tx_list:
-                temp_list.append(tx.id)
-            window['-orphaned_tx_table-'].update(values=temp_list)
-
-        # --- WALLET TAB --- #
-        # Update Wallet Balance
+        # --- UPDATE WALLET FIELDS --- #
         if available_funds != node.wallet.spendable:
             available_funds = node.wallet.spendable
-            window['-wallet_available-'].update(str(available_funds))
+            window['-available-'].update(str(available_funds) + ' BBs')
         if block_locked != node.wallet.block_locked:
             block_locked = node.wallet.block_locked
-            window['-wallet_locked-'].update(str(block_locked))
+            window['-locked-'].update(str(block_locked) + ' BBs')
         if balance != node.wallet.balance:
             balance = node.wallet.balance
-            window['-wallet_balance-'].update(str(balance))
-        if utxo_list != node.wallet.utxo_list:
-            utxo_list = node.wallet.utxo_list
-            window['-utxo_table-'].update(values=utxo_list)
+            window['-balance-'].update(str(balance) + ' BBs')
+
+        # --- SEND FUNDS --- #
 
         # Send Funds
         if event == '-wallet_sendto-' + '_Enter':
             window['-wallet_amount-'].Widget.focus_force()
         if event == '-wallet_amount-' + '_Enter':
             window['-wallet_fees-'].Widget.focus_force()
-        if event in ['-wallet_send_funds-', '-wallet_fees' + '_Enter']:
+        if event == '-wallet_fees-' + '_Enter':
+            window['-wallet_block_height-'].Widget.focus_force()
+        if event in ['-wallet_send_funds-', '-wallet_block_height' + '_Enter']:
             # Get Values
             sendto_address = values['-wallet_sendto-']
             string_amount = values['-wallet_amount-']
@@ -1086,9 +916,12 @@ def run_node_gui():
             string_block_height = values['-wallet_block_height-']
 
             # Verify numeric values
-            if string_amount.isnumeric() and string_fees.isnumeric():
+            if string_amount.isnumeric():
                 amount = int(string_amount)
-                fees = int(string_fees)
+                if string_fees.isnumeric():
+                    fees = int(string_fees)
+                else:
+                    fees = 0
                 if string_block_height.isnumeric():
                     block_height = int(string_block_height)
                 else:
@@ -1100,9 +933,6 @@ def run_node_gui():
                 elif amount > node.wallet.spendable:
                     # Logging
                     gui_logger.warning(f'Insufficient balance. Available funds: {node.wallet.spendable}.\n')
-                elif fees <= 0:
-                    # Logging
-                    gui_logger.warning('Cannot have zero fee amount.\n')
                 else:
                     new_tx = node.wallet.create_transaction(sendto_address, amount, fees, block_height)
                     # Logging
@@ -1117,36 +947,256 @@ def run_node_gui():
                         gui_logger.error('Error creating transaction.')
                     window['-wallet_sendto-'].update('')
                     window['-wallet_amount-'].update('')
-                    window['-wallet_fees-'].update('')
-                    window['-wallet_block_height-'].update('')
+                    window['-wallet_fees-'].update('0')
+                    window['-wallet_block_height-'].update('0')
             else:
                 # Logging
-                gui_logger.warning('Enter a valid amount and/or fees.')
+                gui_logger.warning('Enter a valid amount.')
+
+        # Cancel Transaction
         if event == '-wallet_cancel-':
             window['-wallet_sendto-'].update('')
             window['-wallet_amount-'].update('')
-            window['-wallet_fees-'].update('')
-            window['-wallet_block_height-'].update('')
+            window['-wallet_fees-'].update('0')
+            window['-wallet_block_height-'].update('0')
 
-        # About
-        if event == 'About BB POW':
-            create_about_window()
+        # --- UPDATE NODE LIST --- #
 
-        # Save/clear logs
-        if height % (Formatter.HEARTBEAT * 24) == 0 and height > 0:
-            # Save logs
-            log_file = f'logs_block{height - Formatter.HEARTBEAT * 24}--{height}.txt'
+        if node_list != node.node_list:
+            # Get current nodes in node_list
+            current_nodes = node_list.copy()
 
-            if not Path(node.dir_path, log_file).exists():
-                with open(Path(node.dir_path, log_file).absolute().as_posix(), 'w') as file:
-                    file.write(buffer)
+            # Update node list
+            node_list = node.node_list.copy()
 
-                # Clear logs
-                buffer = ''
+            # Remove Stale Pings
+            ping_list_index = ping_list.copy()
+            for t in ping_list_index:
+                t_ip, t_port, _, _ = t
+                if (t_ip, t_port) not in node_list:
+                    ping_list.remove(t)
 
-        # Open webserver
-        if event == '-open_browser-':
-            webbrowser.open(f"http://{node.ip}:{node.assigned_port}", new=2)
+            # Ping new nodes if connected
+            new_nodes = [n for n in node_list if n not in current_nodes]
+            if connected:
+                for n in new_nodes:
+                    start_time = time.time()
+                    ping = node.ping_node(n)
+                    if ping:
+                        ping_time = int((time.time() - start_time) * 1000)
+                        contact_dict.update({n: utc_to_seconds()})
+                        ping_list.append(n + (seconds_to_utc(contact_dict[n]), ping_time))
+            window['-node_list_table-'].update(values=ping_list)
+
+        # --- SELECT NODE IN TABLE --- #
+        if event == '-double_click-':
+            try:
+                node_index = values['-node_list_table-'][0]
+                t_ip, t_port, _, _ = ping_list[node_index]
+                window['-selected_ip-'].update(t_ip)
+                window['-selected_port-'].update(t_port)
+            except IndexError:
+                # Logging
+                gui_logger.debug('Node list table event with no node selected in table.')
+
+        # --- PING/VALIDATE NODE --- #
+
+        if event in ['-ping_node-', '-validate_node-']:
+            # Get node from table or manual entry
+            try:
+                node_index = values['-node_list_table-'][0]
+                ip, port, _, _ = ping_list[node_index]
+            except IndexError:
+                # Logging
+                gui_logger.warning('Ping node event with no node selected in table. Trying manual values.')
+                ip = values['-selected_ip-']
+                port = values['-selected_port-']
+                if port.isnumeric():
+                    port = int(port)
+
+            if event == '-ping_node-':
+                try:
+                    pt = [pt for pt in ping_list if pt[0] == ip and pt[1] == port][0]
+                    start_time = time.time()
+                    pinged = node.ping_node((ip, port))
+                    if pinged:
+                        ping_time = int((time.time() - start_time) * 1000)
+                        contact_dict.update({(ip, port): utc_to_seconds()})
+                        ping_list.remove(pt)
+                        ping_list.append(
+                            (ip, port, seconds_to_utc(contact_dict[(ip, port)]), str(ping_time))
+                        )
+                        window['-node_list_table-'].update(ping_list)
+                        # Logging
+                        gui_logger.info(f'Ping to {(ip, port)} successful.')
+                except IndexError:
+                    # Logging
+                    gui_logger.error(f'No node in list with ip {ip} and port {port}')
+            else:
+                validated = node.check_genesis((ip, port))
+                if validated:
+                    # Logging
+                    gui_logger.info(f'Successfully validated node {(ip, port)}.')
+                else:
+                    # Logging
+                    gui_logger.error(f'Unable to validate {(ip, port)}. Removing from node list.')
+                    try:
+                        node.node_list.remove((ip, port))
+                    except ValueError:
+                        # Logging
+                        gui_logger.error(f'Unable to find {(ip, port)} in node list.')
+
+        # --- CONNECT / DISCONNECT --- #
+        if event == '-connect-' and not connected:
+            # Get ip and port values
+            temp_ip = values['-selected_ip-']
+            temp_port = values['-selected_port-']
+
+            # Create node for connecting
+            if temp_ip and temp_port and temp_port.isnumeric():
+                temp_node = (temp_ip, int(temp_port))
+            else:
+                temp_node = node.LEGACY_NODE
+            node.connect_to_network(temp_node)
+            #     # Create connecting thread
+            #     download_window = create_download_window()
+            #     connecting_thread = threading.Thread(target=node.connect_to_network, args=(temp_node,))
+            #     connecting_thread.start()
+        if event == '-disconnect-':
+            node.disconnect_from_network()
+            window['-node_list_table-'].update(values=[])
+            ping_list = []
+
+        # --- AUTOMATICALLY PRUNE OLD NODES --- #
+
+        now = utc_to_seconds()
+        for node_key in contact_dict.keys():
+            last_contact = contact_dict[node_key]
+            # TODO: Make below into function - using it twice in the GUI loop
+            if now - last_contact > PING_TIMEOUT:
+                start_time = time.time()
+                ping = node.ping_node(node_key)
+                if ping:
+                    # Update ping list
+                    ping_time = int((time.time() - start_time) * 1000)
+                    contact_dict.update({node_key: utc_to_seconds()})
+                    ping_tuple = [(v1, v2, v3, v4) for (v1, v2, v3, v4) in ping_list if (v1, v2) == node_key][0]
+                    ping_list.remove(ping_tuple)
+                    ping_list.append(node_key + (seconds_to_utc(contact_dict[node_key]), ping_time))
+                    window['-node_list_table-'].update(values=ping_list)
+                else:
+                    # Logging - Remove stale node from node list
+                    gui_logger.warning(
+                        f'Did not ping {node_key} successfully after {PING_TIMEOUT} seconds. Removing from node list.')
+                    try:
+                        node.node_list.remove(node_key)
+                    except ValueError:
+                        # Logging
+                        gui_logger.error(f'{node_key} not found in node list')
+
+        #
+        #     # Download blocks
+        #     while connecting_thread.is_alive():
+        #
+        #         dl_event, dl_values = download_window.read(timeout=100)
+        #         if download_window.is_closed():
+        #             download_window = create_download_window()
+        #             network_height = -1
+        #
+        #         if current_height != node.height:
+        #             current_height = node.height
+        #             download_window['-current_height-'].update(str(current_height))
+        #
+        #         if network_height != node.network_height:
+        #             network_height = node.network_height
+        #             download_window['-network_height-'].update(str(network_height))
+        #
+        #         if percent_complete != node.percent_complete:
+        #             percent_complete = node.percent_complete
+        #             download_window['-pct_complete-'].update(percent_complete)
+        #
+        #         # Update logs
+        #         if log_string != buffer:
+        #             log_string = buffer
+        #             window['-logs-'].update(buffer)
+        #
+        #     download_window.close()
+
+        #
+        # if event == '-clear-':
+        #     window['-selected_ip-'].update('')
+        #     window['-selected_port-'].update('')
+        #
+        # if event == 'Copy':
+        #     element = window.FindElementWithFocus()
+        #     if element:
+        #         window_key = element.Key
+        #         copy_text = None
+        #         try:
+        #             copy_text = window[window_key].Widget.selection_get()
+        #         except _tkinter.TclError:
+        #             pass
+        #         if copy_text:
+        #             cb = Tk()
+        #             cb.clipboard_clear()
+        #             cb.clipboard_append(copy_text)
+        #             cb.update()
+        #             cb.destroy()
+        #
+        # if event == 'Paste':
+        #     element = window.FindElementWithFocus()
+        #     if element:
+        #         window_key = element.Key
+        #         if window_key in needs_paste_keys:
+        #             cb = Tk()
+        #             paste_text = cb.clipboard_get()
+        #             cb.update()
+        #             cb.destroy()
+        #             try:
+        #                 window[window_key].update(paste_text)
+        #             except Exception as e:
+        #                 # Logging
+        #                 gui_logger.error(f'Encountered exception when copying: {e}')
+        #
+        # if event == 'Clear':
+        #     element = window.FindElementWithFocus()
+        #     if element:
+        #         window_key = element.Key
+        #         selected_text = None
+        #         try:
+        #             selected_text = window[window_key].Widget.selection_get()
+        #         except _tkinter.TclError:
+        #             pass
+        #         if selected_text:
+        #             window[window_key].Widget.selection_clear()
+        #             if window_key in [
+        #                 '-selected_ip-', '-selected_port-',
+        #                 '-wallet_sendto-', '-wallet_amount-', '-wallet_fees-'
+        #             ]:
+        #                 temp_text = values[window_key]
+        #                 updated_text = temp_text.replace(selected_text, '')
+        #                 window[window_key].update(updated_text)
+        #
+        # # --- MINER TAB --- #
+        #
+
+        #
+        # # About
+        # if event == 'About BB POW':
+        #     create_about_window()
+        #
+        # # Save/clear logs
+        # if height % (Formatter.HEARTBEAT * 24) == 0 and height > 0:
+        #     # Save logs
+        #     log_file = f'logs_block{height - Formatter.HEARTBEAT * 24}--{height}.txt'
+        #
+        #     if not Path(node.dir_path, log_file).exists():
+        #         with open(Path(node.dir_path, log_file).absolute().as_posix(), 'w') as file:
+        #             file.write(buffer)
+        #
+        #         # Clear logs
+        #         buffer = ''
+        #
 
     # Cleanup
     if node.is_mining:
