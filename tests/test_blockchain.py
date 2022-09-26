@@ -25,11 +25,9 @@ def test_add_pop_block():
         dir_path = './tests/data/test_blockchain/'
     file_name = 'test_add_pop_block.db'
 
-    # Wipe db if it exists. Start with empty db
-    db_exsts = Path(dir_path, file_name).exists()
+    # Start with empty db
     db = DataBase(dir_path, file_name)
-    if db_exsts:
-        db.wipe_db()
+    db.wipe_db()
     db.create_db()
 
     # Create test logger
@@ -41,7 +39,10 @@ def test_add_pop_block():
     test_logger.addHandler(sh)
 
     # Blockchain
-    test_chain = Blockchain(dir_path, file_name, logger=test_logger, log_level='CRITICAL')
+    test_chain = Blockchain(dir_path, file_name, logger=test_logger)
+
+    # Verify db only has genesis block
+    assert test_chain.chain_db.get_height()['height'] == 0
 
     # Modify target for testing
     test_chain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x1f)
@@ -51,8 +52,7 @@ def test_add_pop_block():
     fixed_address = address_from_private_key(private_key)
 
     # Create first block
-    mining_tx1 = MiningTransaction(1, test_chain.mining_reward, 0, fixed_address,
-                                   f.MINING_DELAY + 1)
+    mining_tx1 = MiningTransaction(1, test_chain.mining_reward, 0, fixed_address, f.MINING_DELAY + 1)
     unmined_block1 = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mining_tx1, [])
     mined_block1 = mine_a_block(unmined_block1)
 
@@ -115,18 +115,18 @@ def test_fork():
         dir_path = './tests/data/test_blockchain/'
     file_name = 'test_fork.db'
 
-    # Wipe db if it exists. Start with empty db
-    db_exsts = Path(dir_path, file_name).exists()
+    # Start with empty db
     db = DataBase(dir_path, file_name)
-    if db_exsts:
-        db.wipe_db()
+    db.wipe_db()
     db.create_db()
 
     # Create test logger
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('WARNING')
+    test_logger.setLevel('ERROR')
     test_logger.propagate = False
-    test_logger.addHandler(logging.StreamHandler())
+    sh = logging.StreamHandler()
+    sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
+    test_logger.addHandler(sh)
 
     # Blockchain
     test_chain = Blockchain(dir_path, file_name, logger=test_logger)
@@ -219,18 +219,18 @@ def test_memchain():
         dir_path = './tests/data/test_blockchain/'
     file_name = 'test_memchain.db'
 
-    # Wipe db if it exists. Start with empty db
-    db_exsts = Path(dir_path, file_name).exists()
+    # Start with empty db
     db = DataBase(dir_path, file_name)
-    if db_exsts:
-        db.wipe_db()
+    db.wipe_db()
     db.create_db()
 
     # Create test logger
     test_logger = logging.getLogger(__name__)
     test_logger.setLevel('WARNING')
     test_logger.propagate = False
-    test_logger.addHandler(logging.StreamHandler())
+    sh = logging.StreamHandler()
+    sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
+    test_logger.addHandler(sh)
 
     # Blockchain
     test_chain = Blockchain(dir_path, file_name, logger=test_logger)

@@ -242,9 +242,9 @@ class Node:
         for utxo_input in tx.inputs:
             tx_id = utxo_input.tx_id
             tx_index = utxo_input.index
-            utxo_exists = self.blockchain.chain_db.get_utxo(tx_id, tx_index)
-            if utxo_exists:
-                total_input_amount += utxo_exists['output']['amount']
+            utxo_dict = self.blockchain.chain_db.get_utxo(tx_id, tx_index)
+            if utxo_dict:
+                total_input_amount += utxo_dict['amount']
             # If utxo has been consumed, look for it in the chain
             else:
                 temp_tx = self.blockchain.get_tx_by_id(tx_id)
@@ -325,23 +325,36 @@ class Node:
             tx_id = i.tx_id
             tx_index = i.index
 
-            # Get values from db
-            amount_dict = self.blockchain.chain_db.get_amount_by_utxo(tx_id, tx_index)
-            address_dict = self.blockchain.chain_db.get_address_by_utxo(tx_id, tx_index)
-            block_height_dict = self.blockchain.chain_db.get_block_height_by_utxo(tx_id, tx_index)
+            # -- CONSTRUCTION -- #
 
-            # If values are empty lists mark for orphan
-            if amount_dict == {} or address_dict == {} or block_height_dict == {}:
-                # Logging
+            # Get UTXO
+            utxo_output_dict = self.blockchain.chain_db.get_utxo(tx_id, tx_index)
+
+            if utxo_output_dict == {}:
                 self.logger.warning(f'Unable to find utxo with id {tx_id} and index {tx_index}. Orphan transaction.')
                 orphan = True
+
+            # # Get values from db
+            # amount_dict = self.blockchain.chain_db.get_amount_by_utxo(tx_id, tx_index)
+            # address_dict = self.blockchain.chain_db.get_address_by_utxo(tx_id, tx_index)
+            # block_height_dict = self.blockchain.chain_db.get_block_height_by_utxo(tx_id, tx_index)
+            # --- CONSTRUCTION
+
+            # # If values are empty lists mark for orphan
+            # if amount_dict == {} or address_dict == {} or block_height_dict == {}:
+            #     # Logging
+            #     self.logger.warning(f'Unable to find utxo with id {tx_id} and index {tx_index}. Orphan transaction.')
+            #     orphan = True
 
             # Validate the referenced output utxo
             else:
                 # Get values
-                amount = amount_dict['amount']
-                address = address_dict['address']
-                block_height = block_height_dict['block_height']
+                amount = utxo_output_dict['amount']
+                address = utxo_output_dict['address']
+                block_height = utxo_output_dict['block_height']
+                # amount = amount_dict['amount']
+                # address = address_dict['address']
+                # block_height = block_height_dict['block_height']
 
                 # Validate the block_height
                 if block_height > self.height:
@@ -459,6 +472,13 @@ class Node:
                     # Logging
                     self.logger.error(f'Received NONE from get raw block request from {random_node}')
                     break
+
+                # Update network height when at final HEARTBEAT blocks
+                if self.network_height > self.f.HEARTBEAT and (self.network_height - self.height) == self.f.HEARTBEAT:
+                    # Logging
+                    self.logger.debug(f'Updating network height before retrieving final {self.f.HEARTBEAT} blocks')
+                    self.network_height = self.get_height(random_node)
+
         self.logger.info('Node height equal to network height')
 
     # --- PUT METHODS --- #
@@ -685,29 +705,15 @@ class Node:
 
         # Success
         if r.status_code == 200:
-            # Validate node
-            node_valid = self.check_genesis(node)
-
-            # Valid node
-            if node_valid:
-                # Add node if not in node_list
-                if node not in self.node_list:
-                    self.node_list.append(node)
-                    # Logging
-                    self.logger.info(f'Successfully connected to {node}')
-                else:
-                    # Logging
-                    self.logger.info(f'{node} already in node list')
-                return True
-
-            # Invalid node
+            # Add node if not in node_list
+            if node not in self.node_list:
+                self.node_list.append(node)
+                # Logging
+                self.logger.info(f'Successfully connected to {node}')
             else:
                 # Logging
-                self.logger.critical(f'{node} has malformed genesis block. Removing from node list (if applicable).')
-                # Remove node if in node_list
-                if node in self.node_list:
-                    self.node_list.remove(node)
-                return False
+                self.logger.info(f'{node} already in node list')
+            return True
 
         # Already connected
         elif r.status_code == 202:
@@ -821,6 +827,12 @@ class Node:
             if status_code == 200:
                 self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
                 gossip_count += 1
+
+    def gossip_protocol_add_node(self, node: tuple):
+        pass
+
+    def gossip_protocol_remove_node(self, node: tuple):
+        pass
 
     # --- NETWORKING TOOLS --- #
     def make_url(self, node: tuple, endpoint: str):

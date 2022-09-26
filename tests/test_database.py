@@ -19,10 +19,10 @@ def test_utxo_methods():
     else:
         dir_path = './tests/data/test_database/'
     file_name = 'test_utxos.db'
-    db_exsts = Path(dir_path, file_name).exists()
+
+    # Start with empty db
     db = DataBase(dir_path, file_name)
-    if db_exsts:
-        db.wipe_db()
+    db.wipe_db()
     db.create_db()
 
     # Known address
@@ -51,7 +51,9 @@ def test_utxo_methods():
         utxo_dict = {
             "tx_id": tx_list[y],
             "tx_index": y,
-            "output": json.loads(utxo_list[y].to_json)
+            "amount": utxo_list[y].amount,
+            "address": utxo_list[y].address,
+            "block_height": utxo_list[y].block_height
         }
         assert db.get_utxo(tx_list[y], y) == utxo_dict
         temp_list.append(utxo_dict)
@@ -67,22 +69,13 @@ def test_utxo_methods():
         })
     assert address_dict == db.get_utxos_by_address(fixed_address)
 
-    # get_<...>_by_utxo
-    random_index = secrets.randbelow(random_length)
-    result_dict_a = db.get_address_by_utxo(tx_list[random_index], random_index)
-    result_dict_b = db.get_amount_by_utxo(tx_list[random_index], random_index)
-    result_dict_c = db.get_block_height_by_utxo(tx_list[random_index], random_index)
-    assert result_dict_a["address"] == fixed_address
-    assert result_dict_b["amount"] == utxo_list[random_index].amount
-    assert result_dict_c["block_height"] == utxo_list[random_index].block_height
-
     # delete_utxo
     for w in range(random_length):
         db.delete_utxo(tx_list[w], w)
         assert db.get_utxo(tx_list[w], w) == {}
 
 
-def test_block_header_methods():
+def test_block_methods():
     # Create db with path in tests directory
     current_path = os.getcwd()
     if '/tests' in current_path:
@@ -91,11 +84,9 @@ def test_block_header_methods():
         dir_path = './tests/data/test_database/'
     file_name = 'test_headers.db'
 
-    # If db exists, wipe db first
-    db_exsts = Path(dir_path, file_name).exists()
+    # Start with empty db
     db = DataBase(dir_path, file_name)
-    if db_exsts:
-        db.wipe_db()
+    db.wipe_db()
     db.create_db()
 
     # Formatter
@@ -122,7 +113,7 @@ def test_block_header_methods():
             tx_count = secrets.randbits(4)
 
         # Random tx list
-        transactions = [random_tx() for r in range(tx_count)]
+        transactions = [random_tx() for _ in range(tx_count)]
 
         # Random mining tx
         mining_tx = random_mining_tx()
@@ -133,38 +124,16 @@ def test_block_header_methods():
         # Post
         db.post_block(sample_block)
 
-    # get_block_ids
-    id_dict = {
-        "chain_height": random_length
-    }
-    for y in range(random_length):
-        id_dict.update({
-            f"id_{y}": block_list[y].id
-        })
-    assert id_dict == db.get_block_ids()
-
     # get methods
     for z in range(random_length):
         temp_block = block_list[z]
-        height_dict = {
-            "id": temp_block.id,
-            "prev_id": temp_block.prev_id,
-            "merkle_root": temp_block.merkle_root,
-            "target": f.target_from_int(temp_block.target),
-            "nonce": temp_block.nonce,
-            "timestamp": temp_block.timestamp
-        }
         raw_block_dict = {
             "raw_block": temp_block.raw_block
         }
 
-        assert db.get_headers_by_height(z) == height_dict
-        assert db.get_headers_by_id(temp_block.id) == height_dict
-        assert db.get_headers_by_merkle_root(temp_block.merkle_root) == height_dict
         assert db.get_raw_block(z) == raw_block_dict
 
     # Delete method
     for w in range(random_length):
-        db.delete_block(w)
-        assert db.get_headers_by_height(w) == {}
-        assert db.get_raw_block(w) == {}
+        db.delete_block()
+        assert db.get_raw_block(random_length - w) == {}

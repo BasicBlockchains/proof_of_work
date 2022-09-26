@@ -29,7 +29,7 @@ def test_endpoints():
     # Logging
     # Create test logger
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('ERROR')
+    test_logger.setLevel('CRITICAL')
     test_logger.propagate = False
     sh = logging.StreamHandler()
     sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
@@ -47,7 +47,7 @@ def test_endpoints():
     assert node1.connect_to_network(node1.node)
     assert node1.is_connected
 
-    # Add block to node1
+    # # Add block to node1
     node1.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
     node1.blockchain.f.MINING_DELAY = 0
     mt = MiningTransaction(1, node1.mining_reward, 0, node1.wallet.address, 1)
@@ -76,7 +76,7 @@ def test_endpoints():
     assert node2.height == 1
     node2.blockchain.pop_block()
     assert node2.height == 0
-
+    #
     # Verify node lists
     assert node1.node in node2.node_list
     assert node1.node in node1.node_list
@@ -134,3 +134,10 @@ def test_endpoints():
         node1.blockchain.pop_block()
     while node2.height > 0:
         node2.blockchain.pop_block()
+
+    # Verify cleanup
+
+    assert node1.height == 0
+    assert node1.blockchain.chain_db.get_height()['height'] == 0
+    assert node2.height == 0
+    assert node2.blockchain.chain_db.get_height()['height'] == 0
