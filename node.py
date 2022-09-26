@@ -472,6 +472,13 @@ class Node:
                     # Logging
                     self.logger.error(f'Received NONE from get raw block request from {random_node}')
                     break
+
+                # Update network height when at final HEARTBEAT blocks
+                if self.network_height > self.f.HEARTBEAT and (self.network_height - self.height) == self.f.HEARTBEAT:
+                    # Logging
+                    self.logger.debug(f'Updating network height before retrieving final {self.f.HEARTBEAT} blocks')
+                    self.network_height = self.get_height(random_node)
+
         self.logger.info('Node height equal to network height')
 
     # --- PUT METHODS --- #
@@ -698,29 +705,15 @@ class Node:
 
         # Success
         if r.status_code == 200:
-            # Validate node
-            node_valid = self.check_genesis(node)
-
-            # Valid node
-            if node_valid:
-                # Add node if not in node_list
-                if node not in self.node_list:
-                    self.node_list.append(node)
-                    # Logging
-                    self.logger.info(f'Successfully connected to {node}')
-                else:
-                    # Logging
-                    self.logger.info(f'{node} already in node list')
-                return True
-
-            # Invalid node
+            # Add node if not in node_list
+            if node not in self.node_list:
+                self.node_list.append(node)
+                # Logging
+                self.logger.info(f'Successfully connected to {node}')
             else:
                 # Logging
-                self.logger.critical(f'{node} has malformed genesis block. Removing from node list (if applicable).')
-                # Remove node if in node_list
-                if node in self.node_list:
-                    self.node_list.remove(node)
-                return False
+                self.logger.info(f'{node} already in node list')
+            return True
 
         # Already connected
         elif r.status_code == 202:
@@ -834,6 +827,12 @@ class Node:
             if status_code == 200:
                 self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
                 gossip_count += 1
+
+    def gossip_protocol_add_node(self, node: tuple):
+        pass
+
+    def gossip_protocol_remove_node(self, node: tuple):
+        pass
 
     # --- NETWORKING TOOLS --- #
     def make_url(self, node: tuple, endpoint: str):

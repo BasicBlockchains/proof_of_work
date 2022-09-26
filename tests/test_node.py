@@ -4,9 +4,11 @@ Tests for the Node class
 import logging
 import os
 from pathlib import Path
+import threading
+import time
 
 from .context import Node, Wallet, Block, utc_to_seconds, Transaction, MiningTransaction, mine_a_block, UTXO_INPUT, \
-    UTXO_OUTPUT, Formatter, DataBase
+    UTXO_OUTPUT, Formatter, DataBase, run_app
 
 # --- CONSTANTS --- #
 f = Formatter()
@@ -117,3 +119,76 @@ def test_add_transaction():
     # Empty blocks for next time
     while n.height > 0:
         n.blockchain.pop_block()
+
+
+def test_catchup_to_network():
+    # Create db with path in tests directory
+    current_path = os.getcwd()
+    if '/tests' in current_path:
+        dir_path = current_path + '/data/test_node/'
+    else:
+        dir_path = './tests/data/test_node/'
+    file_name = 'test_catchup_to_network.db'
+
+    # Logging
+    # Create test logger
+    test_logger = logging.getLogger(__name__)
+    test_logger.setLevel('ERROR')
+    test_logger.propagate = False
+    sh = logging.StreamHandler()
+    sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
+    test_logger.addHandler(sh)
+
+    # Create first node + api
+    node1 = Node(dir_path, file_name, logger=test_logger, local=True)
+    n1_thread = threading.Thread(target=run_app, daemon=True, args=(node1,))
+    n1_thread.start()
+
+    # Allow time to pass for api to get setup
+    time.sleep(1)
+
+    assert n1_thread.is_alive()
+    assert node1.connect_to_network(node1.node)
+    assert node1.is_connected
+
+    # # Add block to node1
+    node1.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
+    node1.blockchain.f.MINING_DELAY = 0
+    node1.f.HEARTBEAT = 5
+
+    # Create 12 blocks
+    node1.start_miner()
+    while node1.height < 10:
+        pass
+    node1.stop_miner()
+
+    assert node1.height >= 10
+
+    # Create 2nd node
+    # Create second node + api
+    node2 = Node(dir_path, file_name, logger=test_logger, local=True)
+    node2.blockchain.target = node1.blockchain.target
+    node2.blockchain.f.MINING_DELAY = 0
+    node2.f.HEARTBEAT = 5
+
+    n2_thread = threading.Thread(target=run_app, daemon=True, args=(node2,))
+    n2_thread.start()
+
+    # Allow time to pass for api to get setup
+    time.sleep(1)
+
+    node2.connect_to_network(node1.node)
+    assert node2.height == node1.height
+
+    # Cleanup nodes
+    while node1.height > 0:
+        node1.blockchain.pop_block()
+    while node2.height > 0:
+        node2.blockchain.pop_block()
+
+    # Verify cleanup
+
+    assert node1.height == 0
+    assert node1.blockchain.chain_db.get_height()['height'] == 0
+    assert node2.height == 0
+    assert node2.blockchain.chain_db.get_height()['height'] == 0

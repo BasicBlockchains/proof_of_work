@@ -113,7 +113,7 @@ def test_block_methods():
             tx_count = secrets.randbits(4)
 
         # Random tx list
-        transactions = [random_tx() for r in range(tx_count)]
+        transactions = [random_tx() for _ in range(tx_count)]
 
         # Random mining tx
         mining_tx = random_mining_tx()
@@ -127,25 +127,13 @@ def test_block_methods():
     # get methods
     for z in range(random_length):
         temp_block = block_list[z]
-        height_dict = {
-            "id": temp_block.id,
-            "prev_id": temp_block.prev_id,
-            "merkle_root": temp_block.merkle_root,
-            "target": f.target_from_int(temp_block.target),
-            "nonce": temp_block.nonce,
-            "timestamp": temp_block.timestamp
-        }
         raw_block_dict = {
             "raw_block": temp_block.raw_block
         }
 
-        # assert db.get_headers_by_height(z) == height_dict
-        # assert db.get_headers_by_id(temp_block.id) == height_dict
-        # assert db.get_headers_by_merkle_root(temp_block.merkle_root) == height_dict
         assert db.get_raw_block(z) == raw_block_dict
 
     # Delete method
     for w in range(random_length):
         db.delete_block()
-        # assert db.get_headers_by_height(w) == {}
         assert db.get_raw_block(random_length - w) == {}

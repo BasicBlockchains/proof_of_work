@@ -232,8 +232,8 @@ def create_app(node: Node):
                     # Restart mining
                     if resume_mining:
                         node.start_miner()
-                    #
-                    #     # Return success
+
+                    # Return success
                     return Response(f'Successfully added block at height {test_block.height} for {node.node}',
                                     status=200, mimetype=mimetype)
                 elif {test_block.height: test_block.raw_block} in node.blockchain.forks:
