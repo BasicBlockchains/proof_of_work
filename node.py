@@ -9,6 +9,7 @@ import random
 import secrets
 import socket
 import threading
+import time
 from multiprocessing import Process, Queue
 
 import requests
@@ -483,11 +484,20 @@ class Node:
 
     # --- PUT METHODS --- #
     def connect_to_network(self, node=LEGACY_NODE) -> bool:
+        # Check connection first
+        if self.is_connected:
+            # Logging
+            self.logger.info('Already connected to network')
+            return False
+
         # Logging
         self.logger.info(f'Attempting to connect to network through {node}.')
 
         # Update connected status
         self.is_connected = True
+
+        # Get current node list
+        current_nodes = self.node_list.copy()
 
         # Add own node to node list
         if self.node not in self.node_list:
@@ -506,9 +516,6 @@ class Node:
 
         # Get remaining nodes
         all_nodes = False
-        current_nodes = self.node_list.copy()
-        current_nodes.remove(node)
-        current_nodes.remove(self.node)
         while not all_nodes and current_nodes != []:
             all_nodes = True
             random_node = random.choice(current_nodes)
@@ -519,9 +526,11 @@ class Node:
                     self.node_list.append(check_node)
 
         # Catchup to network
+        # TODO: Change to gossip style
         self.catchup_to_network()
 
         # Get validated txs
+        # TODO: Change to gossip style
         self.get_validated_txs_from_node(node)
 
         return True
@@ -620,6 +629,13 @@ class Node:
         return height
 
     def get_node_list(self, node: tuple) -> list:
+        # Account for calling local node
+        if node in [self.node, ('127.0.0.1', self.assigned_port), ('localhost', self.assigned_port)]:
+            # Logging
+            self.logger.warning('Requesting node_list from self.')
+            return []
+
+        # Get request to /node_list/ endpoint
         try:
             r = requests.get(self.make_url(node, 'node_list'), headers=self.request_header)
             node_list = r.json()
@@ -634,6 +650,7 @@ class Node:
             self.is_connected = False
             return []
 
+        # Return list of nodes as tuples
         if node_list:
             formatted_node_list = []
             for list_tuple in node_list:
@@ -770,7 +787,7 @@ class Node:
             self.node_list.remove(self.node)
         except ValueError:
             # Logging
-            self.logger.warning(f'{self.node} already removed from node list.')
+            self.logger.error(f'{self.node} already removed from node list.')
 
         # Copy node list for indexing
         node_index = self.node_list.copy()
@@ -794,6 +811,9 @@ class Node:
 
         # Finish with empty node list
         self.node_list = []
+
+        # Logging
+        self.logger.info('Disconnected from network.')
 
     # --- GOSSIP PROTOCOLS --- #
 

@@ -324,8 +324,8 @@ class Wallet():
                 utxo_dict = utxos[f'utxo_{x}']
                 tx_id = utxo_dict['tx_id']
                 tx_index = utxo_dict['tx_index']
-                amount = utxo_dict['output']['amount']
-                block_height = utxo_dict['output']['block_height']
+                amount = utxo_dict['amount']
+                block_height = utxo_dict['block_height']
                 utxo_row = pd.DataFrame([[tx_id, tx_index, amount, block_height]], columns=self.COLUMNS)
                 temp_df = pd.concat([temp_df, utxo_row], ignore_index=True)
             self.utxos = temp_df
