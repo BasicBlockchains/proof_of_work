@@ -264,7 +264,7 @@ class Node:
         return max(0, total_input_amount - total_output_amount)
 
     # --- ADD BLOCK --- #
-    def add_block(self, block: Block) -> bool:
+    def add_block(self, block: Block, catching_up=False) -> bool:
         added = self.blockchain.add_block(block)
         if added:
             # Logging
@@ -281,11 +281,13 @@ class Node:
                         if input_tuple in self.consumed_utxos:
                             self.consumed_utxos.remove(input_tuple)
 
-            # Check if orphaned transactions are now valid
-            self.check_for_tx_parents()
+            # Check orphans if not catching up
+            if not catching_up:
+                # Check if orphaned transactions are now valid
+                self.check_for_tx_parents()
 
-            # Check if orphaned blocks are now valid
-            self.check_for_block_parents()
+                # Check if orphaned blocks are now valid
+                self.check_for_block_parents()
         elif block.height > self.height:
             self.orphaned_blocks.append(block)
 
@@ -334,18 +336,6 @@ class Node:
             if utxo_output_dict == {}:
                 self.logger.warning(f'Unable to find utxo with id {tx_id} and index {tx_index}. Orphan transaction.')
                 orphan = True
-
-            # # Get values from db
-            # amount_dict = self.blockchain.chain_db.get_amount_by_utxo(tx_id, tx_index)
-            # address_dict = self.blockchain.chain_db.get_address_by_utxo(tx_id, tx_index)
-            # block_height_dict = self.blockchain.chain_db.get_block_height_by_utxo(tx_id, tx_index)
-            # --- CONSTRUCTION
-
-            # # If values are empty lists mark for orphan
-            # if amount_dict == {} or address_dict == {} or block_height_dict == {}:
-            #     # Logging
-            #     self.logger.warning(f'Unable to find utxo with id {tx_id} and index {tx_index}. Orphan transaction.')
-            #     orphan = True
 
             # Validate the referenced output utxo
             else:
@@ -457,11 +447,16 @@ class Node:
                 # Get random node
                 random_node = random.choice(temp_nodes)
 
+                # Catching up flag
+                catching_up = False
+                if self.height < self.network_height - 1:
+                    catching_up = True
+
                 # Get next raw block
                 next_raw_block = self.get_raw_block_from_node(random_node, block_index=self.height + 1)
                 if next_raw_block:
                     next_block = self.d.raw_block(next_raw_block)
-                    added = self.add_block(next_block)
+                    added = self.add_block(next_block, catching_up=catching_up)
                     if added:
                         # Logging
                         self.logger.info(f'Successfully added block at height {self.height} from {random_node}')
@@ -847,12 +842,6 @@ class Node:
             if status_code == 200:
                 self.logger.info(f'Received 200 code from {gossip_node} for block {block.id}')
                 gossip_count += 1
-
-    def gossip_protocol_add_node(self, node: tuple):
-        pass
-
-    def gossip_protocol_remove_node(self, node: tuple):
-        pass
 
     # --- NETWORKING TOOLS --- #
     def make_url(self, node: tuple, endpoint: str):

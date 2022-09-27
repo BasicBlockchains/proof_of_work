@@ -535,6 +535,10 @@ def run_node_gui():
         network_height = -1
         percent_complete = -1
 
+        # Icon variables
+        mining = node.is_mining
+        connected = False
+
         # Create connecting thread
         connecting_thread = threading.Thread(target=node.connect_to_network)
         connecting_thread.start()
@@ -546,6 +550,14 @@ def run_node_gui():
 
         # Download blocks
         while connecting_thread.is_alive():
+            # Network Icon
+            if connected != node.is_connected:
+                connected = node.is_connected
+                if connected:
+                    window['-network_icon-'].update(GREEN_CIRCLE_PATH.absolute().as_posix())
+                else:
+                    window['-network_icon-'].update(RED_CIRCLE_PATH.absolute().as_posix())
+
             if current_height != node.height:
                 current_height = node.height
                 download_window['-current_height-'].update(str(current_height))
@@ -579,10 +591,6 @@ def run_node_gui():
         window['-wallet_fees-'].bind("<KP_Enter>", "_Enter")
         window['-wallet_block_height-'].bind("<Return>", "_Enter")
         window['-wallet_block_height-'].bind("<KP_Enter>", "_Enter")
-
-        # Icon variables
-        mining = node.is_mining
-        connected = False
 
         # Blockchain tab variables
         height = -1
