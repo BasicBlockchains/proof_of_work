@@ -1002,7 +1002,10 @@ def run_node_gui():
             # --- AUTOMATICALLY PRUNE OLD NODES --- #
             now = utc_to_seconds()
             for node_tuple in node_list:
-                last_contact = contact_dict[node_tuple]
+                if node_tuple in contact_dict.keys():
+                    last_contact = contact_dict[node_tuple]
+                else:
+                    last_contact = now
                 if now - last_contact > PING_TIMEOUT:
                     start_time = time.time()
                     ping = node.ping_node(node_tuple)
