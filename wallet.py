@@ -287,6 +287,10 @@ class Wallet():
             # Logging
             self.logger.warning(f'Unable to connect to {node}. Update node list.')
             return {}
+        except requests.exceptions.JSONDecodeError:
+            # Logging
+            self.logger.warning(f'Unable to retrieve json dict from {node}.')
+            return {}
 
     def get_latest_height(self, node=LEGACY_NODE):
         temp_ip, temp_port = node
