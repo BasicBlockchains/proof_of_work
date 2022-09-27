@@ -1001,29 +1001,28 @@ def run_node_gui():
 
             # --- AUTOMATICALLY PRUNE OLD NODES --- #
             now = utc_to_seconds()
-            for node_key in contact_dict.keys():
-                last_contact = contact_dict[node_key]
-                # TODO: Make below into function - using it twice in the GUI loop
+            for node_tuple in node_list:
+                last_contact = contact_dict[node_tuple]
                 if now - last_contact > PING_TIMEOUT:
                     start_time = time.time()
-                    ping = node.ping_node(node_key)
+                    ping = node.ping_node(node_tuple)
                     if ping:
                         # Update ping list
                         ping_time = int((time.time() - start_time) * 1000)
-                        contact_dict.update({node_key: utc_to_seconds()})
-                        ping_tuple = [(v1, v2, v3, v4) for (v1, v2, v3, v4) in ping_list if (v1, v2) == node_key][0]
+                        contact_dict.update({node_tuple: utc_to_seconds()})
+                        ping_tuple = [(v1, v2, v3, v4) for (v1, v2, v3, v4) in ping_list if (v1, v2) == node_tuple][0]
                         ping_list.remove(ping_tuple)
-                        ping_list.append(node_key + (seconds_to_utc(contact_dict[node_key]), ping_time))
+                        ping_list.append(node_tuple + (seconds_to_utc(contact_dict[node_tuple]), ping_time))
                         window['-node_list_table-'].update(values=ping_list)
                     else:
                         # Logging - Remove stale node from node list
                         gui_logger.warning(
-                            f'Did not ping {node_key} successfully after {PING_TIMEOUT} seconds. Removing from node list.')
+                            f'Did not ping {node_tuple} successfully after {PING_TIMEOUT} seconds. Removing from node list.')
                         try:
-                            node.node_list.remove(node_key)
+                            node.node_list.remove(node_tuple)
                         except ValueError:
                             # Logging
-                            gui_logger.error(f'{node_key} not found in node list')
+                            gui_logger.error(f'{node_tuple} not found in node list')
 
             # --- RIGHT CLICK MENU --- #
             if event == 'Copy':
