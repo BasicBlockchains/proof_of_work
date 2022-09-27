@@ -84,10 +84,16 @@ class DataBase:
 
     def query_db(self, query: str, data=None):
         with closing(sqlite3.connect(self.file_path)) as con, con, closing(con.cursor()) as cur:
-            if data:
-                cur.execute(query, data)
-            else:
-                cur.execute(query)
+            query_executed = False
+            while not query_executed:
+                try:
+                    if data:
+                        cur.execute(query, data)
+                    else:
+                        cur.execute(query)
+                    query_executed = True
+                except sqlite3.OperationalError:
+                    pass
             return cur.fetchall()
 
     def get_tables(self):
