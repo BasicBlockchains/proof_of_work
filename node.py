@@ -425,8 +425,13 @@ class Node:
     def check_for_block_parents(self):
         orphan_index = self.orphaned_blocks.copy()
         for x in range(0, len(orphan_index)):
-            block = self.orphaned_blocks.pop(0)
-            self.add_block(block)
+            try:
+                block = self.orphaned_blocks.pop(0)
+                self.add_block(block)
+            except IndexError:
+                # Logging
+                self.logger.debug(
+                    f'Tried to pop block from empty list. Orphan index: {orphan_index}, Orphaned blocks: {self.orphaned_blocks}')
 
     # --- NETWORK --- #
 
