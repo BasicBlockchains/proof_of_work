@@ -264,13 +264,13 @@ def create_app(node: Node):
                 if added:
                     # Gossip block
                     node.gossip_protocol_block(test_block)
-                else:
-                    return Response(f'Failed to add or fork block', status=400, mimetype=mimetype)
 
                 # Resume mining
                 if resume_mining:
                     node.start_miner()
 
+                if not added:
+                    return Response(f'Failed to add or fork block', status=400, mimetype=mimetype)
                 # Return success
                 return Response(f'Successfully added block at height {test_block.height} for {node.node}',
                                 status=200, mimetype=mimetype)
