@@ -102,7 +102,7 @@ class Blockchain():
             return False
 
         # Check Mining Tx height
-        if block.mining_tx.height != self.last_block.mining_tx.height + 1:
+        if block.height != self.last_block.height + 1:
             # Logging
             self.logger.warning('Block failed validation. Mining_tx height incorrect')
             return False
