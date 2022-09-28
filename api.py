@@ -220,26 +220,35 @@ def create_app(node: Node):
             # Verify raw_block
             test_block = d.raw_block(raw_block)
             if test_block:
-                added = node.add_block(test_block)
-                if added:
+                # Validate block
+                validated = node.blockchain.validate_block(test_block)
+                if validated:
                     # Stop mining
                     resume_mining = node.is_mining
                     node.stop_miner()
+                    # Add block
+                    added = node.add_block(test_block)
+                    if added:
+                        # Gossip block
+                        node.gossip_protocol_block(test_block)
 
-                    # # Gossip block
-                    node.gossip_protocol_block(test_block)
 
-                    # Restart mining
+                    elif {test_block.height: test_block.raw_block} in node.blockchain.forks:
+                        return Response(f'Raw block added to forks in {node.node}', status=202, mimetype=mimetype)
+                    else:
+                        return Response(f'Failed to add or fork block', status=400, mimetype=mimetype)
+
+                    # Resume mining
                     if resume_mining:
                         node.start_miner()
 
                     # Return success
                     return Response(f'Successfully added block at height {test_block.height} for {node.node}',
                                     status=200, mimetype=mimetype)
-                elif {test_block.height: test_block.raw_block} in node.blockchain.forks:
-                    return Response(f'Raw block added to forks in {node.node}', status=202, mimetype=mimetype)
                 else:
-                    return Response(f'Failed to add or fork block', status=400, mimetype=mimetype)
+                    # Logging
+                    node.logger.critical(f'Received invalid block from {request.remote_addr}')
+                    return Response('Block failed to validate', status=406, mimetype=mimetype)
 
             else:
                 return Response(f'Failed to reconstruct raw block {raw_block}', status=400, mimetype=mimetype)
