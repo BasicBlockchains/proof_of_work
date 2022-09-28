@@ -137,7 +137,7 @@ class Node:
             if not self.is_mining:
                 self.is_mining = True
                 self.mining_thread = threading.Thread(target=self.mining_monitor)
-                self.logger.info('Starting mining thread.')
+                self.logger.debug('Starting mining thread.')
                 self.mining_thread.start()
 
             else:
@@ -148,7 +148,7 @@ class Node:
             self.logger.warning('Must be connected to network to start miner.')
 
     def mining_monitor(self):
-        self.logger.info('Mining monitor running')
+        self.logger.debug('Mining monitor running')
         while self.is_mining and self.is_connected:
             unmined_block = self.create_next_block()
 
@@ -169,7 +169,7 @@ class Node:
                 except Exception:
                     # If not mining, end monitor
                     if not self.is_mining:
-                        self.logger.info('Mining interrupt received.')
+                        self.logger.debug('Mining interrupt received.')
                         mining = False
             if next_block:
                 added = self.add_block(next_block)
@@ -182,7 +182,7 @@ class Node:
                     self.logger.warning(
                         f'Block mined but failed to be added. Likely fork. Current forks: {self.blockchain.forks}')
 
-        self.logger.info('Mining monitor terminated.')
+        self.logger.debug('Mining monitor terminated.')
 
     def stop_miner(self):
         if self.is_mining:
@@ -192,7 +192,7 @@ class Node:
             self.is_mining = False
 
             # Logging
-            self.logger.info('Terminating mining functions')
+            self.logger.debug('Terminating mining functions')
 
             # Put block transactions back in validated txs
             block_tx_index = self.block_transactions.copy()

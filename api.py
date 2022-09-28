@@ -21,6 +21,7 @@ def create_app(node: Node):
     app.config['JSON_SORT_KEYS'] = False
     mimetype = 'application/json'
     d = Decoder()
+    f = Formatter()
 
     @app.route('/')
     def home():
@@ -51,6 +52,31 @@ def create_app(node: Node):
     def height():
         height_dict = {'height': node.height}
         return jsonify(height_dict)
+
+    @app.route('/target/')
+    def target():
+        coef, exp = f.get_target_parts(node.target)
+        target_dict = {
+            'encoded_target': f.target_from_int(node.target),
+            'hex_target': format(node.target, f'0{f.HASH_CHARS}x'),
+            'integer_target': node.target,
+            'target_coefficient': coef,
+            'target_exponent': exp,
+            'target_formula': "coefficient * pow(2, 8 * (exponent - 3))"
+        }
+        return jsonify(target_dict)
+
+    @app.route('/forks/')
+    def forks():
+        fork_num = len(node.blockchain.forks)
+        fork_dict = {
+            'number_of_forked_blocks': fork_num
+        }
+        for x in range(fork_num):
+            fork_dict.update({
+                f'fork_{x}': node.blockchain.forks[x]
+            })
+        return jsonify(fork_dict)
 
     @app.route('/block/')
     def block():
@@ -220,23 +246,24 @@ def create_app(node: Node):
             # Verify raw_block
             test_block = d.raw_block(raw_block)
             if test_block:
-                # Validate block
-                validated = node.blockchain.validate_block(test_block)
-                if validated:
+                # Handle return gossip
+                if test_block.id == node.last_block.id:
+                    return Response('Received block at top of chain', status=202, mimetype=mimetype)
+
+                # Handle forks before trying to add
+                if max(1, node.height - Formatter.HEARTBEAT) <= test_block.height <= node.height:
+                    node.blockchain.create_fork(test_block)
+                    return Response(f'Raw block added to forks in {node.node}', status=202, mimetype=mimetype)
+
+                # Add block
+                added = node.add_block(test_block)
+                if added:
                     # Stop mining
                     resume_mining = node.is_mining
                     node.stop_miner()
-                    # Add block
-                    added = node.add_block(test_block)
-                    if added:
-                        # Gossip block
-                        node.gossip_protocol_block(test_block)
 
-
-                    elif {test_block.height: test_block.raw_block} in node.blockchain.forks:
-                        return Response(f'Raw block added to forks in {node.node}', status=202, mimetype=mimetype)
-                    else:
-                        return Response(f'Failed to add or fork block', status=400, mimetype=mimetype)
+                    # Gossip block
+                    node.gossip_protocol_block(test_block)
 
                     # Resume mining
                     if resume_mining:
@@ -246,10 +273,7 @@ def create_app(node: Node):
                     return Response(f'Successfully added block at height {test_block.height} for {node.node}',
                                     status=200, mimetype=mimetype)
                 else:
-                    # Logging
-                    node.logger.critical(f'Received invalid block from {request.remote_addr}')
-                    return Response('Block failed to validate', status=406, mimetype=mimetype)
-
+                    return Response(f'Failed to add or fork block', status=400, mimetype=mimetype)
             else:
                 return Response(f'Failed to reconstruct raw block {raw_block}', status=400, mimetype=mimetype)
 

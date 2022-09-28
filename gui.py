@@ -433,7 +433,7 @@ def run_node_gui():
 
     # --- STAGE 0: Configure Logger for GUI use --- #
     gui_logger = logging.getLogger('GUI')
-    gui_logger.setLevel('DEBUG')
+    gui_logger.setLevel('INFO')
     gui_logger.addHandler(Handler())
     gui_logger.propagate = False
     global buffer
@@ -775,8 +775,12 @@ def run_node_gui():
                         gui_logger.warning('Logs must have .txt extension.')
 
             # --- MINING --- #
-            if event == '-start_miner-': node.start_miner()
-            if event == '-stop_miner-': node.stop_miner()
+            if event == '-start_miner-':
+                node.start_miner()
+                gui_logger.info('Miner running.')
+            if event == '-stop_miner-':
+                node.stop_miner()
+                gui_logger.info('Miner stopped.')
 
             # --- WEBSERVER BUTTON --- #
             if event == '-open_browser-': webbrowser.open(f"http://{node.ip}:{node.assigned_port}", new=2)
