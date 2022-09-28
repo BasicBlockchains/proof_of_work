@@ -255,25 +255,25 @@ def create_app(node: Node):
                     node.blockchain.create_fork(test_block)
                     return Response(f'Raw block added to forks in {node.node}', status=202, mimetype=mimetype)
 
+                # Stop mining
+                resume_mining = node.is_mining
+                node.stop_miner()
+
                 # Add block
                 added = node.add_block(test_block)
                 if added:
-                    # Stop mining
-                    resume_mining = node.is_mining
-                    node.stop_miner()
-
                     # Gossip block
                     node.gossip_protocol_block(test_block)
-
-                    # Resume mining
-                    if resume_mining:
-                        node.start_miner()
-
-                    # Return success
-                    return Response(f'Successfully added block at height {test_block.height} for {node.node}',
-                                    status=200, mimetype=mimetype)
                 else:
                     return Response(f'Failed to add or fork block', status=400, mimetype=mimetype)
+
+                # Resume mining
+                if resume_mining:
+                    node.start_miner()
+
+                # Return success
+                return Response(f'Successfully added block at height {test_block.height} for {node.node}',
+                                status=200, mimetype=mimetype)
             else:
                 return Response(f'Failed to reconstruct raw block {raw_block}', status=400, mimetype=mimetype)
 

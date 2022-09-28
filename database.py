@@ -106,11 +106,11 @@ class DataBase:
                 table_list.append(table_name)
         return table_list
 
-    def is_empty(self):
-        height_dict = self.get_height()
-        if height_dict['height'] == -1:
-            return True
-        return False
+    # def is_empty(self):
+    #     height_dict = self.get_height()
+    #     if height_dict['height'] == -1:
+    #         return True
+    #     return False
 
     # --- RAW BLOCKS --- #
 
