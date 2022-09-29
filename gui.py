@@ -26,7 +26,7 @@ from wallet import Wallet
 DEFAULT_THEME = 'SystemDefault'
 DEFAULT_WINDOW_SIZE = (1200, 500)
 
-IMAGE_DIR = './images'
+IMAGE_DIR = './static/images'
 LOGO_FILE = 'logo_icon.png'
 RED_CIRCLE_FILE = 'red_circle_small.png'
 GREEN_CIRCLE_FILE = 'green_circle_small.png'
