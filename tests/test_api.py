@@ -4,7 +4,7 @@ Testing the api - use local ip to avoid port forwarding
 
 from .context import Node, create_app, run_app, Formatter, DataBase, mine_a_block, MiningTransaction, Block, \
     utc_to_seconds, Decoder, UTXO_OUTPUT, UTXO_INPUT, Transaction, Wallet
-from .helpers import random_unmined_block
+from .helpers import random_unmined_block, create_node_gb, copy_node_gb
 import threading
 import logging
 import json
@@ -36,7 +36,10 @@ def test_endpoints():
     test_logger.addHandler(sh)
 
     # Create first node + api
-    node1 = Node(dir_path, file_name, logger=test_logger, local=True)
+    node1 = create_node_gb(
+        Node(dir_path, file_name, logger=test_logger, local=True)
+    )
+
     n1_thread = threading.Thread(target=run_app, daemon=True, args=(node1,))
     n1_thread.start()
 
@@ -48,18 +51,18 @@ def test_endpoints():
     assert node1.is_connected
 
     # # Add block to node1
-    node1.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
-    node1.blockchain.f.MINING_DELAY = 0
+
     mt = MiningTransaction(1, node1.mining_reward, 0, node1.wallet.address, 1)
     unmined_block = Block(node1.last_block.id, node1.target, 0, utc_to_seconds(), mt, [])
     mined_block = mine_a_block(unmined_block)
+    # node1.add_block(mined_block)
     assert node1.add_block(mined_block)
     assert node1.height == 1
 
     # Create second node + api
-    node2 = Node(dir_path, file_name, logger=test_logger, local=True)
-    node2.blockchain.target = node1.blockchain.target
-    node2.blockchain.f.MINING_DELAY = 0
+    node2 = copy_node_gb(
+        Node(dir_path, file_name, logger=test_logger, local=True), node1.blockchain.chain[0]
+    )
 
     n2_thread = threading.Thread(target=run_app, daemon=True, args=(node2,))
     n2_thread.start()
@@ -76,7 +79,7 @@ def test_endpoints():
     assert node2.height == 1
     node2.blockchain.pop_block()
     assert node2.height == 0
-    #
+
     # Verify node lists
     assert node1.node in node2.node_list
     assert node1.node in node1.node_list

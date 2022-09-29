@@ -16,11 +16,5 @@ def seconds_to_utc(seconds: int):
     return date_object.isoformat()
 
 
-def max_seconds():
-    date_string = datetime.datetime.max.replace(microsecond=0).isoformat()
-    date_object = datetime.datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S')
-    return int(date_object.timestamp())
-
-
 def utc_timestamp():
     return seconds_to_utc(utc_to_seconds())

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .context import Block, Blockchain, DataBase, Decoder, Formatter, MiningTransaction, Transaction, \
     utc_to_seconds, UTXO_INPUT, UTXO_OUTPUT, mine_a_block
-from .helpers import random_unmined_block, random_address, address_from_private_key
+from .helpers import random_unmined_block, random_address, address_from_private_key, create_blockchain_gb
 
 # --- Constants --- #
 d = Decoder()
@@ -39,13 +39,12 @@ def test_add_pop_block():
     test_logger.addHandler(sh)
 
     # Blockchain
-    test_chain = Blockchain(dir_path, file_name, logger=test_logger)
+    test_chain = create_blockchain_gb(
+        Blockchain(dir_path, file_name, logger=test_logger)
+    )
 
     # Verify db only has genesis block
     assert test_chain.chain_db.get_height()['height'] == 0
-
-    # Modify target for testing
-    test_chain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x1f)
 
     # Fix address
     private_key = secrets.randbits(f.HASH_CHARS * 4)
@@ -53,6 +52,8 @@ def test_add_pop_block():
 
     # Create first block
     mining_tx1 = MiningTransaction(1, test_chain.mining_reward, 0, fixed_address, f.MINING_DELAY + 1)
+    while utc_to_seconds() <= test_chain.last_block.timestamp:
+        pass
     unmined_block1 = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mining_tx1, [])
     mined_block1 = mine_a_block(unmined_block1)
 
@@ -78,6 +79,8 @@ def test_add_pop_block():
     # Create next block
     mining_tx2 = MiningTransaction(2, test_chain.mining_reward, block_fees, fixed_address,
                                    f.MINING_DELAY + 2)
+    while utc_to_seconds() <= test_chain.last_block.timestamp:
+        pass
     unmined_block2 = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mining_tx2, [new_tx])
     mined_block2 = mine_a_block(unmined_block2)
 
@@ -122,25 +125,27 @@ def test_fork():
 
     # Create test logger
     test_logger = logging.getLogger(__name__)
-    test_logger.setLevel('ERROR')
+    test_logger.setLevel('CRITICAL')
     test_logger.propagate = False
     sh = logging.StreamHandler()
     sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
     test_logger.addHandler(sh)
 
     # Blockchain
-    test_chain = Blockchain(dir_path, file_name, logger=test_logger)
+    test_chain = create_blockchain_gb(
+        Blockchain(dir_path, file_name, logger=test_logger)
+    )
     genesis_block = test_chain.chain[0]
-
-    # Modify target for testing
-    test_chain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x1f)
 
     # Verify chain is only genesis block
     assert test_chain.chain[0].id == genesis_block.id
 
     # Create first block
-    unmined_block1 = random_unmined_block(test_chain.last_block.id, 1, test_chain.mining_reward,
-                                          test_chain.target)
+    mt1 = MiningTransaction(test_chain.height + 1, test_chain.mining_reward, 0, random_address(),
+                            test_chain.height + 1)
+    while utc_to_seconds() <= test_chain.last_block.timestamp:
+        pass
+    unmined_block1 = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mt1, [])
     mined_block1 = mine_a_block(unmined_block1)
 
     # Add block
@@ -148,7 +153,8 @@ def test_fork():
     assert test_chain.chain[1].id == mined_block1.id
 
     # Create fork block
-    unmined_fork = random_unmined_block(test_chain.chain[0].id, 1, test_chain.mining_reward, test_chain.target)
+    ft1 = MiningTransaction(1, test_chain.mining_reward, 0, random_address(), 1)
+    unmined_fork = Block(genesis_block.id, test_chain.target, 0, unmined_block1.timestamp, ft1, [])
     mined_fork = mine_a_block(unmined_fork)
 
     # Add block - should end up in forks
@@ -160,8 +166,10 @@ def test_fork():
     assert test_chain.forks == [{1: mined_fork.raw_block}]
 
     # Create next block for fork
-    unmined_fork2 = random_unmined_block(mined_fork.id, 2, test_chain.mining_reward,
-                                         test_chain.target)
+    ft2 = MiningTransaction(2, test_chain.mining_reward, 0, random_address(), 2)
+    while utc_to_seconds() <= unmined_block1.timestamp:
+        pass
+    unmined_fork2 = Block(mined_fork.id, test_chain.target, 0, utc_to_seconds(), ft2, [])
     mined_fork2 = mine_a_block(unmined_fork2)
 
     # Asserts - mined_fork2 should get added to chain, mined_fork should get removed from forks and added to chain
@@ -172,15 +180,22 @@ def test_fork():
     assert test_chain.chain[2].id == mined_fork2.id
 
     # Create second block
-    unmined_block2 = random_unmined_block(mined_block1.id, 2, test_chain.mining_reward, test_chain.target)
+    mt2 = MiningTransaction(2, test_chain.mining_reward, 0, random_address(), 2)
+    while utc_to_seconds() <= mined_block1.timestamp:
+        pass
+    unmined_block2 = Block(mined_block1.id, test_chain.target, 0, utc_to_seconds(), mt2, [])
     mined_block2 = mine_a_block(unmined_block2)
 
     # Asserts - should add block to forks
+    # test_chain.add_block(mined_block2)
     assert not test_chain.add_block(mined_block2)
     assert test_chain.forks == [{1: mined_block1.raw_block}, {2: mined_block2.raw_block}]
 
     # Create third block
-    unmined_block3 = random_unmined_block(mined_block2.id, 3, test_chain.mining_reward, test_chain.target)
+    mt3 = MiningTransaction(3, test_chain.mining_reward, 0, random_address(), 3)
+    while utc_to_seconds() <= mined_block2.timestamp:
+        pass
+    unmined_block3 = Block(mined_block2.id, test_chain.target, 0, utc_to_seconds(), mt3, [])
     mined_block3 = mine_a_block(unmined_block3)
 
     # Asserts - mined_block3 gets added, mined_block2 and mined_block1 get removed from forks and added
@@ -192,19 +207,28 @@ def test_fork():
     assert test_chain.chain[3].id == mined_block3.id
 
     # Create third malformed fork
-    unmined_malformed_fork = random_unmined_block(mined_fork2.id, 4, test_chain.mining_reward, test_chain.target + 1)
+    mal_mt = MiningTransaction(4, test_chain.mining_reward, 0, random_address(), 4)
+    while utc_to_seconds() <= mined_fork2.timestamp:
+        pass
+    unmined_malformed_fork = Block(mined_fork2.id, test_chain.target + 1, 0, utc_to_seconds(), mal_mt, [])
     mined_malformed_fork = mine_a_block(unmined_malformed_fork)
     assert not test_chain.add_block(mined_malformed_fork)
     assert test_chain.forks == [{1: mined_fork.raw_block}, {2: mined_fork2.raw_block}]
 
     # Finally create third valid fork
-    unmined_fork3 = random_unmined_block(mined_fork2.id, 3, test_chain.mining_reward, test_chain.target)
+    ft3 = MiningTransaction(3, test_chain.mining_reward, 0, random_address(), 3)
+    while utc_to_seconds() <= mined_fork2.timestamp:
+        pass
+    unmined_fork3 = Block(mined_fork2.id, test_chain.target, 0, utc_to_seconds(), ft3, [])
     mined_fork3 = mine_a_block(unmined_fork3)
     assert not test_chain.add_block(mined_fork3)
     assert test_chain.forks == [{1: mined_fork.raw_block}, {2: mined_fork2.raw_block}, {3: mined_fork3.raw_block}]
 
     # Final recursive test
-    unmined_fork4 = random_unmined_block(mined_fork3.id, 4, test_chain.mining_reward, test_chain.target)
+    ft4 = MiningTransaction(4, test_chain.mining_reward, 0, random_address(), 4)
+    while utc_to_seconds() <= mined_fork3.timestamp:
+        pass
+    unmined_fork4 = Block(mined_fork3.id, test_chain.target, 0, utc_to_seconds(), ft4, [])
     mined_fork4 = mine_a_block(unmined_fork4)
     assert test_chain.add_block(mined_fork4)
     assert test_chain.forks == [{1: mined_block1.raw_block}, {2: mined_block2.raw_block}, {3: mined_block3.raw_block}]
@@ -233,11 +257,11 @@ def test_memchain():
     test_logger.addHandler(sh)
 
     # Blockchain
-    test_chain = Blockchain(dir_path, file_name, logger=test_logger)
+    test_chain = create_blockchain_gb(
+        Blockchain(dir_path, file_name, logger=test_logger)
+    )
     genesis_block = test_chain.chain[0]
-
-    # Modify target for testing
-    test_chain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
+    assert test_chain.height == 0
 
     # Modify heartbeat for testing
     test_chain.heartbeat = 5
@@ -245,12 +269,15 @@ def test_memchain():
     # Mine heartbeat + x blocks, where x in (2,3)
     block_list_ids = [genesis_block.id]
     while test_chain.height < test_chain.heartbeat + 2:
-        # Create first block
-        next_unmined_block = random_unmined_block(test_chain.last_block.id, test_chain.height + 1,
-                                                  test_chain.mining_reward, test_chain.target)
-        next_block = mine_a_block(next_unmined_block)
-        block_list_ids.append(next_block.id)
-        assert test_chain.add_block(next_block)
+        # Create first block | MINING_DELAY = 0 from create_blockchain_gb function
+        mt = MiningTransaction(test_chain.height + 1, test_chain.mining_reward, 0, random_address(),
+                               test_chain.height + 1)
+        while utc_to_seconds() <= test_chain.last_block.timestamp:
+            pass
+        unmined_block = Block(test_chain.last_block.id, test_chain.target, 0, utc_to_seconds(), mt, [])
+        block = mine_a_block(unmined_block)
+        block_list_ids.append(block.id)
+        assert test_chain.add_block(block)
 
     # # Test memchain
     assert test_chain.height == test_chain.heartbeat + 2

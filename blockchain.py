@@ -3,8 +3,6 @@ The Blockchain Class
 '''
 
 import logging
-import sqlite3
-from pathlib import Path
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
@@ -13,7 +11,6 @@ from database import DataBase
 from decoder import Decoder
 from formatter import Formatter
 from transactions import MiningTransaction
-from utxo import UTXO_OUTPUT
 from wallet import Wallet
 
 
@@ -22,9 +19,9 @@ class Blockchain():
     The Blockchain will be saving data to a db, and so can be instantiated with a directory path other than default.
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
-    # Genesis values
-    GENESIS_NONCE = 611190  # Tuned to production values in Formatter
-    GENESIS_TIMESTAMP = 1663939800  # September 23rd, 9:30 AM EST // 1:30 PM UTC
+    # GENESIS CONSTANTS
+    GENESIS_NONCE = 23633  # Tuned to production values in Formatter
+    GENESIS_TIMESTAMP = 1664467200  # Thu, 29 Sep 2022 15:58:43 GMT - FINAL BETA TEST VALUE
 
     # Directory defaults
     DIR_PATH = './data/'
@@ -63,8 +60,6 @@ class Blockchain():
         # Create fork list to index forked blocks
         self.forks = []
 
-        # --- CONSTRUCTION ----#
-
         # Set path and filename variables
         self.dir_path = dir_path
         self.db_file = db_file
@@ -81,7 +76,6 @@ class Blockchain():
             self.load_chain()
 
     # --- PROPERTIES --- #
-
     @property
     def last_block(self):
         return self.chain[-1]
@@ -120,18 +114,17 @@ class Blockchain():
             self.logger.warning('Block failed validation. Block total incorrect')
             return False
 
-        # TODO: Enable in production
-        # # Make sure timestamp is increasing
-        # if block.timestamp <= self.last_block.timestamp:
-        #     # Logging
-        #     self.logger.warning('Block failed validation. Block time too early.')
-        #     return False
-        #
-        # # Make sure timestamp isn't too far ahead
-        # if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
-        #     # Logging
-        #     self.logger.warning('Block timestamp too far ahead.')
-        #     return False
+        # Make sure timestamp is increasing
+        if block.timestamp <= self.last_block.timestamp:
+            # Logging
+            self.logger.warning('Block failed validation. Block time too early.')
+            return False
+
+        # Make sure timestamp isn't too far ahead
+        if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
+            # Logging
+            self.logger.warning('Block timestamp too far ahead.')
+            return False
 
         # Check each tx
         fees = 0
@@ -147,16 +140,6 @@ class Blockchain():
 
                 # Check utxo_exists
                 utxo_dict = self.chain_db.get_utxo(tx_id, index)
-                # utxo_returned = False
-                # utxo_dict = {}
-                # while not utxo_returned:
-                #     try:
-                #         utxo_dict = self.chain_db.get_utxo(tx_id, index)
-                #         utxo_returned = True
-                #     except sqlite3.OperationalError:
-                #         # Logging
-                #         self.logger.warning('Db is locked while looking for UTXO')
-                #         pass
 
                 # Return False if dict is empty
                 if not utxo_dict:
@@ -181,16 +164,7 @@ class Blockchain():
                     return False
 
                 # Update amount
-                input_adjusted = False
                 input_amount += utxo_dict['amount']
-                # while not input_adjusted:
-                #     try:
-                #         input_amount += utxo_dict['amount']
-                #         input_adjusted = True
-                #     except sqlite3.OperationalError:
-                #         # Logging
-                #         self.logger.warning('Db is locked while trying to update input')
-                #         pass
 
             for output_utxo in tx.outputs:
                 output_amount += output_utxo.amount
@@ -241,52 +215,16 @@ class Blockchain():
                     # Consume UTXOS in tx inputs
                     for utxo_input in tx.inputs:
                         self.chain_db.delete_utxo(utxo_input.tx_id, utxo_input.index)
-                        # input_consumed = False
-                        # while not input_consumed:
-                        #     try:
-                        #         self.chain_db.delete_utxo(utxo_input.tx_id, utxo_input.index)
-                        #         input_consumed = True
-                        #     except sqlite3.OperationalError:
-                        #         # Logging
-                        #         self.logger.warning('DB locked while trying to consume utxo')
-                        #         pass
 
                     # Add UTXOS in tx outputs
                     for utxo_output in tx.outputs:
                         self.chain_db.post_utxo(tx.id, tx.outputs.index(utxo_output), utxo_output)
-                        # output_added = False
-                        # while not output_added:
-                        #     try:
-                        #         self.chain_db.post_utxo(tx.id, tx.outputs.index(utxo_output), utxo_output)
-                        #         output_added = True
-                        #     except sqlite3.OperationalError:
-                        #         # Logging
-                        #         self.logger.warning('DB locked while trying to add utxo output')
-                        #         pass
 
                 # Add UTXOs in Mining Tx
                 self.chain_db.post_utxo(block.mining_tx.id, 0, block.mining_tx.mining_utxo)
-                # mining_utxo_added = False
-                # while not mining_utxo_added:
-                #     try:
-                #         self.chain_db.post_utxo(block.mining_tx.id, 0, block.mining_tx.mining_utxo)
-                #         mining_utxo_added = True
-                #     except sqlite3.OperationalError:
-                #         # Logging
-                #         self.logger.warning('DB locked while trying to add mining utxo')
-                #         pass
 
                 # Save block the chain_db
                 self.chain_db.post_block(block)
-                # block_saved = False
-                # while not block_saved:
-                #     try:
-                #         self.chain_db.post_block(block)
-                #         block_saved = True
-                #     except sqlite3.OperationalError:
-                #         # Logging
-                #         self.logger.warning('DB locked while trying to save new block')
-                #         pass
 
             # Save block to mem_chain
             self.chain.append(block)
@@ -341,31 +279,12 @@ class Blockchain():
 
         # Remove mining utxo from db
         self.chain_db.delete_utxo(removed_block.mining_tx.id, 0)
-        # mining_utxo_removed = False
-        # while not mining_utxo_removed:
-        #     try:
-        #         self.chain_db.delete_utxo(removed_block.mining_tx.id, 0)
-        #         mining_utxo_removed = True
-        #     except sqlite3.OperationalError:
-        #         # Logging
-        #         self.logger.warning('DB locked while removing mining utxo')
-        #         pass
 
         # Remove output utxos and restore inputs for each transaction
-
         for tx in removed_block.transactions:
             # Outputs
             for utxo_output in tx.outputs:
                 self.chain_db.delete_utxo(tx.id, tx.outputs.index(utxo_output))
-                # utxo_removed = False
-                # while not utxo_removed:
-                #     try:
-                #         self.chain_db.delete_utxo(tx.id, tx.outputs.index(utxo_output))
-                #         utxo_removed = True
-                #     except sqlite3.OperationalError:
-                #         # Logging
-                #         self.logger.warning('DB locked while removing utxo')
-                #         pass
 
             # Inputs
             for utxo_input in tx.inputs:
@@ -381,41 +300,13 @@ class Blockchain():
 
                 # Database
                 self.chain_db.post_utxo(tx_id, tx_index, utxo_output)
-                # utxo_added = False
-                # while not utxo_added:
-                #     try:
-                #         self.chain_db.post_utxo(tx_id, tx_index, utxo_output)
-                #         utxo_added = True
-                #     except sqlite3.OperationalError:
-                #         # Logging
-                #         self.logger.warning('DB locked while re-adding utxo from input')
-                #         pass
 
         # Remove block from db
         self.chain_db.delete_block()
-        # block_deleted = False
-        # while not block_deleted:
-        #     try:
-        #         self.chain_db.delete_block()
-        #         block_deleted = True
-        #     except sqlite3.OperationalError:
-        #         # Logging
-        #         self.logger.warning('DB locked while removing block from db')
-        #         pass
 
         # Insert block at height self.height - self.heartbeat if it exists
         if len(self.chain) < self.heartbeat + 1 and self.height > self.heartbeat:
             raw_block_dict = self.chain_db.get_raw_block(self.height - self.heartbeat)
-            # raw_block_obtained = False
-            # raw_block_dict = {}
-            # while not raw_block_obtained:
-            #     try:
-            #         raw_block_dict = self.chain_db.get_raw_block(self.height - self.heartbeat)
-            #         raw_block_obtained = True
-            #     except sqlite3.OperationalError:
-            #         # Logging
-            #         self.logger.warning('DB locked while retrieving raw block')
-            #         pass
             if raw_block_dict:
                 self.chain.insert(1, self.d.raw_block(raw_block_dict['raw_block']))
 
@@ -427,8 +318,8 @@ class Blockchain():
         genesis_transaction = MiningTransaction(0, self.f.HALVING_NUMBER * self.f.BASIC_TO_BBS, 0,
                                                 Wallet(seed=0, save=False, logger=self.logger).address,
                                                 0xffffffffffffffff)
-        genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
+        genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
         return genesis_block
 
     # --- FORK METHODS --- #
@@ -497,7 +388,7 @@ class Blockchain():
         if self.mining_reward == 0:
             self.mining_reward = self.f.STARTING_REWARD
             # Logging
-            self.logger.info(f'Setting initial mining reward to {self.mining_reward}')
+            self.logger.debug(f'Setting initial mining reward to {self.mining_reward}')
         # Account for near empty mine
         elif self.mining_reward > self.total_mining_amount:
             self.mining_reward = self.total_mining_amount
@@ -512,17 +403,7 @@ class Blockchain():
             # Find all utxos with block_height >= current_height + HALVING_NUMBER
             next_height = self.height + self.f.HALVING_NUMBER
             next_amount = self.chain_db.get_invested_amount(next_height)
-            # amount_obtained = False
-            # next_amount = 0
-            # while not amount_obtained:
-            #     try:
-            #         next_amount = self.chain_db.get_invested_amount(next_height)
-            #         amount_obtained = True
-            #     except sqlite3.OperationalError:
-            #         # Logging
-            #         self.logger.warning('DB locked while getting block_locked amount')
-            #         pass
-            self.total_mining_amount = next_amount  # int(next_amount / 100)
+            self.total_mining_amount = next_amount
             self.mining_reward = int(self.total_mining_amount // self.f.HALVING_NUMBER)
 
     def update_target(self):
@@ -546,11 +427,11 @@ class Blockchain():
         self.logger.info(f'Difference in total and desired time: {elapsed_time - desired_time}')
 
         # Adjust either up or down
-        if elapsed_time - desired_time > 0:  # Took longer than expected, raise target - higher target = easier
+        if elapsed_time - desired_time > 0:  # Took longer than expected, raise target | higher target = easier
             # Logging
             self.logger.info(f'Updating target. Adjusting target up by {abs_diff}')
             self.target = self.f.adjust_target_up(self.target, abs_diff)
-        elif elapsed_time - desired_time < 0:  # Took shorter than expected, lower target - lower target = harder
+        elif elapsed_time - desired_time < 0:  # Took shorter than expected, lower target | lower target = harder
             # Logging
             self.logger.info(f'Updating target. Adjusting target down by {abs_diff}')
             self.target = self.f.adjust_target_down(self.target, abs_diff)
@@ -573,16 +454,6 @@ class Blockchain():
         while temp_height > -1 and not block_found:
             # Search through database
             raw_block_dict = self.chain_db.get_raw_block(temp_height)
-            # dict_returned = False
-            # raw_block_dict = {}
-            # while not dict_returned:
-            #     try:
-            #         raw_block_dict = self.chain_db.get_raw_block(temp_height)
-            #         dict_returned = True
-            #     except sqlite3.OperationalError:
-            #         # Logging
-            #         self.logger.warning('DB locked while looking for raw block')
-            #         pass
             if raw_block_dict != {}:
                 temp_block = self.d.raw_block(raw_block_dict['raw_block'])
             else:

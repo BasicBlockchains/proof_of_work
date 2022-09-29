@@ -81,7 +81,7 @@ class Formatter():
 
     # CONFIG
     HEARTBEAT = 60
-    MINING_DELAY = 5  # TESTING HEARTBEAT * 24 * 7  # Delay of 1 week
+    MINING_DELAY = HEARTBEAT * 24 * 7  # Delay of 1 week
     MAXIMUM_BIT_SIZE = 0x3e80  # 2Kb
     GOSSIP_NUMBER = 5
     FORK_HEIGHT = 3
@@ -270,19 +270,3 @@ class Formatter():
             coefficient -= 1
 
         return self.target_from_parts(coefficient, exponent)
-
-    # Format Node
-    def node(self, node: tuple):
-        # Tuple values
-        ip, port = node
-
-        # Encode ip
-        formatted_ip = ''
-        octet_list = ip.split('.')
-        for octet in octet_list:
-            formatted_ip += format(int(octet), '02x')
-
-        # Encode port
-        formatted_port = format(port, f'0{self.PORT_CHARS}x')
-
-        return formatted_ip + formatted_port

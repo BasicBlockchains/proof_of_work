@@ -1,7 +1,6 @@
 '''
 REST API for the Blockchain
 '''
-import random
 import secrets
 
 import flask
