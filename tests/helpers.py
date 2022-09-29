@@ -6,11 +6,13 @@ import random
 import secrets
 import string
 from hashlib import sha256
+import logging
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
 from formatter import Formatter
-from .context import UTXO_INPUT, UTXO_OUTPUT, Transaction, MiningTransaction, utc_to_seconds, Header, Block
+from .context import UTXO_INPUT, UTXO_OUTPUT, Transaction, MiningTransaction, utc_to_seconds, Header, Block, Node, \
+    Blockchain, DataBase, Wallet, mine_a_block
 
 # --- Constants --- #
 curve = secp256k1()
@@ -183,3 +185,67 @@ def random_unmined_block_with_address(prev_id: id, height: int, reward: int, tar
     nonce = random_nonce()
     mining_tx = MiningTransaction(height, reward, 0, address, height + f.MINING_DELAY)
     return Block(prev_id, target, nonce, utc_to_seconds(), mining_tx, [])
+
+
+# Genesis blocks
+def create_node_gb(node: Node):
+    # Create test logger
+    test_logger = logging.getLogger(__name__)
+    test_logger.setLevel('CRITICAL')
+    test_logger.propagate = False
+    sh = logging.StreamHandler()
+    sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
+    test_logger.addHandler(sh)
+
+    gt = MiningTransaction(0, f.HALVING_NUMBER * f.BASIC_TO_BBS, 0,
+                           Wallet(seed=0, save=False, logger=test_logger).address, 0xffffffffffffffff)
+    ugb = Block('', f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20), 0, utc_to_seconds(), gt, [])
+    gb = mine_a_block(ugb)
+    node.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
+    node.blockchain.f.MINING_DELAY = 0
+    node.blockchain.GENESIS_NONCE = gb.nonce
+    node.blockchain.GENESIS_TIMESTAMP = gb.timestamp
+    node.blockchain.chain_db.wipe_db()
+    node.blockchain.chain_db.create_db()
+    node.blockchain.chain = []
+    node.blockchain.height = -1
+    node.blockchain.add_block(gb)
+    return node
+
+
+def copy_node_gb(node: Node, gb: Block):
+    node.blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
+    node.blockchain.f.MINING_DELAY = 0
+    node.blockchain.GENESIS_NONCE = gb.nonce
+    node.blockchain.GENESIS_TIMESTAMP = gb.timestamp
+    node.blockchain.chain_db.wipe_db()
+    node.blockchain.chain_db.create_db()
+    node.blockchain.chain = []
+    node.blockchain.height = -1
+    node.blockchain.add_block(gb)
+    return node
+
+
+def create_blockchain_gb(blockchain: Blockchain):
+    # Create test logger
+    test_logger = logging.getLogger(__name__)
+    test_logger.setLevel('CRITICAL')
+    test_logger.propagate = False
+    sh = logging.StreamHandler()
+    sh.formatter = logging.Formatter(f.LOGGING_FORMAT)
+    test_logger.addHandler(sh)
+
+    gt = MiningTransaction(0, f.HALVING_NUMBER * f.BASIC_TO_BBS, 0,
+                           Wallet(seed=0, save=False, logger=test_logger).address, 0xffffffffffffffff)
+    ugb = Block('', f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20), 0, utc_to_seconds(), gt, [])
+    gb = mine_a_block(ugb)
+    blockchain.target = f.target_from_parts(f.STARTING_TARGET_COEFFICIENT, 0x20)
+    blockchain.f.MINING_DELAY = 0
+    blockchain.GENESIS_NONCE = gb.nonce
+    blockchain.GENESIS_TIMESTAMP = gb.timestamp
+    blockchain.chain_db.wipe_db()
+    blockchain.chain_db.create_db()
+    blockchain.chain = []
+    blockchain.height = -1
+    blockchain.add_block(gb)
+    return blockchain

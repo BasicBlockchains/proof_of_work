@@ -19,9 +19,9 @@ class Blockchain():
     The Blockchain will be saving data to a db, and so can be instantiated with a directory path other than default.
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
-    # Genesis values
-    GENESIS_NONCE = 112602  # Tuned to production values in Formatter
-    GENESIS_TIMESTAMP = 1664461800  # September 23rd, 9:30 AM EST // 1:30 PM UTC
+    # GENESIS CONSTANTS
+    GENESIS_NONCE = 936286  # Tuned to production values in Formatter
+    GENESIS_TIMESTAMP = 1664461243  # Thu, 29 Sep 2022 14:20:43 GMT
 
     # Directory defaults
     DIR_PATH = './data/'
@@ -59,8 +59,6 @@ class Blockchain():
 
         # Create fork list to index forked blocks
         self.forks = []
-
-        # --- CONSTRUCTION ----#
 
         # Set path and filename variables
         self.dir_path = dir_path
@@ -320,8 +318,8 @@ class Blockchain():
         genesis_transaction = MiningTransaction(0, self.f.HALVING_NUMBER * self.f.BASIC_TO_BBS, 0,
                                                 Wallet(seed=0, save=False, logger=self.logger).address,
                                                 0xffffffffffffffff)
-        genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
 
+        genesis_block = Block('', self.target, self.GENESIS_NONCE, self.GENESIS_TIMESTAMP, genesis_transaction, [])
         return genesis_block
 
     # --- FORK METHODS --- #
