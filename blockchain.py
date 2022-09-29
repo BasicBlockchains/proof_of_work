@@ -20,8 +20,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # Genesis values
-    GENESIS_NONCE = 611190  # Tuned to production values in Formatter
-    GENESIS_TIMESTAMP = 1663939800  # September 23rd, 9:30 AM EST // 1:30 PM UTC
+    GENESIS_NONCE = 112602  # Tuned to production values in Formatter
+    GENESIS_TIMESTAMP = 1664461800  # September 23rd, 9:30 AM EST // 1:30 PM UTC
 
     # Directory defaults
     DIR_PATH = './data/'
@@ -116,18 +116,17 @@ class Blockchain():
             self.logger.warning('Block failed validation. Block total incorrect')
             return False
 
-        # TODO: Enable in production
-        # # Make sure timestamp is increasing
-        # if block.timestamp <= self.last_block.timestamp:
-        #     # Logging
-        #     self.logger.warning('Block failed validation. Block time too early.')
-        #     return False
-        #
-        # # Make sure timestamp isn't too far ahead
-        # if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
-        #     # Logging
-        #     self.logger.warning('Block timestamp too far ahead.')
-        #     return False
+        # Make sure timestamp is increasing
+        if block.timestamp <= self.last_block.timestamp:
+            # Logging
+            self.logger.warning('Block failed validation. Block time too early.')
+            return False
+
+        # Make sure timestamp isn't too far ahead
+        if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
+            # Logging
+            self.logger.warning('Block timestamp too far ahead.')
+            return False
 
         # Check each tx
         fees = 0
