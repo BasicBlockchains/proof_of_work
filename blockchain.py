@@ -20,8 +20,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # GENESIS CONSTANTS
-    GENESIS_NONCE = 936286  # Tuned to production values in Formatter
-    GENESIS_TIMESTAMP = 1664461243  # Thu, 29 Sep 2022 14:20:43 GMT
+    GENESIS_NONCE = 23633  # Tuned to production values in Formatter
+    GENESIS_TIMESTAMP = 1664467200  # Thu, 29 Sep 2022 15:58:43 GMT - FINAL BETA TEST VALUE
 
     # Directory defaults
     DIR_PATH = './data/'
