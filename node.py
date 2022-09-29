@@ -9,7 +9,6 @@ import random
 import secrets
 import socket
 import threading
-import time
 from multiprocessing import Process, Queue
 
 import requests
@@ -507,12 +506,14 @@ class Node:
         if node == self.node:
             return True
 
+        # Logging
+        self.logger.info('Retrieving node lists. May take a few minutes.')
+
         # Retrieve formatted node list
         initial_node_list = self.get_node_list(node)
-
-        # Connect to every node in node list
-        for n in initial_node_list:
-            self.connect_to_node(n)
+        for init_node in initial_node_list:
+            if init_node not in self.node_list:
+                self.node_list.append(init_node)
 
         # Get remaining nodes
         all_nodes = False
@@ -525,12 +526,21 @@ class Node:
                     all_nodes = False
                     self.node_list.append(check_node)
 
+        # Logging
+        self.logger.info('Connecting to nodes in node list. May take a few minutes.')
+
+        # Connect to every node in node list
+        for n in self.node_list:
+            if n != self.node:
+                self.connect_to_node(n)
+
+        # Logging
+        self.logger.info('Beginning download of saved blocks. Do not close or exit program.')
+
         # Catchup to network
-        # TODO: Change to gossip style
         self.catchup_to_network()
 
         # Get validated txs
-        # TODO: Change to gossip style
         self.get_validated_txs_from_node(node)
 
         return True

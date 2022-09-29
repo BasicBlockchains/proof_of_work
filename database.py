@@ -106,16 +106,9 @@ class DataBase:
                 table_list.append(table_name)
         return table_list
 
-    # def is_empty(self):
-    #     height_dict = self.get_height()
-    #     if height_dict['height'] == -1:
-    #         return True
-    #     return False
-
     # --- RAW BLOCKS --- #
 
     # GET METHODS
-
     def get_height(self):
         query = """SELECT COUNT(*) FROM raw_blocks"""
         height_tuple = self.query_db(query)
@@ -156,7 +149,6 @@ class DataBase:
     # --- UTXO POOL ---#
 
     # GET METHODS
-
     def get_utxo(self, tx_id: str, tx_index: int) -> dict:
         query = """SELECT * FROM utxo_pool WHERE tx_id = ? AND tx_index = ?"""
         utxo_list = self.query_db(query, (tx_id, hex(tx_index)))

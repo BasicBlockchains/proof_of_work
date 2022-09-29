@@ -3,15 +3,15 @@ Main File for GUI
 '''
 import _tkinter
 import logging
+import multiprocessing
 import os
 import os.path
 import threading
 import time
+import webbrowser
 from pathlib import Path
 from tkinter import Tk
-import json
-import multiprocessing
-import webbrowser
+
 import PySimpleGUI as sg
 
 from api import run_app
@@ -67,36 +67,19 @@ def create_config_window(theme=DEFAULT_THEME):
     main_layout = [
         [
             sg.Push(),
-            sg.Text('Enter Port Number. Must be between 41000 and 42000. Default = 41000.'),
+            sg.Text('Enter Port Number. Must be between 41000 and 42000.'),
             sg.Push()
         ],
         [
             sg.Push(),
-            sg.InputText(key='-enter_port-', size=(6, 1), background_color='#ffffff',
+            sg.InputText('41000', key='-enter_port-', size=(6, 1), background_color='#ffffff',
                          tooltip='Blank field will use default value'),
             sg.Push()
         ],
         [sg.HorizontalSeparator(pad=10, color='#000000')],
         [
             sg.Push(),
-            sg.Text('Choose minimum app size. Default = 1200 x 500'),
-            sg.Push(),
-        ],
-        [
-            sg.Push(),
-            sg.InputText(key='-minimum_width-', size=(6, 1), background_color='#ffffff'),
-            sg.InputText(key='-minimum_height-', size=(6, 1), background_color='#ffffff'),
-            sg.Push()
-        ],
-        [
-            sg.Push(),
-            sg.Text('Press Enter to accept defaults or confirm choices. Invalid options will force defaults.'),
-            sg.Push()
-        ],
-        [
-            sg.Push(),
-            sg.Button('Confirm config', key='-confirm_config-'),
-            sg.Button('Accept defaults', key='-accept_defaults-'),
+            sg.Button('Accept', key='-accept-', button_color='#00AA00'),
             sg.Button('Cancel', key='-cancel_gui-', button_color='#FF0000'),
             sg.Push()
         ]
@@ -448,7 +431,6 @@ def run_node_gui():
     desired_width = 1200
     desired_height = 500
     port_confirmed = False
-    size_confirmed = False
     gui_confirmed = True
     config_window = create_config_window()
 
@@ -456,28 +438,17 @@ def run_node_gui():
     config_window.bind("<Return>", "_Enter")
     config_window.bind("<KP_Enter>", "_Enter")
 
-    while not port_confirmed and not size_confirmed and gui_confirmed:
+    while not port_confirmed and gui_confirmed:
         config_event, config_values = config_window.read(timeout=10)
 
         if config_event in ['-cancel_gui-', sg.WIN_CLOSED]: gui_confirmed = False
-        if config_event == '-confirm_config-':
+        if config_event == '-accept-':
             if config_values['-enter_port-'].isnumeric():
                 temp_desired_port = int(config_values['-enter_port-'])
                 if Node.DEFAULT_PORT <= temp_desired_port <= Node.DEFAULT_PORT + Node.PORT_RANGE:
                     desired_port = temp_desired_port
                     port_confirmed = True
 
-            if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
-                temp_width = int(config_values['-minimum_width-'])
-                temp_height = int(config_values['-minimum_height-'])
-                if 200 <= temp_width <= 1200:
-                    desired_width = temp_width
-                if 200 <= temp_height <= 800:
-                    desired_height = temp_height
-                size_confirmed = True
-        if config_event == '-accept_defaults-':
-            port_confirmed = True
-            size_confirmed = True
         if config_event == '_Enter':
             if config_values['-enter_port-'].isnumeric():
                 temp_desired_port = int(config_values['-enter_port-'])
@@ -487,15 +458,6 @@ def run_node_gui():
             else:
                 desired_port = Node.DEFAULT_PORT
                 port_confirmed = True
-
-            if config_values['-minimum_width-'].isnumeric() and config_values['-minimum_height-'].isnumeric():
-                temp_width = int(config_values['-minimum_width-'])
-                temp_height = int(config_values['-minimum_height-'])
-                if 200 <= temp_width <= 1200:
-                    desired_width = temp_width
-                if 200 <= temp_height <= 800:
-                    desired_height = temp_height
-            size_confirmed = True
 
     config_window.close()
 

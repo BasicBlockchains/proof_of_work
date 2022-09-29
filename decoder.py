@@ -1,7 +1,6 @@
 '''
 Decoder - decodes various formatted data structs
 '''
-import json
 import logging
 from hashlib import sha256
 
@@ -44,7 +43,6 @@ class Decoder:
         return True
 
     # CPK, Signature, Address
-
     def decode_cpk(self, cpk: str) -> tuple:
         '''
         The cpk is a hex string - this may or may not have a leading '0x' indicator.
@@ -101,15 +99,6 @@ class Decoder:
         # Return cpk and ecdsa tuple
         return cpk, (r, s)
 
-    def signature_json(self, signature: str):
-        cpk, (r, s) = self.decode_signature(signature)
-        signature_dict = {
-            "compressed_public_key": cpk,
-            "r": hex(r),
-            "s": hex(s)
-        }
-        return json.dumps(signature_dict)
-
     def verify_address(self, address: str) -> bool:
         '''
         We decode from base58 and verify that the epk generates the expected checksum.
@@ -123,14 +112,13 @@ class Decoder:
 
         try:
             assert type == self.F.ADDRESS_TYPE
-            # assert version in self.F.ACCEPTED_VERSIONS
         except AssertionError:
             # Logging
             self.logger.error('Address has incorrect type')
             return False
 
         # Indexing
-        start_index = self.F.TYPE_CHARS  # + self.F.VERSION_CHARS
+        start_index = self.F.TYPE_CHARS
         end_index = -self.F.CHECKSUM_CHARS
 
         epk = hex_addy[start_index:end_index]
@@ -152,7 +140,6 @@ class Decoder:
         return curve.verify_signature(ecdsa_tuple, tx_id, curve.decompress_point(cpk))
 
     # UTXOS
-
     def raw_utxo_input(self, raw_utxo: str):
         # Type version
         if not self.verify_type_version(self.F.UTXO_INPUT_TYPE, self.F.VERSION, raw_utxo):
@@ -339,67 +326,3 @@ class Decoder:
 
         # Return MiningTx, and UserTx list
         return mining_tx, transactions
-
-    def block_from_dict(self, block_dict: dict):
-        # Construct block
-        prev_id = block_dict['header']['prev_id']
-        merkle_root = block_dict['header']['merkle_root']
-        target = self.F.int_from_target(block_dict['header']['target'])
-        nonce = block_dict['header']['nonce']
-        timestamp = block_dict['header']['timestamp']
-        mining_tx_dict = block_dict['transactions']['mining_tx']
-        height = mining_tx_dict['height']
-        reward = mining_tx_dict['reward']
-        block_fees = mining_tx_dict['block_fees']
-        mining_utxo_dict = mining_tx_dict['mining_utxo']
-        amount = mining_utxo_dict['amount']
-        address = mining_utxo_dict['address']
-        block_height = mining_utxo_dict['block_height']
-        mining_tx = MiningTransaction(height, reward, block_fees, address, block_height)
-        if mining_tx.mining_utxo.amount != amount:
-            # Logging
-            self.logger.error('Block failed to reconstruct MiningTransaction')
-            return None
-        tx_count = block_dict['transactions']['tx_count']
-        transactions = []
-        for x in range(tx_count):
-            tx_dict = block_dict['transactions'][f'tx_{x}']
-            input_count = tx_dict['input_count']
-            inputs = []
-            for y in range(input_count):
-                input_dict = tx_dict[f'input_{y}']
-                tx_id = input_dict['tx_id']
-                tx_index = input_dict['index']
-                signature = input_dict['signature']
-                inputs.append(UTXO_INPUT(tx_id, tx_index, signature))
-            output_count = tx_dict['output_count']
-            outputs = []
-            for z in range(output_count):
-                output_dict = tx_dict[f'output_{z}']
-                amount2 = output_dict['amount']
-                address2 = output_dict['address']
-                block_height2 = output_dict['block_height']
-                outputs.append(UTXO_OUTPUT(amount2, address2, block_height2))
-            transactions.append(Transaction(inputs, outputs))
-
-        temp_block = Block(prev_id, target, nonce, timestamp, mining_tx, transactions)
-        if temp_block.merkle_root == merkle_root:
-            return temp_block
-        else:
-            # Logging
-            self.logger.error('Block failed to reconstruct from dict.')
-            return None
-
-    # Node
-    def raw_node(self, raw_node: str):
-        hex_ip = raw_node[:self.F.IP_CHARS]
-        port = raw_node[self.F.IP_CHARS:self.F.NODE_CHARS]
-
-        ip = ''
-        for x in range(0, 4):
-            temp_string = hex_ip[2 * x:2 * (x + 1)]
-            ip += str(int(temp_string, 16))
-            if x != 3:
-                ip += '.'
-
-        return (ip, port)
