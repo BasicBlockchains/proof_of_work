@@ -38,7 +38,7 @@ class DataBase:
         Path(dir_path).mkdir(parents=True, exist_ok=True)
 
         # Get file_path for future use
-        self.file_path = join(dir_path, db_file)
+        self.file_path = Path(dir_path, db_file).absolute().as_posix()
 
         # Verify db
         if self.get_tables() != ['raw_blocks', 'utxo_pool']:
