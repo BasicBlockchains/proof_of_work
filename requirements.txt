@@ -12,3 +12,4 @@ basicblockchains-ecc==2.1.0
 primefac==2.0.12
     # via basicblockchains-ecc
 waitress==2.1.2
+PySimpleGUI==4.60.3
