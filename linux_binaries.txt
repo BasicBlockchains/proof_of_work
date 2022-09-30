@@ -1,0 +1,8 @@
+To create a standalone binary file for linux:
+
+pip install nuitka
+python -m nuitka --standalone gui.py --include-data-file=./static/images/*=static/images/ --include-data-file=./static/styles/style.css=static/styles/style.css --include-data-file=./templates/index.html=templates/index.html
+
+
+After installing nuitka and running the above command, you can copy gui.build and gui.dist folders and not rely on the repo.
+The binary "gui" will be found in gui.dist, and can be run from terminal or file explorer.
