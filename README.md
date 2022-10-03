@@ -1,5 +1,84 @@
-# An Object Oriented proof of work Blockchain
+# BBPOW: A "no frills" proof-of-work Blockchain
 
+---
+
+## Installation
+
+1. Install Python version 3.10.
+2. Install dependencies through pip
+3. Port forward your public ip to your device through port 41000
+4. Copy and download the github repo
+4. Run "python gui" command
+
+### Install python 3.10: Linux (Ubuntu)
+
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install software-properties-common -y
+    sudo add-apt-repository ppa:deadsnakes/ppa
+    sudo apt install python3.10
+
+Verify the installation by checking the installed version.
+
+    $ python3.10 --version
+    3.10.4
+
+### Install python 3.10: Windows
+
+Download package and install. [Link to installation.](https://www.python.org/downloads/release/python-3107/)
+
+### Install dependencies: Linux (Ubuntu)
+
+First install pip if it's not already installed.
+
+    apt install python3-pip
+
+Finally install all dependencies using pip
+
+    pip install pandas
+    pip install requests
+    pip install Flask
+    pip install basicblockchains-ecc
+    pip install primefac
+    pip install waitress
+    pip install PySimpleGUI
+
+### Install dependencies: Windows
+
+First insstall pip if it's not already installed. [Link to installation.](https://pip.pypa.io/en/stable/installation/)
+Once pip installed, repeat all the "pip install" commands listed above.
+
+### Port forward: Linux and Windows
+
+Log into your router - this will normally require a wired connection from your computer to the router. In order to login
+to the router, go to the router's address in a web browser, typically this is address: 192.168.0.1.
+
+Once logged into the router, look for a section called "Port Forwarding". Select your device ip, and forward the port
+41000 to that device through a tcp connection. Example:
+
+![port forward example](./static/images/portforward.png)
+
+### Clone the repo: Linux and Windows
+
+In an appropriate directory, clone the repo by running:
+
+    git clone https://github.com/BasicBlockchains/proof_of_work
+
+(If git is not installed, you can install it here: [Install Git](https://www.atlassian.com/git/tutorials/install-git))
+
+### Run the GUI
+
+Finally, in the directory where you cloned the repo above, run
+
+    python3.10 gui.py
+
+This should launch the GUI. Select port 41000 and it should connect to the network and begin downloading the blocks
+already saved to the chain.
+
+---
+
+
+
+ 
 ---
 
     GUI
