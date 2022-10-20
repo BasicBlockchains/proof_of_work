@@ -14,14 +14,14 @@ from multiprocessing import Process, Queue
 import requests
 from requests import get
 
-from block import Block
-from blockchain import Blockchain
-from decoder import Decoder
-from formatter import Formatter
-from miner import mine_a_block
-from timestamp import utc_to_seconds
-from transactions import Transaction, MiningTransaction
-from wallet import Wallet
+from .block import Block
+from .blockchain import Blockchain
+from .decoder import Decoder
+from .formatter import Formatter
+from .miner import mine_a_block
+from .timestamp import utc_to_seconds
+from .transactions import Transaction, MiningTransaction
+from .wallet import Wallet
 
 
 class Node:

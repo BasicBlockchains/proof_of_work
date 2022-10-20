@@ -6,12 +6,12 @@ import logging
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from block import Block
-from database import DataBase
-from decoder import Decoder
-from formatter import Formatter
-from transactions import MiningTransaction
-from wallet import Wallet
+from .block import Block
+from .database import DataBase
+from .decoder import Decoder
+from .formatter import Formatter
+from .transactions import MiningTransaction
+from .wallet import Wallet
 
 
 class Blockchain():

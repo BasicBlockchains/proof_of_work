@@ -10,7 +10,7 @@ import logging
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from formatter import Formatter
+from bbpow.formatter import Formatter
 from .context import UTXO_INPUT, UTXO_OUTPUT, Transaction, MiningTransaction, utc_to_seconds, Header, Block, Node, \
     Blockchain, DataBase, Wallet, mine_a_block
 

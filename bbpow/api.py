@@ -8,10 +8,10 @@ import requests
 import waitress
 from flask import Flask, jsonify, request, Response, json, render_template
 
-from decoder import Decoder
-from formatter import Formatter
-from node import Node
-from timestamp import utc_timestamp
+from .decoder import Decoder
+from .formatter import Formatter
+from .node import Node
+from .timestamp import utc_timestamp
 
 
 def create_app(node: Node):
