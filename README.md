@@ -81,8 +81,9 @@ To save memory, you can run in a python shell using the following commands insid
     >>> from node import Node
     >>> from api import run_app
     >>> import threading
-    >>> n = Node()
+    >>> n = Node()  #Optional port value
     >>> api_thread = threading.Thread(target=run_app, daemon=True, args=(n,))
+    >>> api_thread.start()
     >>> n.connect_to_network()
 
 Once you connect to the network, this should trigger the initial block download. From there, you can begin mining as
