@@ -24,7 +24,7 @@ Verify the installation by checking the installed version.
     $ python3.10 --version
     3.10.4
 
-### Install python 3.10: Windows
+### Install python: Windows
 
 Download package and install. [Link to installation.](https://www.python.org/downloads/release/python-3107/)
 
