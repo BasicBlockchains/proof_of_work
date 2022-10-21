@@ -228,8 +228,13 @@ class Node:
         mining_tx = MiningTransaction(self.height + 1, self.mining_reward, block_fees, self.wallet.address,
                                       self.height + 1 + self.f.MINING_DELAY)
 
+        # Disaster recovery timestamp
+        timestamp = utc_to_seconds()
+        if timestamp > self.last_block.timestamp + pow(self.f.HEARTBEAT, 2):
+            timestamp = self.last_block.timestamp + pow(self.f.HEARTBEAT, 2) - 1
+
         # Return unmined block
-        return Block(self.last_block.id, self.target, 0, utc_to_seconds(), mining_tx, self.block_transactions)
+        return Block(self.last_block.id, self.target, 0, timestamp, mining_tx, self.block_transactions)
 
     def get_fees(self, tx: Transaction):
         '''
