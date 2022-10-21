@@ -4,7 +4,7 @@ Headers class
 import json
 from hashlib import sha256
 
-from .formatter import Formatter
+from formatter import Formatter
 
 
 class Header:

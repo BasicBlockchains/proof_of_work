@@ -12,10 +12,10 @@ import pandas as pd
 import requests
 from basicblockchains_ecc import elliptic_curve as EC
 
-from .decoder import Decoder
-from .formatter import Formatter
-from .transactions import Transaction
-from .utxo import UTXO_INPUT, UTXO_OUTPUT
+from decoder import Decoder
+from formatter import Formatter
+from transactions import Transaction
+from utxo import UTXO_INPUT, UTXO_OUTPUT
 
 
 class Wallet():
@@ -27,7 +27,7 @@ class Wallet():
     cryptographically strong random numbers.
     '''
     # File constants
-    DIR_PATH = './data'
+    DIR_PATH = 'data'
     FILE_NAME = 'wallet.dat'
 
     # Network constants
