@@ -80,8 +80,8 @@ already saved to the chain.
 
 To save memory, you can run in a python shell using the following commands inside a python shell.
 
-    >>> from node import Node
-    >>> from api import run_app
+    >>> from bbpow.node import Node
+    >>> from bbpow.api import run_app
     >>> import threading
     >>> n = Node()  #Optional port value ==> n = Node(port=xxxxx)
     >>> api_thread = threading.Thread(target=run_app, daemon=True, args=(n,))
