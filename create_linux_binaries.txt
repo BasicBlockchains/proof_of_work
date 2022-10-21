@@ -1,2 +1,0 @@
-pip install nuitka
-python -m nuitka --standalone gui.py --include-data-file=./static/images/*=static/images/ --include-data-file=./static/styles/style.css=static/styles/style.css --include-data-file=./templates/index.html=templates/index.html
