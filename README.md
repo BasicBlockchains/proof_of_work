@@ -4,13 +4,15 @@
 
 ## Installation
 
-1. Install Python version 3.10.
+1. Install Python; versions 3.8, 3.9 or 3.10.
 2. Install dependencies through pip
 3. Port forward your public ip to your device through port 41000
 4. Copy and download the github repo
 4. Run "python gui" command
 
-### Install python 3.10: Linux (Ubuntu)
+### Install python: Linux (Ubuntu)
+
+We use python version 3.10 here as an example. But it will work for versions 3.8 and 3.9.
 
     sudo apt update && sudo apt upgrade -y
     sudo apt install software-properties-common -y
