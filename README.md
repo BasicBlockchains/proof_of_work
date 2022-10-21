@@ -57,7 +57,7 @@ to the router, go to the router's address in a web browser, typically this is ad
 Once logged into the router, look for a section called "Port Forwarding". Select your device ip, and forward the port
 41000 to that device through a tcp connection. Example:
 
-![port forward example](./static/images/portforward.png)
+![port forward example](static/images/portforward.png)
 
 ### Clone the repo: Linux and Windows
 
@@ -80,8 +80,8 @@ already saved to the chain.
 
 To save memory, you can run in a python shell using the following commands inside a python shell.
 
-    >>> from bbpow.node import Node
-    >>> from bbpow.api import run_app
+    >>> from node import Node
+    >>> from api import run_app
     >>> import threading
     >>> n = Node()  #Optional port value ==> n = Node(port=xxxxx)
     >>> api_thread = threading.Thread(target=run_app, daemon=True, args=(n,))

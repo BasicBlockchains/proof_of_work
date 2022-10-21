@@ -1,7 +1,7 @@
 '''
 The Miner class
 '''
-from .block import Block
+from block import Block
 
 
 # --- MINE BLOCK METHOD --- #

@@ -6,12 +6,12 @@ import logging
 
 from basicblockchains_ecc.elliptic_curve import secp256k1
 
-from .block import Block
-from .database import DataBase
-from .decoder import Decoder
-from .formatter import Formatter
-from .transactions import MiningTransaction
-from .wallet import Wallet
+from block import Block
+from database import DataBase
+from decoder import Decoder
+from formatter import Formatter
+from transactions import MiningTransaction
+from wallet import Wallet
 
 
 class Blockchain():
@@ -24,7 +24,7 @@ class Blockchain():
     GENESIS_TIMESTAMP = 1666445400  # Saturday, October 22, 2022 9:30:00 AM GMT-05:00
 
     # Directory defaults
-    DIR_PATH = './data/'
+    DIR_PATH = 'data/'
     DB_FILE = 'chain.db'
 
     # Decoder and formatter
@@ -114,11 +114,11 @@ class Blockchain():
             self.logger.warning('Block failed validation. Block total incorrect')
             return False
 
-        # Make sure timestamp is increasing
-        if block.timestamp <= self.last_block.timestamp:
-            # Logging
-            self.logger.warning('Block failed validation. Block time too early.')
-            return False
+        # # Make sure timestamp is increasing
+        # if block.timestamp <= self.last_block.timestamp:
+        #     # Logging
+        #     self.logger.warning('Block failed validation. Block time too early.')
+        #     return False
 
         # Make sure timestamp isn't too far ahead
         if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
