@@ -20,8 +20,8 @@ class Blockchain():
     Similarly, the filenames for the db can be other than default "chain.db".
     '''
     # GENESIS CONSTANTS
-    GENESIS_NONCE = 252318  # Tuned to production values in Formatter
-    GENESIS_TIMESTAMP = 1666445400  # Saturday, October 22, 2022 9:30:00 AM GMT-05:00
+    GENESIS_NONCE = 325915  # Tuned to production values in Formatter
+    GENESIS_TIMESTAMP = 1666373400  # Friday, October 21, 2022 1:30:00 PM GMT-05:00
 
     # Directory defaults
     DIR_PATH = 'data/'
@@ -114,11 +114,11 @@ class Blockchain():
             self.logger.warning('Block failed validation. Block total incorrect')
             return False
 
-        # # Make sure timestamp is increasing
-        # if block.timestamp <= self.last_block.timestamp:
-        #     # Logging
-        #     self.logger.warning('Block failed validation. Block time too early.')
-        #     return False
+        # Make sure timestamp is increasing
+        if block.timestamp <= self.last_block.timestamp:
+            # Logging
+            self.logger.warning('Block failed validation. Block time too early.')
+            return False
 
         # Make sure timestamp isn't too far ahead
         if block.timestamp > self.last_block.timestamp + pow(self.heartbeat, 2):
