@@ -260,19 +260,15 @@ We use SQLite3 as our database. This has a type limitation as their integers are
 I would like to thank Jurko Gospodnetic of stackoverflow for his db query design.
 -https://stackoverflow.com/questions/9561832/what-if-i-dont-close-the-database-connection-in-python-sqlite
 
-The Database has 3 tables:
+The Database has 2 tables:
 
-    -block_headers
-    -utxo_pool
     -raw_blocks
+    -utxo_pool
 
-The block_headers will contain all the header information of the Block, where the height of the Block is equal to the
-row number + 1 (accounting for Genesis Block). This is for ease of use when searching.
+The raw_block table contains the raw form of each Block, where the height of the Block corresponds to the row
+number plus one (accounting for genesis Block).
 
 The utxo_pool contains all those UTXO_OUTPUTs which have not yet been consumed.
-
-Finally, the raw_block table contains the raw form of each Block, where the height of the Block corresponds to the row
-number plus one (accounting for genesis Block).
 
 ## Validation
 
