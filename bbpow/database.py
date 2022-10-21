@@ -7,9 +7,9 @@ from contextlib import closing
 from os.path import join
 from pathlib import Path
 
-from block import Block
-from formatter import Formatter
-from utxo import UTXO_OUTPUT
+from .block import Block
+from .formatter import Formatter
+from .utxo import UTXO_OUTPUT
 
 
 # noinspection PySingleQuotedDocstring

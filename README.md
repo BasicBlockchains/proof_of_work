@@ -74,6 +74,27 @@ Finally, in the directory where you cloned the repo above, run
 This should launch the GUI. Select port 41000 and it should connect to the network and begin downloading the blocks
 already saved to the chain.
 
+### Run in Python
+
+To save memory, you can run in a python shell using the following commands inside a python shell.
+
+    >>> from node import Node
+    >>> from api import run_app
+    >>> import threading
+    >>> n = Node()  #Optional port value ==> n = Node(port=xxxxx)
+    >>> api_thread = threading.Thread(target=run_app, daemon=True, args=(n,))
+    >>> api_thread.start()
+    >>> n.connect_to_network()
+
+Once you connect to the network, this should trigger the initial block download. From there, you can begin mining as
+follows:
+
+    >>> n.start_miner()
+
+And similarly you can end mining as follows:
+
+    >>> n.stop_miner()
+
 ---
 
 

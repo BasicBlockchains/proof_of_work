@@ -14,19 +14,19 @@ from tkinter import Tk
 
 import PySimpleGUI as sg
 
-from api import run_app
-from blockchain import Blockchain
-from decoder import Decoder
-from formatter import Formatter
-from node import Node
-from timestamp import utc_to_seconds, seconds_to_utc
-from wallet import Wallet
+from bbpow.api import run_app
+from bbpow.blockchain import Blockchain
+from bbpow.decoder import Decoder
+from bbpow.formatter import Formatter
+from bbpow.node import Node
+from bbpow.timestamp import utc_to_seconds, seconds_to_utc
+from bbpow.wallet import Wallet
 
 # --- CONSTANTS --- #
 DEFAULT_THEME = 'SystemDefault'
 DEFAULT_WINDOW_SIZE = (1200, 500)
 
-IMAGE_DIR = './static/images'
+IMAGE_DIR = '../static/images'
 LOGO_FILE = 'logo_icon.png'
 RED_CIRCLE_FILE = 'red_circle_small.png'
 GREEN_CIRCLE_FILE = 'green_circle_small.png'

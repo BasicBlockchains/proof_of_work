@@ -4,8 +4,8 @@ The Transactions class
 import json
 from hashlib import sha256
 
-from formatter import Formatter
-from utxo import UTXO_OUTPUT
+from .formatter import Formatter
+from .utxo import UTXO_OUTPUT
 
 
 class MiningTransaction():

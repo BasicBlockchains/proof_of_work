@@ -14,14 +14,14 @@ from multiprocessing import Process, Queue
 import requests
 from requests import get
 
-from block import Block
-from blockchain import Blockchain
-from decoder import Decoder
-from formatter import Formatter
-from miner import mine_a_block
-from timestamp import utc_to_seconds
-from transactions import Transaction, MiningTransaction
-from wallet import Wallet
+from .block import Block
+from .blockchain import Blockchain
+from .decoder import Decoder
+from .formatter import Formatter
+from .miner import mine_a_block
+from .timestamp import utc_to_seconds
+from .transactions import Transaction, MiningTransaction
+from .wallet import Wallet
 
 
 class Node:
@@ -228,8 +228,13 @@ class Node:
         mining_tx = MiningTransaction(self.height + 1, self.mining_reward, block_fees, self.wallet.address,
                                       self.height + 1 + self.f.MINING_DELAY)
 
+        # Disaster recovery timestamp
+        timestamp = utc_to_seconds()
+        if timestamp > self.last_block.timestamp + pow(self.f.HEARTBEAT, 2):
+            timestamp = self.last_block.timestamp + pow(self.f.HEARTBEAT, 2) - 1
+
         # Return unmined block
-        return Block(self.last_block.id, self.target, 0, utc_to_seconds(), mining_tx, self.block_transactions)
+        return Block(self.last_block.id, self.target, 0, timestamp, mining_tx, self.block_transactions)
 
     def get_fees(self, tx: Transaction):
         '''
