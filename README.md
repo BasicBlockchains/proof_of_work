@@ -99,10 +99,7 @@ And similarly you can end mining as follows:
 
 ---
 
-
-
- 
----
+## Class Dependencies
 
     GUI
      |
